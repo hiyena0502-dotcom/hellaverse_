@@ -1,55 +1,12 @@
 (()=>{
-if(window.__HELLAVERSE_SETTINGS_QUICK_ACCESS_V1__)return;
-window.__HELLAVERSE_SETTINGS_QUICK_ACCESS_V1__=1;
-
-let queued=false;
-const $=(s,r=document)=>r.querySelector(s);
-
-function ensureStyle(){
-  if($('#hvSettingsQuickStyle'))return;
-  const style=document.createElement('style');
-  style.id='hvSettingsQuickStyle';
-  style.textContent=`
-    .hv-settings-nav{display:inline-flex;align-items:center;justify-content:center;gap:6px}
-    .hv-settings-nav:before{content:'⚙';font-size:.85em;opacity:.72}
-    .room-hud .hv-settings-nav{margin-left:4px;border:0;background:transparent;color:var(--muted);font-size:.68rem;letter-spacing:.12em}
-    .room-hud .hv-settings-nav:hover,.main-nav .hv-settings-nav:hover{color:var(--gold)}
-    @media(max-width:700px){.main-nav .hv-settings-nav:before{display:none}.room-hud .hv-settings-nav{font-size:0}.room-hud .hv-settings-nav:before{display:block;font-size:.9rem}}
-  `;
-  document.head.appendChild(style);
-}
-
-function decorate(){
-  ensureStyle();
-  const mainNav=$('.game-hud .main-nav');
-  if(mainNav&&!mainNav.querySelector('[data-hv-settings-quick]')){
-    const btn=document.createElement('button');
-    btn.className='nav-button hv-settings-nav';
-    btn.dataset.page='settings';
-    btn.dataset.hvSettingsQuick='1';
-    btn.textContent='SETTINGS';
-    mainNav.appendChild(btn);
-  }
-  const roomHud=$('.room-hud');
-  if(roomHud&&!roomHud.querySelector('[data-hv-settings-quick]')){
-    const btn=document.createElement('button');
-    btn.className='hv-settings-nav';
-    btn.dataset.page='settings';
-    btn.dataset.hvSettingsQuick='1';
-    btn.textContent='SETTINGS';
-    roomHud.appendChild(btn);
-  }
-}
-
-function schedule(){
-  if(queued)return;
-  queued=true;
-  requestAnimationFrame(()=>{queued=false;decorate()});
-}
-
-new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('hellaverse:state-updated',schedule);
-document.addEventListener('DOMContentLoaded',schedule);
-window.addEventListener('load',schedule);
-if(document.readyState!=='loading')schedule();
+if(window.__HELLAVERSE_SETTINGS_QUICK_ACCESS_V3__)return;window.__HELLAVERSE_SETTINGS_QUICK_ACCESS_V3__=1;
+const K='hellaverse_dialogue_state_v1',O={HELLBORN:'HELL',SINNER:'HELL',ANGEL:'HEAVEN',WINNER:'HEAVEN'};let q=0;
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)],read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};
+function save(s){localStorage.setItem(K,JSON.stringify(s));window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'thought-archive',clearDirty:false}}))}
+function css(){if($('#hvSQStyle'))return;let x=document.createElement('style');x.id='hvSQStyle';x.textContent='.hv-settings-nav{display:inline-flex;gap:6px}.hv-pedit{order:-10;padding:20px;border:1px solid rgba(201,166,107,.25)}.hv-pedit input{width:100%;border:0;border-bottom:1px solid var(--line-strong);background:transparent;color:var(--text);padding:10px 0}.hv-pedit-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:14px 0}.hv-pedit-grid button{border:1px solid var(--line);background:transparent;color:var(--text);padding:10px;text-align:left}.hv-pedit-grid button.on{border-color:var(--gold);color:var(--gold)}.hv-pedit-save{width:100%;border:1px solid var(--gold);background:rgba(167,45,72,.12);color:var(--gold);padding:10px}@media(max-width:700px){.hv-pedit-grid{grid-template-columns:1fr}}';document.head.appendChild(x)}
+function editor(s){let o=String(s.player?.origin||'').toUpperCase();return `<section class="settings-panel hv-pedit" id="hvPE" data-origin="${o}"><p class="label">PLAYER</p><h2>PLAYER PROFILE</h2><label>NAME<input id="hvPEName" maxlength="30" value="${String(s.player?.name||'').replace(/"/g,'&quot;')}"></label><div class="hv-pedit-grid">${Object.entries(O).map(([k,r])=>`<button type="button" class="${o===k?'on':''}" data-pe-origin="${k}"><strong>${k}</strong><br><small>${r}</small></button>`).join('')}</div><p>ROLE · EXTRA / LOW PROFILE</p><button type="button" class="hv-pedit-save" data-pe-save>SAVE PLAYER</button><p id="hvPEMsg"></p></section>`}
+function draw(){css();let s=read(),nav=$('.game-hud .main-nav');if(nav&&!$('[data-hv-settings-quick]',nav)){let b=document.createElement('button');b.className='nav-button hv-settings-nav';b.dataset.page='settings';b.dataset.hvSettingsQuick='1';b.textContent='⚙ SETTINGS';nav.appendChild(b)}let rh=$('.room-hud');if(rh&&!$('[data-hv-settings-quick]',rh)){let b=document.createElement('button');b.className='hv-settings-nav';b.dataset.page='settings';b.dataset.hvSettingsQuick='1';b.textContent='SETTINGS';rh.appendChild(b)}if(s.page!=='settings')return;let g=$('.settings-grid');if(!g)return;let old=$('.hv-player-settings',g);if(old)old.style.display='none';if(!$('#hvPE',g))g.insertAdjacentHTML('afterbegin',editor(s))}
+function schedule(){if(q)return;q=1;requestAnimationFrame(()=>{q=0;draw()})}
+document.addEventListener('click',e=>{let t=e.target instanceof Element?e.target:null;if(!t)return;let o=t.closest('[data-pe-origin]')?.dataset.peOrigin;if(o&&O[o]){e.preventDefault();let p=$('#hvPE');p.dataset.origin=o;$$('[data-pe-origin]',p).forEach(b=>b.classList.toggle('on',b.dataset.peOrigin===o));return}if(!t.closest('[data-pe-save]'))return;e.preventDefault();let p=$('#hvPE'),name=$('#hvPEName',p)?.value.trim(),origin=p?.dataset.origin;if(!name||!O[origin]){let m=$('#hvPEMsg');if(m)m.textContent='이름과 출신을 모두 정해줘.';return}let s=read();s.player={...(s.player||{}),name,origin,realm:O[origin],role:'EXTRA',profileSetup:true};s.flags=s.flags&&typeof s.flags==='object'?s.flags:{};for(let k of Object.keys(s.flags))if(k.startsWith('player.origin.')||k.startsWith('player.realm.'))delete s.flags[k];s.flags['player.origin.'+origin.toLowerCase()]=true;s.flags['player.realm.'+O[origin].toLowerCase()]=true;s.flags['player.role.extra']=true;save(s)},true);
+new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('hellaverse:state-updated',schedule);document.addEventListener('DOMContentLoaded',schedule);window.addEventListener('load',schedule);if(document.readyState!=='loading')schedule();
 })();

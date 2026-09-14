@@ -14,7 +14,7 @@ let state={};try{state=JSON.parse(localStorage.getItem(STATE_KEY)||'{}')||{}}cat
 state.dialogues=Array.isArray(state.dialogues)?state.dialogues:[];
 state.events=Array.isArray(state.events)?state.events:[];
 state.memories=Array.isArray(state.memories)?state.memories:[];
-state.lorebook=Array.isArray(state.lorebook)?state.lorebook:[];
+delete state.lorebook;
 state.affection=state.affection&&typeof state.affection==='object'?state.affection:{};
 state.moods=state.moods&&typeof state.moods==='object'?state.moods:{};
 state.dialogueMeta=state.dialogueMeta&&typeof state.dialogueMeta==='object'?state.dialogueMeta:{};
@@ -87,17 +87,6 @@ for(const [id,name,description,type] of eventDefs){const i=state.events.findInde
 
 const baselineMemory={id:'lucifer-memory-first-impression',characterId:CID,type:'observation',title:'루시퍼에 대한 첫인상',summary:'말투는 화려하고 장난이 많다. 완전히 냉소적인 사람은 아니며 찰리와 호텔의 가능성을 돕고 싶어 한다. 다만 가족을 비하하거나 무례하게 선을 넘는 태도에는 즉각 예민해진다.',tags:['lucifer','first-impression','observation'],sourceType:'baseline',sourceId:CID,importance:'normal',createdAt:'2026-09-14T00:00:00.000Z',pinned:false,hidden:false};
 const bmi=state.memories.findIndex(m=>m?.id===baselineMemory.id);if(bmi>=0&&state.memories[bmi]?.sourceType==='baseline')state.memories[bmi]=baselineMemory;else if(bmi<0)state.memories.push(baselineMemory);
-const lore=[
-{id:'lucifer-lore-king-of-hell',title:'LUCIFER MORNINGSTAR',category:'CHARACTER',keywords:['lucifer','king of hell','morningstar','optimism'],content:'지옥의 왕. 화려하고 장난스러우며 자존심도 강하지만 본질적으로 가능성을 아주 쉽게 포기하는 타입은 아니다. 오래된 실패 때문에 조심스러워졌을 뿐, 여전히 좋은 결과를 바라며 다시 손을 내밀 수 있다.',relatedCharacters:[CID],enabled:true,priority:10},
-{id:'lucifer-lore-ducks',title:'고무 오리 작업대',category:'HABIT',keywords:['duck','hobby','workbench'],content:'작은 고무 오리와 장난감 같은 물건을 만드는 데 몰두할 때가 있다. 거창한 실패와 책임에서 잠시 벗어나 작은 결과를 직접 고칠 수 있다는 점이 그에게 휴식이 된다.',relatedCharacters:[CID],enabled:true,priority:5},
-{id:'lucifer-lore-charlie',title:'찰리와의 관계',category:'RELATIONSHIP',keywords:['charlie','family','fatherhood','dream'],content:'찰리를 깊이 사랑하고 자랑스러워한다. 찰리의 구원이라는 꿈을 비웃거나 무시할 의도는 없으며, 지금은 오히려 그 꿈이 현실이 되도록 돕고 싶어 한다. 다만 찰리의 이상에서 추락 이전의 자신을 떠올릴 때가 있어, 같은 상처를 겪을까 두려워 조심스러워질 수 있다.',relatedCharacters:[CID,'charlie-morningstar'],enabled:true,priority:10},
-{id:'lucifer-lore-heaven',title:'천국과 추락의 기억',category:'PAST',keywords:['heaven','fall','past'],content:'천국은 루시퍼에게 단순한 적대 대상이 아니라 과거의 이상과 실패, 상실이 겹쳐 있는 장소다. 모두를 똑같이 미워한다기보다 자신이 겪은 체계와 판단에 상처가 깊다.',relatedCharacters:[CID],enabled:true,priority:9},
-{id:'lucifer-lore-hotel',title:'호텔에서의 현재',category:'PRESENT',keywords:['hotel','charlie','present','support'],content:'호텔의 소란과 허술한 운영에는 투덜거리지만 찰리의 꿈 자체를 깎아내리지 않는다. 약속한 대로 돕고 싶어 하며, 필요하면 자신의 지식과 권한을 쓰려 한다. 걱정이 많아지는 이유는 실패를 바라서가 아니라 찰리가 다칠까 두렵기 때문이다.',relatedCharacters:[CID,'charlie-morningstar'],enabled:true,priority:9},
-{id:'lucifer-lore-alastor',title:'알래스터에 대한 태도',category:'RELATIONSHIP',keywords:['alastor','rivalry','hotel'],content:'알래스터의 과하게 여유로운 태도와 찰리 주변에서 영향력을 행사하는 방식을 특히 못마땅해한다. 단순한 질투만이 아니라 가족 주변에서 속내를 읽기 어려운 사람이 주도권을 쥐는 상황 자체를 싫어한다.',relatedCharacters:[CID,'alastor'],enabled:true,priority:8},
-{id:'lucifer-lore-boundary',title:'루시퍼가 싫어하는 선 넘기',category:'PERSONALITY',keywords:['family','rude','boundary'],content:'자신을 향한 가벼운 놀림은 과장되게 받아칠 수 있지만, 찰리나 가족을 깎아내리거나 약점을 이용해 모욕하는 태도에는 훨씬 진지하게 화낸다. 예의 없는 압박과 가족을 비하하는 말은 관계를 크게 깎을 수 있다.',relatedCharacters:[CID],enabled:true,priority:8}
-];
-for(const x of lore){const i=state.lorebook.findIndex(l=>l?.id===x.id);if(i>=0)state.lorebook[i]={...state.lorebook[i],...x};else state.lorebook.push(x)}
-
 function choice(id,text,response,delta=0,nextNodeId='',opts={}){return{id,type:opts.type==='action'?'action':'speech',text,playerLine:text,response,affectionDelta:Number(delta||0),requiredAffection:0,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:opts.setFlags||'',removeFlags:opts.removeFlags||'',addMemoryTitle:opts.addMemoryTitle||'',addMemorySummary:opts.addMemorySummary||'',addMemoryTags:opts.addMemoryTags||'',moodChange:opts.moodChange||'',unlockItemId:'',nextNodeId,endConversation:!nextNodeId}}
 function upsertDialogue(scene){const i=state.dialogues.findIndex(s=>s?.id===scene.id);if(i>=0)state.dialogues[i]={...state.dialogues[i],...scene};else state.dialogues.push(scene)}
 function askChoice(id,text,response,delta=0,opts={}){return choice(id,text,response,delta,'',{moodChange:opts.moodChange||'',setFlags:opts.setFlags||'',removeFlags:opts.removeFlags||'',type:opts.type||'speech'})}

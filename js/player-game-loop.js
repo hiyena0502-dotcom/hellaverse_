@@ -1,147 +1,445 @@
-(()=>{
-if(window.__HELLAVERSE_PLAYER_GAME_LOOP_V1__)return;
-window.__HELLAVERSE_PLAYER_GAME_LOOP_V1__=1;
+(function missionRuntime(){
+  if(window.__HELLAVERSE_MISSION_SYSTEM_V1__)return;
+  window.__HELLAVERSE_MISSION_SYSTEM_V1__=1;
 
-const K='hellaverse_dialogue_state_v1';
-const META='hellaverse_dialogue_render_meta_v1';
-const LUCIFER='lucifer-morningstar';
-const MAX_ACTIONS=3;
-const ORIGINS={
-  HELLBORN:{realm:'HELL',label:'HELLBORN',desc:'지옥에서 태어난 평범한 주민. 왕족도 귀족도 아닌 토박이.'},
-  SINNER:{realm:'HELL',label:'SINNER',desc:'죽은 뒤 지옥에 온 평범한 죄인. 생전에도 유명인은 아니었다.'},
-  ANGEL:{realm:'HEAVEN',label:'ANGEL',desc:'천국의 평범한 천사. 세라핌·엑소시스트 같은 고위직은 아니다.'},
-  WINNER:{realm:'HEAVEN',label:'WINNER',desc:'죽은 뒤 천국에 온 평범한 인간 영혼. 특별한 지위는 없다.'}
-};
-const DAILY_EVENTS=[
-  {id:'hotel-errand',title:'사소한 심부름',desc:'호텔에서 별것 아닌 심부름 하나가 네 차례로 떨어졌다. 루시퍼에게 봉투 하나만 전하면 끝이다.',mood:'NORMAL',choices:[
-    {text:'[봉투를 조용히 건넨다]',response:'루시퍼가 봉투와 당신을 번갈아 본다. “오. 왕실 특급 우편이군. 배달원이 너무 평범해서 오히려 믿음직해.”',delta:1,flags:'lucifer.daily_errand_shared',memory:['별것 아닌 심부름','호텔의 사소한 심부름으로 루시퍼에게 봉투를 전달했다.','lucifer:daily-routine, player:extra-life']},
-    {text:'“왕실 특급 배송입니다.”',response:'루시퍼가 피식 웃으며 봉투를 받는다. “좋아. 다음엔 제복도 맞춰줄까? …농담이야. 아마도.”',delta:1,flags:'lucifer.daily_errand_shared',memory:['왕실 특급 배송 흉내','사소한 배달을 거창하게 포장해 루시퍼를 웃겼다.','lucifer:daily-routine, lucifer:joke-shared']}
-  ]},
-  {id:'paperwork',title:'서류 폭주',desc:'루시퍼의 책상 위에 왕실 서류가 평소보다 훨씬 많이 쌓여 있다.',mood:'TIRED',choices:[
-    {text:'[서류를 종류별로 나눠준다]',response:'루시퍼가 잠깐 멈춰 당신이 정리한 더미를 본다. “잠깐, 진짜 해준 거야? …좋아. 오늘 네 존재감은 서류철 하나보다 훨씬 유용했어.”',delta:2,flags:'lucifer.player_helped_with_work',memory:['왕실 서류를 함께 정리함','바쁜 날 루시퍼의 왕실 서류를 직접 분류해주었다.','lucifer:work-help, lucifer:royalty-work']},
-    {text:'[커피만 조용히 내려놓는다]',response:'“이건 개입이 아니라 지원 물자군.” 루시퍼가 컵을 받아든다. “아주 현명해.”',delta:1,flags:'lucifer.daily_work_comfort',memory:['바쁜 날의 커피','서류에 파묻힌 루시퍼 옆에 말없이 커피를 놓아두었다.','lucifer:work-comfort, lucifer:daily-comfort']}
-  ]},
-  {id:'broken-duck',title:'망가진 오리',desc:'작업대 위의 작은 오리 하나가 반쯤 분해된 채 놓여 있다. 루시퍼는 생각보다 진지하다.',mood:'ANNOYED',choices:[
-    {text:'[부품을 주워 건넨다]',response:'“거기 작은 금색 톱니.” 당신이 건네자 그가 바로 끼워 넣는다. “좋아. 조수로 고용한 건 아닌데 꽤 쓸 만하네.”',delta:2,flags:'lucifer.duck_hobby_shared',memory:['망가진 오리를 같이 고침','루시퍼가 아끼는 작은 오리를 수리할 때 옆에서 부품을 건넸다.','lucifer:duck-hobby, lucifer:craft-shared']},
-    {text:'“오리가 먼저 잘못했죠?”',response:'루시퍼가 아주 진지하게 고개를 끄덕인다. “정확해. 드디어 사건의 본질을 이해하는 증인이 나타났군.”',delta:1,flags:'lucifer.duck_hobby_shared',memory:['오리 사고의 증인','망가진 오리를 두고 루시퍼 편을 들어주었다.','lucifer:duck-hobby, lucifer:joke-shared']}
-  ]},
-  {id:'charlie-gift',title:'들킨 선물 계획',desc:'책상 한쪽에 CHARLIE라고 적힌 작은 상자와 포장지가 널려 있다.',mood:'GOOD',choices:[
-    {text:'“그 리본이 제일 잘 어울려요.”',response:'루시퍼가 두 리본을 다시 비교한다. “그렇지? 나도 이쪽이었어. 그냥… 객관적인 표가 하나 필요했을 뿐이야.”',delta:2,flags:'lucifer.charlie_concern_shared',memory:['찰리의 선물 포장을 골라줌','루시퍼가 찰리에게 줄 선물을 준비할 때 리본을 함께 골랐다.','lucifer:charlie-care, lucifer:charlie-gift']},
-    {text:'[못 본 척 상자를 덮어준다]',response:'그가 잠시 당신을 보다가 작게 웃는다. “눈치가 빠른데 모르는 척도 잘하네. 유용한 재능이야.”',delta:1,flags:'lucifer.charlie_concern_shared',memory:['찰리의 깜짝 선물을 지켜줌','찰리에게 줄 선물을 우연히 보고도 모르는 척 비밀을 지켜주었다.','lucifer:charlie-care, lucifer:trust-small']}
-  ]},
-  {id:'quiet-hotel',title:'이상하게 조용한 호텔',desc:'오늘은 복도도 로비도 기묘할 정도로 조용하다. 루시퍼도 자꾸 문 쪽을 본다.',mood:'NORMAL',choices:[
-    {text:'[말없이 근처에 앉는다]',response:'한동안 아무 말도 없다. 먼저 침묵을 깨는 건 루시퍼다. “이 정도 조용함은… 네가 있으면 덜 이상하네.”',delta:2,flags:'lucifer.daily_quiet_shared',memory:['조용한 시간을 같이 보냄','유난히 조용한 날 루시퍼와 굳이 말을 채우지 않고 같은 공간에 있었다.','lucifer:quiet-company, lucifer:daily-comfort']},
-    {text:'“곧 뭐 터지는 거 아니에요?”',response:'“그렇지?” 루시퍼가 즉시 손가락을 튕긴다. “봐, 너도 이 호텔의 생존 감각을 익혔어.”',delta:1,flags:'lucifer.daily_quiet_shared',memory:['호텔의 불길한 정적','조용한 호텔을 두고 루시퍼와 같은 농담을 했다.','lucifer:hotel-routine, lucifer:joke-shared']}
-  ]},
-  {id:'old-melody',title:'오래된 멜로디',desc:'문을 열기 전부터 안쪽에서 오래된 멜로디가 몇 번이고 반복된다.',mood:'SAD',requires:'lucifer.music_shared',choices:[
-    {text:'[곡이 끝날 때까지 조용히 듣는다]',response:'마지막 음이 사라진 뒤 루시퍼가 당신 쪽을 본다. “…끝까지 들었네.” 잠깐의 침묵 뒤, “고마워.”',delta:2,flags:'lucifer.music_shared',memory:['오래된 곡을 끝까지 들음','루시퍼가 오래된 멜로디를 연주하는 동안 방해하지 않고 끝까지 들었다.','lucifer:music-shared, lucifer:past-trust']},
-    {text:'“오늘은 기억났어요?”',response:'그가 건반 위에 손을 둔 채 웃는다. “조금. 기억이라는 게 꼭 친절하게 돌아오는 건 아니지만.”',delta:1,flags:'lucifer.music_shared',memory:['멜로디의 기억을 물음','전에 들었던 멜로디가 오늘은 조금 더 이어졌다는 걸 함께 확인했다.','lucifer:music-shared, lucifer:melody']}
-  ]}
-];
+  const K='hellaverse_dialogue_state_v1';
+  const LUCIFER='lucifer-morningstar';
+  const ORIGINS={
+    HELLBORN:{realm:'HELL',label:'HELLBORN',desc:'지옥에서 태어난 평범한 주민. 왕족도 귀족도 아닌 토박이.'},
+    SINNER:{realm:'HELL',label:'SINNER',desc:'죽은 뒤 지옥에 온 평범한 죄인. 생전에도 유명인은 아니었다.'},
+    ANGEL:{realm:'HEAVEN',label:'ANGEL',desc:'천국의 평범한 천사. 세라핌·엑소시스트 같은 고위직은 아니다.'},
+    WINNER:{realm:'HEAVEN',label:'WINNER',desc:'죽은 뒤 천국에 온 평범한 인간 영혼. 특별한 지위는 없다.'}
+  };
+  const DATE_EVENT_IDS=new Set([
+    'lucifer.daily_errand_shared',
+    'lucifer.daily_work_comfort',
+    'lucifer.daily_quiet_shared'
+  ]);
+  const DATE_ONLY_FLAGS=[
+    'lucifer.daily_errand_shared',
+    'lucifer.daily_work_comfort',
+    'lucifer.daily_quiet_shared',
+    'player.helped_charlie_at_hotel',
+    'player.story_letter_v2_migrated'
+  ];
+  const MISSIONS=[
+    {id:'visit-lucifer',title:'루시퍼의 방 방문',desc:'루시퍼의 방에 한 번 들어가세요.',metric:'visits',target:1,reward:1},
+    {id:'talk-lucifer',title:'첫 대화',desc:'루시퍼와 대화를 한 번 끝까지 나누세요.',metric:'conversations',target:1,reward:1},
+    {id:'talk-more',title:'조금 더 알아가기',desc:'루시퍼와 대화를 세 번 완료하세요.',metric:'conversations',target:3,reward:2},
+    {id:'gift-lucifer',title:'첫 선물',desc:'루시퍼에게 선물을 한 번 건네세요.',metric:'gifts',target:1,reward:2},
+    {id:'find-memories',title:'기억 수집',desc:'루시퍼의 MEMORY를 다섯 개 발견하세요.',metric:'memories',target:5,reward:2},
+    {id:'build-trust',title:'관계 쌓기',desc:'루시퍼의 호감도를 30까지 올리세요.',metric:'affection',target:30,reward:3}
+  ];
 
-let modalState=null;
-let forceIntro=false;
-let decorateQueued=false;
+  let missionOpen=false;
+  let queued=false;
+  let flash='';
 
-const $=(s,r=document)=>r.querySelector(s);
-const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-const esc=(v='')=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const split=v=>Array.isArray(v)?v.map(String).map(x=>x.trim()).filter(Boolean):String(v||'').split(/[\n,;/|]+/).map(x=>x.trim()).filter(Boolean);
-function read(k=K,f={}){try{return JSON.parse(localStorage.getItem(k)||'')||f}catch{return f}}
-function writeRaw(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}
-function syncCore(){window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'thought-archive',clearDirty:false}}))}
-function writeState(s){if(writeRaw(K,s)){syncCore();scheduleDecorate();return true}return false}
-function upsertById(arr,obj){const i=arr.findIndex(x=>x?.id===obj.id);if(i>=0)arr[i]={...arr[i],...obj};else arr.push(obj)}
-function addFlags(state,v){state.flags=state.flags&&typeof state.flags==='object'?state.flags:{};split(v).forEach(x=>state.flags[x]=true)}
-function removeFlags(state,v){state.flags=state.flags&&typeof state.flags==='object'?state.flags:{};split(v).forEach(x=>delete state.flags[x])}
-function hasFlags(state,v){return split(v).every(x=>state.flags?.[x])}
-function eventDef(id,name,description,type='MILESTONE',characterId=LUCIFER,namespace='lucifer'){return{id,name,description,type,characterId,namespace}}
-function ensureEvents(state){state.events=Array.isArray(state.events)?state.events:[];state.eventCatalog=Array.isArray(state.eventCatalog)?state.eventCatalog:[];const defs=[
-  eventDef('player.origin.hellborn','PLAYER · HELLBORN','플레이어는 지옥에서 태어난 평범한 헬본이다.','PROFILE','player','player'),
-  eventDef('player.origin.sinner','PLAYER · SINNER','플레이어는 죽은 뒤 지옥에 온 평범한 죄인이다.','PROFILE','player','player'),
-  eventDef('player.origin.angel','PLAYER · ANGEL','플레이어는 고위직이 아닌 평범한 천사다.','PROFILE','player','player'),
-  eventDef('player.origin.winner','PLAYER · WINNER','플레이어는 천국에 온 평범한 인간 영혼이다.','PROFILE','player','player'),
-  eventDef('player.role.extra','PLAYER · EXTRA','특별한 직함이나 권력 없이 주변을 오가는 평범한 인물이다.','PROFILE','player','player'),
-  eventDef('lucifer.player_origin_known','플레이어의 출신을 알게 됨','루시퍼가 플레이어가 천국/지옥 어디에서 온 누구인지 대략 알게 되었다.'),
-  eventDef('lucifer.daily_errand_shared','사소한 심부름을 함께함','호텔의 사소한 심부름으로 플레이어와 루시퍼가 마주쳤다.'),
-  eventDef('lucifer.daily_work_comfort','바쁜 날 곁을 챙겨줌','업무가 많은 날 플레이어가 말없이 루시퍼를 챙겨주었다.'),
-  eventDef('lucifer.daily_quiet_shared','조용한 시간을 함께 보냄','별일 없는 조용한 시간을 플레이어와 루시퍼가 같은 공간에서 보냈다.')
-];for(const d of defs){upsertById(state.events,d);upsertById(state.eventCatalog,d)}}
-function addMemory(state,{title,summary,tags,sourceId,importance='normal'}){state.memories=Array.isArray(state.memories)?state.memories:[];if(state.memories.some(m=>m?.characterId===LUCIFER&&m?.sourceType==='player-game'&&m?.sourceId===sourceId))return;state.memories.unshift({id:`pg-${Date.now()}-${Math.random().toString(16).slice(2)}`,characterId:LUCIFER,type:'event',title,summary,tags:split(tags),sourceType:'player-game',sourceId,importance,createdAt:new Date().toISOString(),pinned:false,hidden:false})}
-function choice(id,text,response,delta=0,opts={}){return{id,type:opts.type==='action'?'action':'speech',text,playerLine:text,response,affectionDelta:delta,requiredAffection:0,requiredStage:'',requiredMood:'ANY',requiredFlags:opts.requiredFlags||'',blockedFlags:'',requiredMemoryTags:opts.requiredMemoryTags||'',lockDisplay:opts.lockDisplay||'disabled',setFlags:opts.setFlags||'',removeFlags:'',addMemoryTitle:opts.memoryTitle||'',addMemorySummary:opts.memorySummary||'',addMemoryTags:opts.memoryTags||'',moodChange:opts.moodChange||'',unlockItemId:'',nextNodeId:'',endConversation:true}}
-function originScene(origin,title,opening,reaction,choices){const key=origin.toLowerCase();return{id:`player-origin-${key}-lucifer`,characterId:LUCIFER,title,kind:'TALK',repeatable:false,requiredAffection:0,maxAffection:100,requiredStage:'',requiredMood:'ANY',requiredFlags:`player.origin.${key}, lucifer.player_origin_known`,blockedFlags:'',requiredMemoryTags:`player-origin:${key}`,blockedMemoryTags:'',requiredItemIds:'',priority:16,probability:100,opening,openingType:'narration',sceneRole:'CONVERSATION',conversationType:'PERSONAL',topics:['player','origin',key],followUpTopics:['player','origin'],exitLine:'',after:'',used:false,nodes:[{id:'start',speaker:'character',text:reaction,choices:choices.map((x,i)=>choice(`player-origin-${key}-c${i+1}`,x[0],x[1],x[2]||0))}],openingNodeId:'start'}}
-function ensureOriginContent(state){state.dialogues=Array.isArray(state.dialogues)?state.dialogues:[];const scenes=[
-  originScene('HELLBORN','지옥에서 태어났다고 했지','루시퍼가 당신을 위아래로 한 번 훑어보고는 의외로 금방 시선을 거둔다.','“토박이였지? 그럼 지옥이 어떤 곳인지 왕이 직접 설명하는 우스운 상황은 피하겠네. 그리고 긴장 풀어. 네가 귀족도 아니고 내가 지금 공식 석상도 아니잖아.”',[
-    ['왕 앞인데 안 긴장하기가 어렵죠.','“그 왕이 지금 오리 부품 찾고 있다는 사실에 집중해봐. 위엄이 적당히 사라질 거야.”',1],['전 그냥 평범한 주민이에요.','“완벽해. 평범한 주민이 제일 상대하기 편해. 나한테 뭘 뜯어낼 작정인 귀족보다 백 배 낫지.”',1],['지옥 토박이 취급이 너무 익숙한데요.','“내가 여기 산 세월이 얼만데. 사람 보는 눈 정도는 있지.”',0]
-  ]),
-  originScene('SINNER','죽어서 여기 온 쪽이구나','루시퍼가 잠깐 당신을 보다가 손에 든 펜을 내려놓는다.','“죄인 쪽이네. 생전 이야기는 안 물을게. 먼저 말하고 싶을 때나 말해. 여기선 다들 과거 하나쯤은 들고 다니니까.”',[
-    ['안 물어봐줘서 고마워요.','“천만에. 호기심하고 무례함은 구분할 줄 알거든.”',1],['전 별로 대단한 사람도 아니었어요.','“더 좋네. 유명한 인간들은 죽어서도 피곤한 경우가 많아서.”',1],['지옥의 왕치고 배려가 있네요.','루시퍼가 눈썹을 올린다. “그 칭찬, 묘하게 기분 나쁜데?”',0]
-  ]),
-  originScene('ANGEL','천국 출신이라니','당신의 출신을 다시 확인한 루시퍼의 표정이 아주 잠깐 굳었다가 풀린다.','“…천국 출신. 아, 고위직 같은 건 아니라고 했지. 그럼 됐어. 널 천국 대표로 취급할 생각은 없어. 나도 그런 취급 질색이니까.”',[
-    ['그냥 평범한 천사예요.','“그 말이 꽤 안심되네. 높은 자리에 있는 존재들은 대개 방에 들어올 때부터 공기가 피곤해져.”',1],['불편하면 천국 얘기는 안 할게요.','그가 잠시 당신을 본다. “그건… 고맙네. 필요하면 내가 먼저 꺼낼게.”',2],['제가 여기 있는 게 이상해요?','“조금? 하지만 이 호텔 자체가 이상한 일들의 집합소잖아. 금방 적응할 거야.”',1]
-  ]),
-  originScene('WINNER','위너가 여기까지 왔네','루시퍼가 재미있다는 듯 고개를 기울인다.','“위너가 내 방까지 찾아오는 날도 오는군. 걱정 마. 네가 천국의 대변인이라고 생각하진 않아. 그냥… 죽고 나서도 운이 좀 좋았던 평범한 인간 영혼인 거지?”',[
-    ['대충 그런 셈이죠.','“좋아. 그러면 나도 대충 지옥의 왕인 셈으로 하자.”',1],['천국에서도 전 그냥 평범했어요.','“평범함을 과소평가하지 마. 이상한 직함이 붙기 시작하면 인생이 귀찮아져.”',1],['지옥에 오니까 긴장되긴 해요.','“그건 정상적인 생존 본능이야. 호텔 안에서는 조금 내려놔도 되고.”',1]
-  ])
-];
-for(const s of scenes)upsertById(state.dialogues,s);
-function pushConditional(sceneId,ch){const s=state.dialogues.find(x=>x?.id===sceneId),n=s?.nodes?.[0];if(!n||!Array.isArray(n.choices)||n.choices.some(x=>x?.id===ch.id))return;n.choices.push(ch)}
-pushConditional('lucifer-room-talk-12',choice('origin-hellborn-royalty','지옥 토박이한텐 왕이라는 호칭이 꽤 익숙해요.','“그게 문제야. 익숙한 만큼 내가 뭘 하든 전부 왕의 행동으로 기록되거든. 가끔은 그냥 의자 불평하는 사람이고 싶은데.”',1,{requiredFlags:'player.origin.hellborn, lucifer.player_origin_known',requiredMemoryTags:'player-origin:hellborn',lockDisplay:'hidden'}));
-pushConditional('lucifer-room-talk-12',choice('origin-sinner-royalty','전 죽고 나서야 지옥에 왕이 있다는 걸 알았어요.','“놀랍지? 나도 가끔 내가 왜 아직 직함을 유지하고 있는지 놀라워.”',1,{requiredFlags:'player.origin.sinner, lucifer.player_origin_known',requiredMemoryTags:'player-origin:sinner',lockDisplay:'hidden'}));
-pushConditional('lucifer-room-talk-12',choice('origin-angel-royalty','천국에서는 당신을 완전히 다르게 말해요.','루시퍼의 웃음이 아주 조금 얇아진다. “그럴 것 같네. 그래도 네가 들은 설명보다 직접 본 쪽을 믿는 게 낫지 않겠어?”',1,{requiredFlags:'player.origin.angel, lucifer.player_origin_known',requiredMemoryTags:'player-origin:angel',lockDisplay:'hidden'}));
-pushConditional('lucifer-room-talk-12',choice('origin-winner-royalty','천국에선 지옥의 왕이 거의 전설처럼 들렸어요.','“전설이라.” 그가 헛웃음을 친다. “실물은 허리 아프다고 왕좌에 쿠션 까는 타입인데. 실망했어?”',1,{requiredFlags:'player.origin.winner, lucifer.player_origin_known',requiredMemoryTags:'player-origin:winner',lockDisplay:'hidden'}));
-pushConditional('lucifer-room-talk-09',choice('origin-angel-wings','저도 날개 손질 귀찮은 건 알아요.','루시퍼가 처음으로 꽤 진지하게 동의한다. “그렇지? 드디어 이 문제를 이해하는 존재가 왔군. 다만 난 여섯 장이야. 그건 강조해야 해.”',2,{requiredFlags:'player.origin.angel, lucifer.player_origin_known',requiredMemoryTags:'player-origin:angel',lockDisplay:'hidden'}));
-pushConditional('lucifer-s12-heaven-40',choice('origin-angel-heaven','저도 천국 출신이지만 당신한테 설명을 요구하진 않을게요.','그가 한동안 당신을 본다. “…그 말은 생각보다 도움이 되네. 같은 곳을 안다고 같은 기억을 가진 건 아니니까.”',2,{requiredFlags:'player.origin.angel, lucifer.player_origin_known',requiredMemoryTags:'player-origin:angel',lockDisplay:'hidden'}));
-pushConditional('lucifer-s12-heaven-40',choice('origin-winner-heaven','제가 아는 천국과 당신이 알던 천국은 많이 다르겠죠.','“아주 많이.” 루시퍼가 천천히 고개를 끄덕인다. “그러니까 네 경험을 내 과거의 답안지로 쓰진 않을게.”',2,{requiredFlags:'player.origin.winner, lucifer.player_origin_known',requiredMemoryTags:'player-origin:winner',lockDisplay:'hidden'}));
-const meta=read(META,{});for(const s of scenes)meta[s.id]={...(meta[s.id]||{}),openingType:'narration',sceneRole:'CONVERSATION',conversationType:'PERSONAL',topics:s.topics,followUpTopics:s.followUpTopics,nodes:{start:{speaker:'character'}}};writeRaw(META,meta)
-}
-function currentOrigin(state){const key=String(state.player?.origin||'').toUpperCase();return ORIGINS[key]?key:''}
-function originReaction(state){const name=state.player?.name||'너';return{
-  HELLBORN:`“${name}. 지옥에서 태어난 쪽이구나. 그럼 여기 사정 설명은 생략해도 되겠네. …왕 앞이라고 그렇게 굳어 있을 필요 없어. 지금은 그냥 루시퍼면 돼.”`,
-  SINNER:`“${name}. 죄인 쪽이네. 생전 이야기는 안 물을게. 먼저 말하고 싶을 때나 말해. 여기선 다들 과거 하나쯤은 들고 다니니까.”`,
-  ANGEL:`“…천국 출신?” 루시퍼의 시선이 잠깐 멈춘다. “${name}, 맞지? 고위직 같은 건 아니라니 됐어. 널 천국 대표로 취급할 생각은 없고.”`,
-  WINNER:`“위너가 내 방까지 찾아오는 날도 오는군.” 루시퍼가 당신을 보며 눈썹을 든다. “${name}, 걱정 마. 널 천국 대표로 취급하진 않을게. 그냥 평범한 손님이면 충분해.”`
-}[currentOrigin(state)]||''}
-function chooseDailyEvent(state,day){if(day===1)return'hotel-errand';const available=DAILY_EVENTS.filter(e=>!e.requires||hasFlags(state,e.requires));if(!available.length)return'hotel-errand';return available[(day-2)%available.length].id}
-function eventFor(state){return DAILY_EVENTS.find(e=>e.id===state.game?.currentEventId)||DAILY_EVENTS[0]}
-function affectionValue(state,cid=LUCIFER){return Math.max(0,Math.min(100,Number(state.affection?.[cid]?.value||0)))}
-function snapshotDay(state){state.game.dayStartAffection=affectionValue(state);state.game.dayStartMemoryIds=(state.memories||[]).map(x=>x.id);state.game.dayStartFlagIds=Object.keys(state.flags||{}).filter(k=>state.flags[k])}
-function initGame(state,reset=false){state.game=state.game&&typeof state.game==='object'&&!reset?state.game:{};const g=state.game;if(!Number.isFinite(Number(g.day))||Number(g.day)<1)g.day=1;if(!Number.isFinite(Number(g.actionsLeft)))g.actionsLeft=MAX_ACTIONS;g.actionsLeft=Math.max(0,Math.min(MAX_ACTIONS,Number(g.actionsLeft)));g.maxActions=MAX_ACTIONS;g.actionsToday=Array.isArray(g.actionsToday)?g.actionsToday:[];g.currentEventId=g.currentEventId||chooseDailyEvent(state,g.day);g.currentEventResolved=!!g.currentEventResolved;g.ended=!!g.ended;if(!Array.isArray(g.dayStartMemoryIds))snapshotDay(state);return state}
-function applyDayMood(state){const ev=eventFor(state);state.moods=state.moods||{};if(ev?.mood)state.moods[LUCIFER]=ev.mood}
-function phaseLabel(g){const used=MAX_ACTIONS-Number(g?.actionsLeft||0);return used<=0?'MORNING':used===1?'AFTERNOON':used===2?'EVENING':'NIGHT'}
-function originLabel(state){const o=ORIGINS[currentOrigin(state)];return o?`${o.realm} · ${o.label}`:'UNSET'}
-function clearOldOrigin(state){for(const k of Object.keys(ORIGINS))removeFlags(state,`player.origin.${k.toLowerCase()}`);removeFlags(state,'player.realm.hell, player.realm.heaven, lucifer.player_origin_known, lucifer.player_origin_reacted');state.memories=Array.isArray(state.memories)?state.memories.filter(m=>m?.sourceType!=='player-origin'):[];for(const s of state.dialogues||[])if(String(s.id||'').startsWith('player-origin-')&&String(s.id||'').endsWith('-lucifer'))s.used=false}
-function setPlayerProfile(name,origin){const state=read(K,{}),o=ORIGINS[origin];if(!o)return;const editing=!!state.player?.profileSetup;clearOldOrigin(state);state.player={...(state.player||{}),name:name.trim(),origin,realm:o.realm,role:'EXTRA',profileSetup:true,profileVersion:1,setupAt:state.player?.setupAt||new Date().toISOString()};addFlags(state,`player.origin.${origin.toLowerCase()}, player.realm.${o.realm.toLowerCase()}, player.role.extra`);ensureEvents(state);ensureOriginContent(state);initGame(state,!editing&&!state.game);if(!editing){state.game.day=1;state.game.actionsLeft=MAX_ACTIONS;state.game.actionsToday=[];state.game.currentEventId=chooseDailyEvent(state,1);state.game.currentEventResolved=false;state.game.ended=false;snapshotDay(state);applyDayMood(state)}writeState(state);forceIntro=false;$('#hvPlayerSetup')?.remove();scheduleDecorate()}
-function renderIntro(){const state=read(K,{}),setup=!!state.player?.profileSetup;if(setup&&!forceIntro){$('#hvPlayerSetup')?.remove();return}let root=$('#hvPlayerSetup');if(!root){root=document.createElement('div');root.id='hvPlayerSetup';root.className='hv-player-intro';document.body.appendChild(root)}const current=forceIntro?currentOrigin(state):'';root.dataset.selected=current;root.innerHTML=`<section class="hv-player-card"><p class="hv-kicker">HELLAVERSE / PLAYER FILE</p><h1>WHO ARE YOU?</h1><p class="hv-intro-copy">이 세계에서 당신은 선택받은 존재도, 유명인도 아니다. 호텔 주변을 오가다 캐릭터들과 조금씩 엮이게 되는 이름 없는 한 사람. 필요한 건 이름과 어디에서 왔는지뿐이다.</p><label class="hv-player-name"><span>NAME</span><input id="hvPlayerName" maxlength="30" autocomplete="off" placeholder="이름을 입력하세요" value="${esc(forceIntro?(state.player?.name||''):(state.player?.name&&state.player.name!=='Hiyena'?state.player.name:''))}"></label><p class="hv-origin-label">ORIGIN</p><div class="hv-origin-groups"><section class="hv-origin-group"><strong>HELL</strong><div class="hv-origin-options">${originButton('HELLBORN',current)}${originButton('SINNER',current)}</div></section><section class="hv-origin-group"><strong>HEAVEN</strong><div class="hv-origin-options">${originButton('ANGEL',current)}${originButton('WINNER',current)}</div></section></div><p class="hv-role-lock"><b>ROLE · EXTRA / LOW PROFILE</b><br>출신이 어디든 권력, 특별한 혈통, 예언, 고위 직책은 없다. 유명 캐릭터 입장에서는 처음엔 그냥 스쳐 지나갈 법한 평범한 인물이다.</p><p class="hv-player-error" id="hvPlayerError"></p><button class="hv-player-start" data-player-start ${current&&state.player?.name?'':'disabled'}>${forceIntro?'SAVE PROFILE':'ENTER HELLAVERSE'}</button></section>`}
-function originButton(key,current){const o=ORIGINS[key];return`<button class="hv-origin-card ${current===key?'selected':''}" data-player-origin="${key}"><strong>${o.label}</strong><span>${o.desc}</span></button>`}
-function selectOrigin(key){const root=$('#hvPlayerSetup');if(!root||!ORIGINS[key])return;root.dataset.selected=key;$$('[data-player-origin]',root).forEach(b=>b.classList.toggle('selected',b.dataset.playerOrigin===key));validateIntro()}
-function validateIntro(){const root=$('#hvPlayerSetup');if(!root)return;const name=$('#hvPlayerName',root)?.value.trim()||'',origin=root.dataset.selected||'',btn=$('[data-player-start]',root);if(btn)btn.disabled=!(name&&ORIGINS[origin]);const err=$('#hvPlayerError',root);if(err)err.textContent=''}
-function spendAction(label,type='ACTION'){const state=read(K,{});initGame(state);if(state.game.ended||state.game.actionsLeft<=0)return false;state.game.actionsLeft--;state.game.actionsToday.push({type,label,at:new Date().toISOString()});writeState(state);return true}
-function eventName(state,id){return state.events?.find(e=>e?.id===id)?.name||id}
-function openDailyEvent(){const state=read(K,{});initGame(state);if(state.game.currentEventResolved){modalState={type:'notice',title:'TODAY · COMPLETE',body:'오늘의 작은 사건은 이미 끝났다.'};return renderModal()}if(state.game.actionsLeft<=0){modalState={type:'notice',title:'NO ACTIONS LEFT',body:'오늘 할 수 있는 행동을 모두 썼다. DAY를 끝내면 다시 행동할 수 있다.'};return renderModal()}modalState={type:'dailyEvent',event:eventFor(state)};renderModal()}
-function resolveDailyEvent(index){const state=read(K,{});initGame(state);const ev=eventFor(state),ch=ev?.choices?.[index];if(!ch||state.game.currentEventResolved||state.game.actionsLeft<=0)return;state.affection=state.affection||{};state.affection[LUCIFER]={...(state.affection[LUCIFER]||{}),value:Math.max(0,Math.min(100,affectionValue(state)+Number(ch.delta||0)))};if(ch.mood){state.moods=state.moods||{};state.moods[LUCIFER]=ch.mood}addFlags(state,ch.flags||'');if(ch.memory)addMemory(state,{title:ch.memory[0],summary:ch.memory[1],tags:ch.memory[2],sourceId:`day-${state.game.day}-${ev.id}`});state.game.currentEventResolved=true;state.game.currentEventResult=ch.text;state.game.actionsLeft--;state.game.actionsToday.push({type:'TODAY',label:ev.title,at:new Date().toISOString()});writeState(state);modalState={type:'eventResult',title:ev.title,body:ch.response,delta:Number(ch.delta||0)};renderModal()}
-function daySummary(state){const g=state.game||{},start=Number(g.dayStartAffection||0),now=affectionValue(state),oldM=new Set(g.dayStartMemoryIds||[]),oldF=new Set(g.dayStartFlagIds||[]);const memories=(state.memories||[]).filter(m=>!oldM.has(m.id)&&m.characterId===LUCIFER).slice(0,6);const flags=Object.keys(state.flags||{}).filter(k=>state.flags[k]&&!oldF.has(k)&&(k.startsWith('lucifer.')||k.startsWith('player.'))).slice(0,8);return{day:g.day,start,now,delta:now-start,memories,flags,unused:g.actionsLeft,actions:(g.actionsToday||[]).length}}
-function endDay(){const state=read(K,{});initGame(state);state.game.ended=true;const summary=daySummary(state);writeState(state);modalState={type:'dayEnd',summary};renderModal()}
-function nextDay(){const state=read(K,{});initGame(state);state.game.day=Number(state.game.day||1)+1;state.game.actionsLeft=MAX_ACTIONS;state.game.actionsToday=[];state.game.currentEventId=chooseDailyEvent(state,state.game.day);state.game.currentEventResolved=false;state.game.currentEventResult='';state.game.ended=false;snapshotDay(state);applyDayMood(state);writeState(state);modalState=null;renderModal();scheduleDecorate()}
-function renderModal(){let root=$('#hvGameModal');if(!modalState){root?.remove();return}if(!root){root=document.createElement('div');root.id='hvGameModal';root.className='hv-game-modal';document.body.appendChild(root)}if(modalState.type==='dailyEvent'){const ev=modalState.event;root.innerHTML=`<section class="hv-game-modal-card"><p class="hv-game-kicker">TODAY'S EVENT</p><h2>${esc(ev.title)}</h2><p>${esc(ev.desc)}</p><div class="hv-event-choices">${ev.choices.map((c,i)=>`<button class="hv-event-choice" data-hv-event-choice="${i}"><b>${String(i+1).padStart(2,'0')}</b><span>${esc(c.text)}</span></button>`).join('')}</div><div class="hv-modal-actions"><button data-hv-modal-close>CLOSE</button></div></section>`;return}if(modalState.type==='eventResult'){root.innerHTML=`<section class="hv-game-modal-card"><p class="hv-game-kicker">EVENT RESULT</p><h2>${esc(modalState.title)}</h2><p class="hv-result-line">${esc(modalState.body)}</p>${modalState.delta?`<p>♥ ${modalState.delta>0?'+':''}${modalState.delta}</p>`:''}<div class="hv-modal-actions"><button class="primary" data-hv-modal-close>CONTINUE</button></div></section>`;return}if(modalState.type==='dayEnd'){const s=modalState.summary;root.innerHTML=`<section class="hv-game-modal-card"><p class="hv-game-kicker">DAY COMPLETE</p><h2>DAY ${String(s.day).padStart(2,'0')}</h2><p>오늘의 작은 만남과 선택이 끝났다. 거창한 사건이 없어도, 반복해서 마주친 일은 다음 대화에 남는다.</p><div class="hv-day-results"><div class="hv-day-result"><span>ACTIONS</span><strong>${s.actions} / ${MAX_ACTIONS}${s.unused?` · ${s.unused} UNUSED`:''}</strong></div><div class="hv-day-result"><span>LUCIFER</span><strong>♥ ${s.start} → ${s.now}${s.delta?` (${s.delta>0?'+':''}${s.delta})`:''}</strong></div><div class="hv-day-result"><span>NEW MEMORIES</span><strong>${s.memories.length}</strong></div><div class="hv-day-result"><span>NEW EVENTS</span><strong>${s.flags.length}</strong></div></div>${s.memories.length?`<p class="hv-game-kicker">MEMORIES</p><ul class="hv-new-list">${s.memories.map(m=>`<li>${esc(m.title)}</li>`).join('')}</ul>`:''}${s.flags.length?`<p class="hv-game-kicker" style="margin-top:18px">EVENTS</p><ul class="hv-new-list">${s.flags.map(f=>`<li>${esc(eventName(read(K,{}),f))}</li>`).join('')}</ul>`:''}<div class="hv-modal-actions"><button class="primary" data-hv-next-day>NEXT DAY</button></div></section>`;return}root.innerHTML=`<section class="hv-game-modal-card"><p class="hv-game-kicker">${esc(modalState.title||'NOTICE')}</p><h2>${esc(modalState.title||'NOTICE')}</h2><p>${esc(modalState.body||'')}</p><div class="hv-modal-actions"><button class="primary" data-hv-modal-close>OK</button></div></section>`}
-function ensureFirstOriginReaction(state,quote){if(state.active!==LUCIFER||state.flags?.['lucifer.player_origin_reacted']||!currentOrigin(state)||!quote)return false;quote.textContent=originReaction(state);quote.classList.add('hv-origin-first');addFlags(state,'lucifer.player_origin_known, lucifer.player_origin_reacted');const key=currentOrigin(state).toLowerCase();addMemory(state,{title:'루시퍼가 내 출신을 알게 됨',summary:`루시퍼가 내가 ${ORIGINS[currentOrigin(state)].label} 출신이라는 사실을 알고 첫 반응을 보였다.`,tags:`player-origin, player-origin:${key}, player-realm:${ORIGINS[currentOrigin(state)].realm.toLowerCase()}`,sourceId:'player-origin',importance:'normal'});writeState(state);return true}
-function statusMarkup(state){const g=state.game,day=String(g.day||1).padStart(2,'0'),left=Number(g.actionsLeft||0);return`<div class="hv-game-status"><span class="hv-day">DAY ${day}</span><span class="hv-phase">${phaseLabel(g)}</span><span class="hv-action-pips" title="${left} actions left">${[0,1,2].map(i=>`<i class="${i<left?'on':''}"></i>`).join('')}</span><button class="hv-end-day ${left===0?'ready':''}" data-hv-end-day>${g.ended?'DAY ENDED':'END DAY'}</button></div>`}
-function todayMarkup(state){const ev=eventFor(state),done=state.game.currentEventResolved;return`<div class="hv-today-chip ${done?'done':''}"><small>TODAY'S EVENT${done?' · COMPLETE':''}</small><strong>${esc(ev.title)}</strong><span>${esc(ev.desc)}</span></div>`}
-function decorateHud(state){if(!['home','life'].includes(state.page))return;const hud=$('.room-hud,.game-hud');if(!hud||$('.hv-game-status',hud))return;hud.insertAdjacentHTML('beforeend',statusMarkup(state))}
-function decorateHome(state){const copy=$('.home-lobby .lobby-copy');if(!copy||$('.hv-today-chip',copy))return;const enter=$('.enter-room',copy);if(enter)enter.insertAdjacentHTML('beforebegin',todayMarkup(state))}
-function decorateRoom(state){const cap=$('.character-room .room-caption');if(!cap)return;const quote=$('blockquote',cap);ensureFirstOriginReaction(state,quote);if(!$('.hv-today-chip',cap)){const menu=$('.action-menu',cap);if(menu)menu.insertAdjacentHTML('beforebegin',todayMarkup(state))}const menu=$('.action-menu',cap);if(menu&&!$('[data-hv-event]',menu)&&state.active===LUCIFER){const done=state.game.currentEventResolved,disabled=state.game.actionsLeft<=0||state.game.ended;menu.insertAdjacentHTML('beforeend',`<button class="hv-event-action ${done?'done':''} ${disabled?'hv-no-actions':''}" data-hv-event ${disabled?'disabled':''}><b>04</b><span>TODAY</span><small>${esc(eventFor(state).title)}</small></button>`)}const lock=state.game.actionsLeft<=0||state.game.ended;$$('[data-action]',menu||cap).forEach(b=>{b.disabled=lock;b.classList.toggle('hv-no-actions',lock)})}
-function decorateSettings(state){if(state.page!=='settings')return;const grid=$('.settings-grid');if(!grid||$('.hv-player-settings',grid))return;grid.insertAdjacentHTML('afterbegin',`<section class="settings-panel hv-player-settings"><p class="label">PLAYER</p><div class="hv-player-summary"><strong>${esc(state.player?.name||'Unnamed')}</strong><span>${esc(originLabel(state))} · ROLE: EXTRA</span></div><button class="ghost-button" data-player-remake>CHANGE PLAYER PROFILE</button></section>`)}
-function decorate(){const state=read(K,{});if(!state.player?.profileSetup||!currentOrigin(state)){renderIntro();return}$('#hvPlayerSetup')?.remove();ensureEvents(state);initGame(state);decorateHud(state);decorateHome(state);decorateRoom(state);decorateSettings(state)}
-function scheduleDecorate(){if(decorateQueued)return;decorateQueued=true;requestAnimationFrame(()=>{decorateQueued=false;decorate()})}
-function blockNoActions(e){e.preventDefault();e.stopImmediatePropagation();modalState={type:'notice',title:'NO ACTIONS LEFT',body:'오늘 할 수 있는 행동을 모두 썼다. END DAY를 눌러 다음 날로 넘어가면 다시 3번 행동할 수 있다.'};renderModal()}
+  const $=(selector,root=document)=>root.querySelector(selector);
+  const $$=(selector,root=document)=>Array.from(root.querySelectorAll(selector));
+  const esc=(value='')=>String(value??'').replace(/[&<>"']/g,char=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[char]));
 
-document.addEventListener('click',e=>{const t=e.target instanceof Element?e.target:null;if(!t)return;const origin=t.closest('[data-player-origin]')?.dataset.playerOrigin;if(origin){e.preventDefault();selectOrigin(origin);return}if(t.closest('[data-player-start]')){e.preventDefault();const root=$('#hvPlayerSetup'),name=$('#hvPlayerName',root)?.value.trim()||'',key=root?.dataset.selected||'';if(!name||!ORIGINS[key]){const err=$('#hvPlayerError',root);if(err)err.textContent='이름과 출신을 하나 선택해줘.';return}setPlayerProfile(name,key);return}if(t.closest('[data-player-remake]')){e.preventDefault();forceIntro=true;renderIntro();return}if(t.closest('[data-hv-end-day]')){e.preventDefault();e.stopImmediatePropagation();const s=read(K,{});if(s.game?.ended){modalState={type:'dayEnd',summary:daySummary(s)};renderModal()}else endDay();return}if(t.closest('[data-hv-event]')){e.preventDefault();e.stopImmediatePropagation();openDailyEvent();return}const evChoice=t.closest('[data-hv-event-choice]');if(evChoice){e.preventDefault();e.stopImmediatePropagation();resolveDailyEvent(Number(evChoice.dataset.hvEventChoice));return}if(t.closest('[data-hv-next-day]')){e.preventDefault();e.stopImmediatePropagation();nextDay();return}if(t.closest('[data-hv-modal-close]')){e.preventDefault();modalState=null;renderModal();return}const state=read(K,{});if(!state.player?.profileSetup)return;initGame(state);if(t.closest('[data-action]')&&(state.game.actionsLeft<=0||state.game.ended)){blockNoActions(e);return}const sid=t.closest('[data-scene]')?.dataset.scene;if(sid){if(state.game.actionsLeft<=0||state.game.ended){blockNoActions(e);return}const s=(state.dialogues||[]).find(x=>x?.id===sid);spendAction(s?.title||'Conversation',String(s?.kind||'TALK').toUpperCase());return}const gid=t.closest('[data-gift]')?.dataset.gift;if(gid){if(state.game.actionsLeft<=0||state.game.ended){blockNoActions(e);return}const g=(state.gifts||[]).find(x=>x?.id===gid);spendAction(g?.name||'Gift','GIFT');return}},true);
-document.addEventListener('input',e=>{if(e.target?.id==='hvPlayerName')validateIntro()});
-new MutationObserver(scheduleDecorate).observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('hellaverse:state-updated',scheduleDecorate);
-window.addEventListener('load',scheduleDecorate);
-document.addEventListener('DOMContentLoaded',scheduleDecorate);
+  function read(){
+    try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}
+    catch{return{}}
+  }
 
-function boot(){const state=read(K,{});ensureEvents(state);ensureOriginContent(state);if(state.player?.profileSetup&&currentOrigin(state)){initGame(state);addFlags(state,`player.origin.${currentOrigin(state).toLowerCase()}, player.realm.${ORIGINS[currentOrigin(state)].realm.toLowerCase()}, player.role.extra`)}writeState(state);renderIntro();scheduleDecorate()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+  function write(state){
+    try{
+      const value=JSON.stringify(state);
+      localStorage.setItem(K,value);
+      window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{
+        detail:{source:'thought-archive',clearDirty:false}
+      }));
+      return true;
+    }catch(error){
+      console.warn('Could not save mission progress',error);
+      return false;
+    }
+  }
+
+  function currentOrigin(state){
+    const key=String(state.player?.origin||'').toUpperCase();
+    return ORIGINS[key]?key:'';
+  }
+
+  function ensureMissionState(state){
+    const old=state.missionProgress;
+    if(old&&typeof old==='object'&&!Array.isArray(old)){
+      old.version=1;
+      old.claimed=old.claimed&&typeof old.claimed==='object'&&!Array.isArray(old.claimed)?old.claimed:{};
+      return false;
+    }
+    state.missionProgress={version:1,claimed:{}};
+    return true;
+  }
+
+  function cleanupDateState(state){
+    let changed=false;
+    if(Object.prototype.hasOwnProperty.call(state,'game')){
+      delete state.game;
+      changed=true;
+    }
+    if(state.flags&&typeof state.flags==='object'){
+      for(const key of DATE_ONLY_FLAGS){
+        if(Object.prototype.hasOwnProperty.call(state.flags,key)){
+          delete state.flags[key];
+          changed=true;
+        }
+      }
+    }
+    for(const key of ['events','eventCatalog']){
+      if(!Array.isArray(state[key]))continue;
+      const next=state[key].filter(event=>!DATE_EVENT_IDS.has(String(event?.id||'')));
+      if(next.length!==state[key].length){
+        state[key]=next;
+        changed=true;
+      }
+    }
+    return changed;
+  }
+
+  function ensureOriginFlags(state){
+    const origin=currentOrigin(state);
+    if(!state.player?.profileSetup||!origin)return false;
+    state.flags=state.flags&&typeof state.flags==='object'?state.flags:{};
+    const needed=[
+      `player.origin.${origin.toLowerCase()}`,
+      `player.realm.${ORIGINS[origin].realm.toLowerCase()}`,
+      'player.role.extra'
+    ];
+    let changed=false;
+    for(const key of needed){
+      if(!state.flags[key]){
+        state.flags[key]=true;
+        changed=true;
+      }
+    }
+    return changed;
+  }
+
+  function clearOriginFlags(state){
+    state.flags=state.flags&&typeof state.flags==='object'?state.flags:{};
+    for(const key of Object.keys(state.flags)){
+      if(key.startsWith('player.origin.')||key.startsWith('player.realm.'))delete state.flags[key];
+    }
+  }
+
+  function ensureOriginMemory(state,origin){
+    state.memories=Array.isArray(state.memories)?state.memories:[];
+    const realm=ORIGINS[origin].realm;
+    const tags=['player-origin',`player-origin:${origin.toLowerCase()}`,`player-realm:${realm.toLowerCase()}`];
+    let memory=state.memories.find(item=>item?.sourceType==='player-origin'||item?.sourceId==='player-origin');
+    const data={
+      characterId:LUCIFER,
+      type:'event',
+      title:'루시퍼가 내 출신을 알게 됨',
+      summary:`루시퍼가 내가 ${origin} 출신이라는 사실을 알고 있다.`,
+      tags,
+      sourceType:'player-origin',
+      sourceId:'player-origin',
+      importance:'normal',
+      pinned:false,
+      hidden:false
+    };
+    if(memory){
+      Object.assign(memory,data);
+      return;
+    }
+    state.memories.unshift({
+      id:`player-origin-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      ...data,
+      createdAt:new Date().toISOString()
+    });
+  }
+
+  function setPlayerProfile(name,origin){
+    const state=read();
+    const data=ORIGINS[origin];
+    if(!data)return;
+    clearOriginFlags(state);
+    state.player={
+      ...(state.player||{}),
+      name:name.trim(),
+      origin,
+      realm:data.realm,
+      role:'EXTRA',
+      profileSetup:true,
+      profileVersion:2,
+      setupAt:state.player?.setupAt||new Date().toISOString()
+    };
+    state.flags[`player.origin.${origin.toLowerCase()}`]=true;
+    state.flags[`player.realm.${data.realm.toLowerCase()}`]=true;
+    state.flags['player.role.extra']=true;
+    ensureOriginMemory(state,origin);
+    cleanupDateState(state);
+    ensureMissionState(state);
+    if(write(state)){
+      $('#hvPlayerSetup')?.remove();
+      schedule();
+    }
+  }
+
+  function originButton(key,current){
+    const origin=ORIGINS[key];
+    return `<button type="button" class="hv-origin-card ${current===key?'selected':''}" data-player-origin="${key}"><strong>${origin.label}</strong><span>${origin.desc}</span></button>`;
+  }
+
+  function renderIntro(){
+    const state=read();
+    if(state.player?.profileSetup&&currentOrigin(state)){
+      $('#hvPlayerSetup')?.remove();
+      return;
+    }
+    if($('#hvPlayerSetup'))return;
+    const root=document.createElement('div');
+    root.id='hvPlayerSetup';
+    root.className='hv-player-intro';
+    const current=currentOrigin(state);
+    root.dataset.selected=current;
+    const currentName=state.player?.name&&state.player.name!=='Hiyena'?state.player.name:'';
+    root.innerHTML=`<section class="hv-player-card">
+      <p class="hv-kicker">HELLAVERSE / PLAYER FILE</p>
+      <h1>WHO ARE YOU?</h1>
+      <p class="hv-intro-copy">이 세계에서 당신은 선택받은 존재도 유명인도 아닙니다. 이름과 출신만 정하면 바로 시작됩니다.</p>
+      <label class="hv-player-name"><span>NAME</span><input id="hvPlayerName" maxlength="30" autocomplete="off" placeholder="이름을 입력하세요" value="${esc(currentName)}"></label>
+      <p class="hv-origin-label">ORIGIN</p>
+      <div class="hv-origin-groups">
+        <section class="hv-origin-group"><strong>HELL</strong><div class="hv-origin-options">${originButton('HELLBORN',current)}${originButton('SINNER',current)}</div></section>
+        <section class="hv-origin-group"><strong>HEAVEN</strong><div class="hv-origin-options">${originButton('ANGEL',current)}${originButton('WINNER',current)}</div></section>
+      </div>
+      <p class="hv-role-lock"><b>ROLE · EXTRA / LOW PROFILE</b><br>특별한 권력이나 예언 없이 캐릭터들과 천천히 관계를 쌓습니다.</p>
+      <p class="hv-player-error" id="hvPlayerError"></p>
+      <button type="button" class="hv-player-start" data-player-start ${current&&currentName?'':'disabled'}>ENTER HELLAVERSE</button>
+    </section>`;
+    document.body.appendChild(root);
+  }
+
+  function selectOrigin(key){
+    const root=$('#hvPlayerSetup');
+    if(!root||!ORIGINS[key])return;
+    root.dataset.selected=key;
+    $$('[data-player-origin]',root).forEach(button=>{
+      button.classList.toggle('selected',button.dataset.playerOrigin===key);
+    });
+    validateIntro();
+  }
+
+  function validateIntro(){
+    const root=$('#hvPlayerSetup');
+    if(!root)return;
+    const name=$('#hvPlayerName',root)?.value.trim()||'';
+    const origin=root.dataset.selected||'';
+    const button=$('[data-player-start]',root);
+    if(button)button.disabled=!(name&&ORIGINS[origin]);
+    const error=$('#hvPlayerError',root);
+    if(error)error.textContent='';
+  }
+
+  function historyFor(state){
+    return Array.isArray(state.conversationHistory)?state.conversationHistory.filter(item=>item?.characterId===LUCIFER):[];
+  }
+
+  function metrics(state){
+    const visit=state.visits?.[LUCIFER]||{};
+    const history=historyFor(state);
+    const conversations=history.filter(item=>!/^Gift:/i.test(String(item?.sceneTitle||''))).length;
+    const gifts=history.filter(item=>/^Gift:/i.test(String(item?.sceneTitle||''))).length;
+    const affectionRaw=state.affection?.[LUCIFER];
+    return{
+      visits:Math.max(Number(visit.visitCount||0),visit.firstMet?1:0),
+      conversations:Math.max(Number(visit.conversationsCount||0),conversations),
+      gifts:Math.max(Number(visit.giftsCount||0),gifts),
+      memories:(Array.isArray(state.memories)?state.memories:[]).filter(item=>item?.characterId===LUCIFER&&!item?.hidden).length,
+      affection:Math.max(0,Math.min(100,Number(affectionRaw?.value??affectionRaw??0)))
+    };
+  }
+
+  function missionRows(state){
+    const values=metrics(state);
+    const claimed=state.missionProgress?.claimed||{};
+    return MISSIONS.map(mission=>{
+      const value=Math.max(0,Number(values[mission.metric]||0));
+      return{
+        ...mission,
+        value,
+        done:value>=mission.target,
+        claimed:!!claimed[mission.id]
+      };
+    });
+  }
+
+  function missionCount(state){
+    return missionRows(state).filter(row=>row.done).length;
+  }
+
+  function missionButton(host,state){
+    let button=$('[data-hv-missions]',host);
+    if(!button){
+      button=document.createElement('button');
+      button.type='button';
+      button.dataset.hvMissions='1';
+      button.className=host.matches('.main-nav')?'nav-button hv-mission-open':'hv-mission-open hv-room-mission';
+      const admin=$('[data-admin]',host);
+      if(admin)host.insertBefore(button,admin);
+      else host.appendChild(button);
+    }
+    button.innerHTML=`MISSIONS <span>${missionCount(state)}/${MISSIONS.length}</span>`;
+  }
+
+  function decorateMissionButtons(state){
+    $$('.game-hud .main-nav, .room-hud').forEach(host=>missionButton(host,state));
+  }
+
+  function missionCard(row){
+    const shown=Math.min(row.value,row.target);
+    const percent=Math.min(100,Math.round(shown/row.target*100));
+    const action=row.claimed
+      ?'<span class="hv-mission-claimed">CLAIMED</span>'
+      :row.done
+        ?`<button type="button" data-hv-mission-claim="${row.id}">CLAIM · ♥ +${row.reward}</button>`
+        :`<span class="hv-mission-progress-text">${shown} / ${row.target}</span>`;
+    return `<article class="hv-mission-card ${row.done?'complete':''} ${row.claimed?'claimed':''}">
+      <div class="hv-mission-copy"><small>${row.done?'MISSION COMPLETE':'IN PROGRESS'}</small><h3>${esc(row.title)}</h3><p>${esc(row.desc)}</p></div>
+      <div class="hv-mission-track"><i style="width:${percent}%"></i></div>
+      <div class="hv-mission-meta"><span>${shown} / ${row.target}</span><span>REWARD · ♥ +${row.reward}</span></div>
+      <div class="hv-mission-action">${action}</div>
+    </article>`;
+  }
+
+  function modalMarkup(state){
+    const rows=missionRows(state);
+    const claimed=rows.filter(row=>row.claimed).length;
+    return `<div class="hv-mission-backdrop" id="hvMissionModal" data-hv-mission-backdrop>
+      <section class="hv-mission-panel" role="dialog" aria-modal="true" aria-labelledby="hvMissionTitle">
+        <header><div><p>PERMANENT PROGRESS</p><h2 id="hvMissionTitle">MISSIONS</h2></div><button type="button" data-hv-mission-close aria-label="닫기">×</button></header>
+        <p class="hv-mission-intro">날짜 제한과 초기화가 없는 일회성 미션입니다. 평소처럼 대화하고 선물을 주면 자동으로 진행됩니다.</p>
+        ${flash?`<p class="hv-mission-flash">${esc(flash)}</p>`:''}
+        <div class="hv-mission-summary"><strong>${claimed}</strong><span>/ ${MISSIONS.length} REWARDS CLAIMED</span></div>
+        <div class="hv-mission-list">${rows.map(missionCard).join('')}</div>
+      </section>
+    </div>`;
+  }
+
+  function renderMissionModal(){
+    $('#hvMissionModal')?.remove();
+    if(!missionOpen)return;
+    document.body.insertAdjacentHTML('beforeend',modalMarkup(read()));
+  }
+
+  function claimMission(id){
+    const definition=MISSIONS.find(mission=>mission.id===id);
+    if(!definition)return;
+    const state=read();
+    ensureMissionState(state);
+    const row=missionRows(state).find(mission=>mission.id===id);
+    if(!row?.done||row.claimed)return;
+    state.missionProgress.claimed[id]=new Date().toISOString();
+    state.affection=state.affection&&typeof state.affection==='object'?state.affection:{};
+    const old=state.affection[LUCIFER];
+    const before=Math.max(0,Math.min(100,Number(old?.value??old??0)));
+    state.affection[LUCIFER]={
+      ...(old&&typeof old==='object'?old:{}),
+      value:Math.min(100,before+definition.reward)
+    };
+    flash=`${definition.title} 보상으로 호감도 ${definition.reward}을 받았습니다.`;
+    if(write(state))renderMissionModal();
+  }
+
+  function decorate(){
+    const state=read();
+    if(!state.player?.profileSetup||!currentOrigin(state)){
+      renderIntro();
+      return;
+    }
+    $('#hvPlayerSetup')?.remove();
+    decorateMissionButtons(state);
+    if(missionOpen)renderMissionModal();
+  }
+
+  function schedule(){
+    if(queued)return;
+    queued=true;
+    requestAnimationFrame(()=>{
+      queued=false;
+      decorate();
+    });
+  }
+
+  function boot(){
+    const state=read();
+    let changed=cleanupDateState(state);
+    changed=ensureMissionState(state)||changed;
+    changed=ensureOriginFlags(state)||changed;
+    if(changed)write(state);
+    renderIntro();
+    schedule();
+  }
+
+  document.addEventListener('click',event=>{
+    const target=event.target instanceof Element?event.target:null;
+    if(!target)return;
+    const origin=target.closest('[data-player-origin]')?.dataset.playerOrigin;
+    if(origin){
+      event.preventDefault();
+      selectOrigin(origin);
+      return;
+    }
+    if(target.closest('[data-player-start]')){
+      event.preventDefault();
+      const root=$('#hvPlayerSetup');
+      const name=$('#hvPlayerName',root)?.value.trim()||'';
+      const key=root?.dataset.selected||'';
+      if(!name||!ORIGINS[key]){
+        const error=$('#hvPlayerError',root);
+        if(error)error.textContent='이름과 출신을 하나 선택해 주세요.';
+        return;
+      }
+      setPlayerProfile(name,key);
+      return;
+    }
+    if(target.closest('[data-hv-missions]')){
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      missionOpen=true;
+      flash='';
+      renderMissionModal();
+      return;
+    }
+    const claim=target.closest('[data-hv-mission-claim]')?.dataset.hvMissionClaim;
+    if(claim){
+      event.preventDefault();
+      claimMission(claim);
+      return;
+    }
+    if(target.closest('[data-hv-mission-close]')||target.matches('[data-hv-mission-backdrop]')){
+      event.preventDefault();
+      missionOpen=false;
+      flash='';
+      renderMissionModal();
+    }
+  },true);
+
+  document.addEventListener('input',event=>{
+    if(event.target?.id==='hvPlayerName')validateIntro();
+  });
+
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&missionOpen){
+      missionOpen=false;
+      flash='';
+      renderMissionModal();
+    }
+  });
+
+  new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
+  window.addEventListener('hellaverse:state-updated',schedule);
+  window.addEventListener('storage',event=>{if(event.key===K)schedule()});
+  window.addEventListener('load',schedule);
+  document.addEventListener('DOMContentLoaded',schedule);
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
 })();

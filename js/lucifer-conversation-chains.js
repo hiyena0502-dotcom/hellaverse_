@@ -40,3 +40,12 @@ if(write(state)){
   window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'lucifer-topic-chains'}}));
 }
 })();
+
+(()=>{
+if(window.__HELLAVERSE_LUCIFER_MEMORY_EVENT_LOADER_V1__)return;
+window.__HELLAVERSE_LUCIFER_MEMORY_EVENT_LOADER_V1__=1;
+const load=src=>new Promise(resolve=>{const s=document.createElement('script');s.src=src;s.async=false;s.onload=resolve;s.onerror=resolve;document.head.appendChild(s)});
+load('js/lucifer-memory-event-weave.js?v=1')
+ .then(()=>load('js/lucifer-memory-event-bridge.js?v=1'))
+ .then(()=>window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'thought-archive',clearDirty:false}})));
+})();

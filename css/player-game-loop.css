@@ -1,9 +1,69 @@
-/* Player setup + lightweight day loop. Keeps the existing room UI compact. */
-.hv-player-intro{position:fixed;inset:0;z-index:1400;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 22%,rgba(167,45,72,.24),transparent 34rem),rgba(5,4,5,.98);overflow:auto}
+/* Player profile + permanent missions. No day, calendar, phase, or action-limit UI. */
+.hv-player-intro{position:fixed;inset:0;z-index:1500;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 22%,rgba(167,45,72,.24),transparent 34rem),rgba(5,4,5,.98);overflow:auto}
 .hv-player-card{width:min(780px,96vw);padding:clamp(26px,5vw,54px);border:1px solid rgba(201,166,107,.28);background:linear-gradient(180deg,rgba(21,16,20,.97),rgba(11,8,10,.99));box-shadow:0 30px 90px rgba(0,0,0,.58)}
-.hv-player-card .hv-kicker,.hv-game-kicker{margin:0 0 10px;color:var(--gold);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase}.hv-player-card h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.5rem,8vw,5.8rem);font-weight:500;letter-spacing:.07em}.hv-player-card>.hv-intro-copy{max-width:60ch;margin:16px 0 28px;color:var(--muted);line-height:1.7}.hv-player-name{display:grid;gap:8px;margin-bottom:26px}.hv-player-name span,.hv-origin-label{color:var(--muted);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase}.hv-player-name input{border:0;border-bottom:1px solid var(--line-strong);border-radius:0;background:transparent;padding:12px 0;font-family:Georgia,"Times New Roman",serif;font-size:1.3rem}.hv-origin-groups{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:10px}.hv-origin-group{border-top:1px solid var(--line);padding-top:12px}.hv-origin-group>strong{display:block;margin-bottom:8px;color:var(--gold);font-size:.76rem;letter-spacing:.18em}.hv-origin-options{display:grid;gap:5px}.hv-origin-card{display:grid;grid-template-columns:minmax(92px,.36fr) 1fr;gap:14px;width:100%;border:0;border-bottom:1px solid rgba(243,236,232,.08);background:transparent;padding:12px 0;text-align:left}.hv-origin-card strong{font-family:Georgia,serif;font-size:1.04rem;font-weight:500}.hv-origin-card span{color:var(--muted);font-size:.84rem;line-height:1.5}.hv-origin-card:hover strong,.hv-origin-card.selected strong{color:var(--gold)}.hv-origin-card.selected{border-color:var(--wine)}.hv-origin-card.selected strong:before{content:'→ ';color:var(--gold)}.hv-role-lock{margin:24px 0 0;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--muted);font-size:.82rem;line-height:1.6}.hv-role-lock b{color:var(--text);font-weight:500}.hv-player-start{width:100%;margin-top:24px;min-height:48px;border:1px solid rgba(201,166,107,.55);background:rgba(167,45,72,.16);color:var(--text);letter-spacing:.18em}.hv-player-start:disabled{opacity:.34}.hv-player-error{min-height:20px;margin:8px 0 0;color:var(--danger);font-size:.78rem}
-.hv-game-status{display:flex;align-items:center;gap:14px;margin-left:auto}.hv-game-status .hv-day{color:var(--text);font-family:Georgia,serif;font-size:.82rem;letter-spacing:.08em}.hv-game-status .hv-phase{color:var(--muted);font-size:.68rem;letter-spacing:.14em}.hv-action-pips{display:flex;gap:5px}.hv-action-pips i{display:block;width:7px;height:7px;border:1px solid rgba(201,166,107,.5);transform:rotate(45deg)}.hv-action-pips i.on{background:var(--gold)}.hv-end-day{border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--muted);padding:6px 0;font-size:.68rem;letter-spacing:.14em}.hv-end-day.ready{color:var(--gold);border-color:var(--gold)}
-.hv-today-chip{display:grid;gap:4px;width:min(420px,100%);margin:14px 0 4px;padding:10px 0;border-top:1px solid rgba(201,166,107,.2);border-bottom:1px solid rgba(243,236,232,.07)}.hv-today-chip small{color:var(--gold);font-size:.65rem;letter-spacing:.17em}.hv-today-chip strong{font-family:Georgia,serif;font-size:1rem;font-weight:500}.hv-today-chip span{color:var(--muted);font-size:.78rem;line-height:1.45}.hv-today-chip.done{opacity:.58}.hv-event-action{display:grid!important;grid-template-columns:42px 1fr!important}.hv-event-action small{grid-column:2;color:var(--muted);font-size:.65rem;letter-spacing:.08em}.hv-event-action.done span:after{content:' · DONE';color:var(--muted);font-size:.65rem}.action-menu button.hv-no-actions{opacity:.36;pointer-events:none}
-.hv-game-modal{position:fixed;inset:0;z-index:1350;display:grid;place-items:center;padding:20px;background:rgba(5,4,5,.84);backdrop-filter:blur(7px)}.hv-game-modal-card{width:min(620px,94vw);max-height:84vh;overflow:auto;padding:clamp(24px,5vw,44px);border:1px solid var(--line-strong);background:rgba(11,8,10,.98);box-shadow:0 28px 86px rgba(0,0,0,.56)}.hv-game-modal-card h2{margin:0 0 10px;font-family:Georgia,serif;font-size:clamp(1.8rem,5vw,3.2rem);font-weight:500}.hv-game-modal-card>p{color:var(--muted);line-height:1.65}.hv-event-choices{display:grid;margin-top:22px;border-top:1px solid var(--line)}.hv-event-choice{display:grid;grid-template-columns:38px 1fr;border:0;border-bottom:1px solid var(--line);background:transparent;padding:13px 0;text-align:left}.hv-event-choice b{color:var(--gold);font-weight:500}.hv-event-choice:hover span{color:var(--gold)}.hv-result-line{margin:22px 0 4px!important;color:var(--text)!important;font-family:Georgia,serif;font-size:1.08rem}.hv-day-results{display:grid;gap:10px;margin:20px 0;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.hv-day-result{display:flex;justify-content:space-between;gap:20px}.hv-day-result span{color:var(--muted)}.hv-day-result strong{font-weight:500;text-align:right}.hv-new-list{margin:12px 0 0;padding:0;list-style:none}.hv-new-list li{padding:7px 0;border-bottom:1px solid rgba(243,236,232,.06);color:var(--muted);font-size:.84rem}.hv-modal-actions{display:flex;justify-content:flex-end;gap:14px;margin-top:24px}.hv-modal-actions button{border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--muted);padding:9px 0;letter-spacing:.12em;font-size:.72rem}.hv-modal-actions .primary{color:var(--gold);border-color:var(--gold)}
-.hv-player-settings{order:-1}.hv-player-settings .hv-player-summary{display:grid;gap:5px;margin-bottom:14px}.hv-player-settings .hv-player-summary strong{font-family:Georgia,serif;font-size:1.2rem}.hv-player-settings .hv-player-summary span{color:var(--muted);font-size:.8rem}.hv-origin-first{border-left-color:var(--gold)!important}.hv-origin-first:before{content:'FIRST IMPRESSION';display:block;margin-bottom:7px;color:var(--gold);font-family:system-ui,sans-serif;font-size:.62rem;letter-spacing:.16em;font-style:normal}
-@media(max-width:800px){.hv-player-intro{padding:12px}.hv-player-card{padding:24px 18px}.hv-origin-groups{grid-template-columns:1fr;gap:14px}.hv-origin-card{grid-template-columns:86px 1fr}.hv-game-status{gap:9px}.hv-game-status .hv-phase{display:none}.hv-day{font-size:.74rem!important}.hv-end-day{font-size:.62rem}.hv-today-chip{margin-top:10px}.hv-game-modal-card{padding:24px 18px}.hv-day-result{display:grid;gap:4px}.hv-day-result strong{text-align:left}}
+.hv-player-card .hv-kicker{margin:0 0 10px;color:var(--gold);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase}
+.hv-player-card h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.5rem,8vw,5.8rem);font-weight:500;letter-spacing:.07em}
+.hv-player-card>.hv-intro-copy{max-width:60ch;margin:16px 0 28px;color:var(--muted);line-height:1.7}
+.hv-player-name{display:grid;gap:8px;margin-bottom:26px}
+.hv-player-name span,.hv-origin-label{color:var(--muted);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase}
+.hv-player-name input{border:0;border-bottom:1px solid var(--line-strong);border-radius:0;background:transparent;padding:12px 0;color:var(--text);font-family:Georgia,"Times New Roman",serif;font-size:1.3rem}
+.hv-origin-groups{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:10px}
+.hv-origin-group{border-top:1px solid var(--line);padding-top:12px}
+.hv-origin-group>strong{display:block;margin-bottom:8px;color:var(--gold);font-size:.76rem;letter-spacing:.18em}
+.hv-origin-options{display:grid;gap:5px}
+.hv-origin-card{display:grid;grid-template-columns:minmax(92px,.36fr) 1fr;gap:14px;width:100%;border:0;border-bottom:1px solid rgba(243,236,232,.08);background:transparent;padding:12px 0;color:var(--text);text-align:left}
+.hv-origin-card strong{font-family:Georgia,serif;font-size:1.04rem;font-weight:500}
+.hv-origin-card span{color:var(--muted);font-size:.84rem;line-height:1.5}
+.hv-origin-card:hover strong,.hv-origin-card.selected strong{color:var(--gold)}
+.hv-origin-card.selected{border-color:var(--wine)}
+.hv-origin-card.selected strong:before{content:'→ ';color:var(--gold)}
+.hv-role-lock{margin:24px 0 0;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--muted);font-size:.82rem;line-height:1.6}
+.hv-role-lock b{color:var(--text);font-weight:500}
+.hv-player-start{width:100%;margin-top:24px;min-height:48px;border:1px solid rgba(201,166,107,.55);background:rgba(167,45,72,.16);color:var(--text);letter-spacing:.18em}
+.hv-player-start:disabled{opacity:.34}
+.hv-player-error{min-height:20px;margin:8px 0 0;color:var(--danger);font-size:.78rem}
+
+.hv-mission-open{white-space:nowrap}
+.hv-mission-open span{margin-left:5px;color:var(--gold);font-size:.66rem}
+.room-hud .hv-room-mission{border:0;border-bottom:1px solid rgba(201,166,107,.35);background:transparent;color:var(--muted);padding:5px 0;font-size:.66rem;letter-spacing:.1em}
+.room-hud .hv-room-mission:hover{color:var(--gold);border-color:var(--gold)}
+
+.hv-mission-backdrop{position:fixed;inset:0;z-index:1460;display:grid;place-items:center;padding:22px;background:rgba(5,4,5,.88);backdrop-filter:blur(8px)}
+.hv-mission-panel{width:min(720px,96vw);max-height:min(88vh,900px);overflow:auto;border:1px solid rgba(201,166,107,.3);background:linear-gradient(180deg,rgba(22,16,20,.99),rgba(9,7,8,.99));box-shadow:0 32px 100px rgba(0,0,0,.68);padding:clamp(24px,4vw,42px)}
+.hv-mission-panel>header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.hv-mission-panel>header p{margin:0 0 5px;color:var(--gold);font-size:.66rem;letter-spacing:.2em}
+.hv-mission-panel>header h2{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.2rem,6vw,4.2rem);font-weight:500;letter-spacing:.08em}
+.hv-mission-panel>header button{border:0;background:transparent;color:var(--muted);font-size:1.9rem;line-height:1}
+.hv-mission-intro{margin:18px 0;color:var(--muted);font-size:.86rem;line-height:1.65}
+.hv-mission-flash{margin:0 0 16px;padding:10px 12px;border-left:2px solid var(--gold);background:rgba(201,166,107,.08);color:var(--gold);font-size:.8rem}
+.hv-mission-summary{display:flex;align-items:baseline;gap:8px;margin:18px 0 8px}
+.hv-mission-summary strong{font-family:Georgia,serif;font-size:2rem;font-weight:500;color:var(--gold)}
+.hv-mission-summary span{color:var(--muted);font-size:.68rem;letter-spacing:.13em}
+.hv-mission-list{display:grid}
+.hv-mission-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 22px;padding:20px 0;border-top:1px solid rgba(243,236,232,.08)}
+.hv-mission-card:first-child{border-top:0}
+.hv-mission-copy small{color:var(--muted);font-size:.62rem;letter-spacing:.15em}
+.hv-mission-card.complete .hv-mission-copy small{color:var(--gold)}
+.hv-mission-copy h3{margin:5px 0 6px;font-family:Georgia,"Times New Roman",serif;font-size:1.18rem;font-weight:500}
+.hv-mission-copy p{margin:0;color:var(--muted);font-size:.8rem;line-height:1.5}
+.hv-mission-track{grid-column:1;height:3px;background:rgba(243,236,232,.08);overflow:hidden}
+.hv-mission-track i{display:block;height:100%;background:linear-gradient(90deg,var(--wine),var(--gold))}
+.hv-mission-meta{grid-column:1;display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:.64rem;letter-spacing:.1em}
+.hv-mission-action{grid-column:2;grid-row:1/4;display:flex;align-items:center;min-width:118px;justify-content:flex-end}
+.hv-mission-action button{border:1px solid rgba(201,166,107,.5);background:rgba(167,45,72,.14);color:var(--gold);padding:10px 12px;font-size:.67rem;letter-spacing:.1em}
+.hv-mission-action button:hover{background:rgba(167,45,72,.28)}
+.hv-mission-claimed,.hv-mission-progress-text{color:var(--muted);font-size:.66rem;letter-spacing:.12em}
+.hv-mission-card.claimed{opacity:.58}
+
+@media(max-width:800px){
+  .hv-player-intro{padding:12px}
+  .hv-player-card{padding:24px 18px}
+  .hv-origin-groups{grid-template-columns:1fr;gap:14px}
+  .hv-origin-card{grid-template-columns:86px 1fr}
+  .hv-mission-backdrop{padding:10px}
+  .hv-mission-panel{padding:24px 18px;max-height:94vh}
+  .hv-mission-card{grid-template-columns:1fr}
+  .hv-mission-action{grid-column:1;grid-row:auto;justify-content:flex-start}
+  .hv-mission-meta{flex-wrap:wrap}
+  .room-hud .hv-room-mission{font-size:.58rem}
+}

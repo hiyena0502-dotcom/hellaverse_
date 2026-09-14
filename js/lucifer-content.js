@@ -4,6 +4,7 @@ const KEY='hellaverse_lucifer_pilot_owner_version';
 const VERSION=4;
 const CID='lucifer-morningstar';
 let current=0;try{current=Number(localStorage.getItem(KEY)||0)||0}catch{}
+try{const saved=JSON.parse(localStorage.getItem(STATE_KEY)||'{}')||{};if(Object.prototype.hasOwnProperty.call(saved,'lorebook')){delete saved.lorebook;localStorage.setItem(STATE_KEY,JSON.stringify(saved))}}catch{}
 if(current>=VERSION)return;
 
 const split=v=>Array.isArray(v)?[...new Set(v.map(String).map(x=>x.trim()).filter(Boolean))]:[...new Set(String(v||'').split(/[\n,;/|]+/).map(x=>x.trim()).filter(Boolean))];

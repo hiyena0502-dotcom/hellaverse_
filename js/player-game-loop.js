@@ -22,13 +22,17 @@
     'player.helped_charlie_at_hotel',
     'player.story_letter_v2_migrated'
   ];
-  const MISSIONS=[
-    {id:'visit-lucifer',title:'루시퍼의 방 방문',desc:'루시퍼의 방에 한 번 들어가세요.',metric:'visits',target:1,reward:1},
-    {id:'talk-lucifer',title:'첫 대화',desc:'루시퍼와 대화를 한 번 끝까지 나누세요.',metric:'conversations',target:1,reward:1},
-    {id:'talk-more',title:'조금 더 알아가기',desc:'루시퍼와 대화를 세 번 완료하세요.',metric:'conversations',target:3,reward:2},
-    {id:'gift-lucifer',title:'첫 선물',desc:'루시퍼에게 선물을 한 번 건네세요.',metric:'gifts',target:1,reward:2},
-    {id:'find-memories',title:'기억 수집',desc:'루시퍼의 MEMORY를 다섯 개 발견하세요.',metric:'memories',target:5,reward:2},
-    {id:'build-trust',title:'관계 쌓기',desc:'루시퍼의 호감도를 30까지 올리세요.',metric:'affection',target:30,reward:3}
+  const MISSION_TEMPLATES=[
+    {id:'visit-1',title:'첫 방문',desc:name=>`${name}의 방에 한 번 들어가세요.`,metric:'visits',target:1,reward:1},
+    {id:'visit-3',title:'자주 찾아가기',desc:name=>`${name}의 방에 세 번 방문하세요.`,metric:'visits',target:3,reward:1},
+    {id:'talk-1',title:'첫 대화',desc:name=>`${name}와 대화를 한 번 끝까지 나누세요.`,metric:'conversations',target:1,reward:1},
+    {id:'talk-3',title:'조금 더 알아가기',desc:name=>`${name}와 대화를 세 번 완료하세요.`,metric:'conversations',target:3,reward:2},
+    {id:'talk-5',title:'대화 이어가기',desc:name=>`${name}와 대화를 다섯 번 완료하세요.`,metric:'conversations',target:5,reward:2},
+    {id:'gift-1',title:'첫 선물',desc:name=>`${name}에게 선물을 한 번 건네세요.`,metric:'gifts',target:1,reward:2},
+    {id:'gift-3',title:'마음을 담은 선물',desc:name=>`${name}에게 선물을 세 번 건네세요.`,metric:'gifts',target:3,reward:3},
+    {id:'memory-1',title:'첫 번째 기억',desc:name=>`${name}의 MEMORY를 한 개 발견하세요.`,metric:'memories',target:1,reward:1},
+    {id:'memory-5',title:'기억 수집',desc:name=>`${name}의 MEMORY를 다섯 개 발견하세요.`,metric:'memories',target:5,reward:2},
+    {id:'affection-20',title:'관계 쌓기',desc:name=>`${name}의 호감도를 기준 시점보다 20 올리세요.`,metric:'affection',target:20,reward:3}
   ];
 
   let missionOpen=false;
@@ -66,14 +70,35 @@
   }
 
   function ensureMissionState(state){
-    const old=state.missionProgress;
-    if(old&&typeof old==='object'&&!Array.isArray(old)){
-      old.version=1;
-      old.claimed=old.claimed&&typeof old.claimed==='object'&&!Array.isArray(old.claimed)?old.claimed:{};
-      return false;
+    let changed=false;
+    let progress=state.missionProgress;
+    if(!progress||typeof progress!=='object'||Array.isArray(progress)){
+      progress={version:2,claimed:{},baselines:{},selectedCharacterId:''};
+      state.missionProgress=progress;
+      return true;
     }
-    state.missionProgress={version:1,claimed:{}};
-    return true;
+    progress.claimed=progress.claimed&&typeof progress.claimed==='object'&&!Array.isArray(progress.claimed)?progress.claimed:{};
+    progress.baselines=progress.baselines&&typeof progress.baselines==='object'&&!Array.isArray(progress.baselines)?progress.baselines:{};
+    progress.selectedCharacterId=String(progress.selectedCharacterId||'');
+    if(Number(progress.version)<2){
+      const map={
+        'visit-lucifer':'visit-1',
+        'talk-lucifer':'talk-1',
+        'talk-more':'talk-3',
+        'gift-lucifer':'gift-1',
+        'find-memories':'memory-5',
+        'build-trust':'affection-20'
+      };
+      const migrated={};
+      for(const [key,value] of Object.entries(progress.claimed)){
+        if(key.includes(':'))migrated[key]=value;
+        else if(map[key])migrated[`${LUCIFER}:${map[key]}`]=value;
+      }
+      progress.claimed=migrated;
+      progress.version=2;
+      changed=true;
+    }
+    return changed;
   }
 
   function cleanupDateState(state){
@@ -238,44 +263,83 @@
     if(error)error.textContent='';
   }
 
-  function historyFor(state){
-    return Array.isArray(state.conversationHistory)?state.conversationHistory.filter(item=>item?.characterId===LUCIFER):[];
+  function missionCharacters(state){
+    const list=Array.isArray(state.characters)?state.characters.filter(character=>character?.id&&!character.hidden):[];
+    return list.length?list:[{id:LUCIFER,name:'Lucifer Morningstar'}];
   }
 
-  function metrics(state){
-    const visit=state.visits?.[LUCIFER]||{};
-    const history=historyFor(state);
+  function characterById(state,id){
+    const list=missionCharacters(state);
+    return list.find(character=>character.id===id)||list[0];
+  }
+
+  function historyFor(state,characterId){
+    return Array.isArray(state.conversationHistory)?state.conversationHistory.filter(item=>item?.characterId===characterId):[];
+  }
+
+  function rawMetrics(state,characterId){
+    const visit=state.visits?.[characterId]||{};
+    const history=historyFor(state,characterId);
     const conversations=history.filter(item=>!/^Gift:/i.test(String(item?.sceneTitle||''))).length;
     const gifts=history.filter(item=>/^Gift:/i.test(String(item?.sceneTitle||''))).length;
-    const affectionRaw=state.affection?.[LUCIFER];
+    const affectionRaw=state.affection?.[characterId];
     return{
       visits:Math.max(Number(visit.visitCount||0),visit.firstMet?1:0),
       conversations:Math.max(Number(visit.conversationsCount||0),conversations),
       gifts:Math.max(Number(visit.giftsCount||0),gifts),
-      memories:(Array.isArray(state.memories)?state.memories:[]).filter(item=>item?.characterId===LUCIFER&&!item?.hidden).length,
+      memories:(Array.isArray(state.memories)?state.memories:[]).filter(item=>item?.characterId===characterId&&!item?.hidden).length,
       affection:Math.max(0,Math.min(100,Number(affectionRaw?.value??affectionRaw??0)))
     };
   }
 
-  function missionRows(state){
-    const values=metrics(state);
+  function baselineFor(state,characterId){
+    const base=state.missionProgress?.baselines?.[characterId];
+    return base&&typeof base==='object'?base:{visits:0,conversations:0,gifts:0,memories:0,affection:0};
+  }
+
+  function missionKey(characterId,missionId){
+    return `${characterId}:${missionId}`;
+  }
+
+  function missionRows(state,characterId){
+    const character=characterById(state,characterId);
+    const values=rawMetrics(state,character.id);
+    const base=baselineFor(state,character.id);
     const claimed=state.missionProgress?.claimed||{};
-    return MISSIONS.map(mission=>{
-      const value=Math.max(0,Number(values[mission.metric]||0));
+    return MISSION_TEMPLATES.map(mission=>{
+      const value=Math.max(0,Number(values[mission.metric]||0)-Number(base[mission.metric]||0));
       return{
         ...mission,
+        characterId:character.id,
+        title:mission.title,
+        description:mission.desc(character.name||'이 캐릭터'),
         value,
         done:value>=mission.target,
-        claimed:!!claimed[mission.id]
+        claimed:!!claimed[missionKey(character.id,mission.id)]
       };
     });
   }
 
-  function missionCount(state){
-    return missionRows(state).filter(row=>row.done).length;
+  function defaultMissionCharacter(state,preferred=''){
+    const list=missionCharacters(state);
+    const ids=new Set(list.map(character=>character.id));
+    const choices=[
+      preferred,
+      state.page==='life'?state.active:'',
+      state.missionProgress?.selectedCharacterId,
+      state.homeCharacter,
+      LUCIFER
+    ];
+    const id=choices.find(value=>ids.has(value));
+    return characterById(state,id||list[0].id);
+  }
+
+  function missionCount(state,characterId){
+    return missionRows(state,characterId).filter(row=>row.done).length;
   }
 
   function missionButton(host,state){
+    const character=defaultMissionCharacter(state);
     let button=$('[data-hv-missions]',host);
     if(!button){
       button=document.createElement('button');
@@ -286,7 +350,8 @@
       if(admin)host.insertBefore(button,admin);
       else host.appendChild(button);
     }
-    button.innerHTML=`MISSIONS <span>${missionCount(state)}/${MISSIONS.length}</span>`;
+    button.dataset.hvMissionDefault=character.id;
+    button.innerHTML=`MISSIONS <span>${missionCount(state,character.id)}/${MISSION_TEMPLATES.length}</span>`;
   }
 
   function decorateMissionButtons(state){
@@ -299,10 +364,10 @@
     const action=row.claimed
       ?'<span class="hv-mission-claimed">CLAIMED</span>'
       :row.done
-        ?`<button type="button" data-hv-mission-claim="${row.id}">CLAIM · ♥ +${row.reward}</button>`
+        ?`<button type="button" data-hv-mission-claim="${esc(row.id)}" data-hv-mission-cid="${esc(row.characterId)}">CLAIM · ♥ +${row.reward}</button>`
         :`<span class="hv-mission-progress-text">${shown} / ${row.target}</span>`;
     return `<article class="hv-mission-card ${row.done?'complete':''} ${row.claimed?'claimed':''}">
-      <div class="hv-mission-copy"><small>${row.done?'MISSION COMPLETE':'IN PROGRESS'}</small><h3>${esc(row.title)}</h3><p>${esc(row.desc)}</p></div>
+      <div class="hv-mission-copy"><small>${row.done?'MISSION COMPLETE':'IN PROGRESS'}</small><h3>${esc(row.title)}</h3><p>${esc(row.description)}</p></div>
       <div class="hv-mission-track"><i style="width:${percent}%"></i></div>
       <div class="hv-mission-meta"><span>${shown} / ${row.target}</span><span>REWARD · ♥ +${row.reward}</span></div>
       <div class="hv-mission-action">${action}</div>
@@ -310,15 +375,27 @@
   }
 
   function modalMarkup(state){
-    const rows=missionRows(state);
+    const characters=missionCharacters(state);
+    const selected=defaultMissionCharacter(state);
+    const rows=missionRows(state,selected.id);
     const claimed=rows.filter(row=>row.claimed).length;
+    const totalClaimed=Object.keys(state.missionProgress?.claimed||{}).length;
     return `<div class="hv-mission-backdrop" id="hvMissionModal" data-hv-mission-backdrop>
       <section class="hv-mission-panel" role="dialog" aria-modal="true" aria-labelledby="hvMissionTitle">
-        <header><div><p>PERMANENT PROGRESS</p><h2 id="hvMissionTitle">MISSIONS</h2></div><button type="button" data-hv-mission-close aria-label="닫기">×</button></header>
-        <p class="hv-mission-intro">날짜 제한과 초기화가 없는 일회성 미션입니다. 평소처럼 대화하고 선물을 주면 자동으로 진행됩니다.</p>
+        <header><div><p>PERMANENT PROGRESS · ${totalClaimed}/${characters.length*MISSION_TEMPLATES.length} TOTAL CLAIMED</p><h2 id="hvMissionTitle">MISSIONS</h2></div><button type="button" data-hv-mission-close aria-label="닫기">×</button></header>
+        <div class="hv-mission-character-head">
+          <label>CHARACTER
+            <select data-hv-mission-character>${characters.map(character=>`<option value="${esc(character.id)}" ${character.id===selected.id?'selected':''}>${esc(character.name||character.id)}</option>`).join('')}</select>
+          </label>
+          <div class="hv-mission-summary"><strong>${claimed}</strong><span>/ ${MISSION_TEMPLATES.length} REWARDS CLAIMED</span></div>
+        </div>
+        <p class="hv-mission-intro">날짜 제한 없이 캐릭터별로 진행되는 미션입니다. 방문·대화·선물·MEMORY·호감도가 자동 반영됩니다.</p>
         ${flash?`<p class="hv-mission-flash">${esc(flash)}</p>`:''}
-        <div class="hv-mission-summary"><strong>${claimed}</strong><span>/ ${MISSIONS.length} REWARDS CLAIMED</span></div>
         <div class="hv-mission-list">${rows.map(missionCard).join('')}</div>
+        <footer class="hv-mission-tools">
+          <button type="button" data-hv-mission-reset-character>RESET THIS CHARACTER</button>
+          <button type="button" data-hv-mission-reset-all>RESET ALL MISSIONS</button>
+        </footer>
       </section>
     </div>`;
   }
@@ -329,22 +406,59 @@
     document.body.insertAdjacentHTML('beforeend',modalMarkup(read()));
   }
 
-  function claimMission(id){
-    const definition=MISSIONS.find(mission=>mission.id===id);
+  function selectMissionCharacter(characterId){
+    const state=read();
+    ensureMissionState(state);
+    const character=characterById(state,characterId);
+    state.missionProgress.selectedCharacterId=character.id;
+    if(write(state))renderMissionModal();
+  }
+
+  function claimMission(characterId,id){
+    const definition=MISSION_TEMPLATES.find(mission=>mission.id===id);
     if(!definition)return;
     const state=read();
     ensureMissionState(state);
-    const row=missionRows(state).find(mission=>mission.id===id);
+    const character=characterById(state,characterId);
+    const row=missionRows(state,character.id).find(mission=>mission.id===id);
     if(!row?.done||row.claimed)return;
-    state.missionProgress.claimed[id]=new Date().toISOString();
+    state.missionProgress.claimed[missionKey(character.id,id)]=new Date().toISOString();
     state.affection=state.affection&&typeof state.affection==='object'?state.affection:{};
-    const old=state.affection[LUCIFER];
+    const old=state.affection[character.id];
     const before=Math.max(0,Math.min(100,Number(old?.value??old??0)));
-    state.affection[LUCIFER]={
+    state.affection[character.id]={
       ...(old&&typeof old==='object'?old:{}),
       value:Math.min(100,before+definition.reward)
     };
-    flash=`${definition.title} 보상으로 호감도 ${definition.reward}을 받았습니다.`;
+    flash=`${character.name||character.id} · ${definition.title} 보상으로 호감도 ${definition.reward}을 받았습니다.`;
+    if(write(state))renderMissionModal();
+  }
+
+  function resetCharacterMissions(){
+    const state=read();
+    ensureMissionState(state);
+    const character=defaultMissionCharacter(state);
+    if(!window.confirm(`${character.name||character.id}의 미션 진행도와 수령 기록을 초기화할까요? 관계 기록과 호감도는 유지됩니다.`))return;
+    state.missionProgress.baselines[character.id]=rawMetrics(state,character.id);
+    for(const key of Object.keys(state.missionProgress.claimed)){
+      if(key.startsWith(`${character.id}:`))delete state.missionProgress.claimed[key];
+    }
+    state.missionProgress.lastResetAt=new Date().toISOString();
+    flash=`${character.name||character.id}의 미션이 초기화되었습니다.`;
+    if(write(state))renderMissionModal();
+  }
+
+  function resetAllMissions(){
+    const state=read();
+    ensureMissionState(state);
+    if(!window.confirm('모든 캐릭터의 미션 진행도와 수령 기록을 초기화할까요? 관계 기록과 호감도는 유지됩니다.'))return;
+    state.missionProgress.claimed={};
+    state.missionProgress.baselines={};
+    for(const character of missionCharacters(state)){
+      state.missionProgress.baselines[character.id]=rawMetrics(state,character.id);
+    }
+    state.missionProgress.lastResetAt=new Date().toISOString();
+    flash='모든 캐릭터의 미션이 초기화되었습니다.';
     if(write(state))renderMissionModal();
   }
 
@@ -399,18 +513,33 @@
       setPlayerProfile(name,key);
       return;
     }
-    if(target.closest('[data-hv-missions]')){
+    const missionButtonTarget=target.closest('[data-hv-missions]');
+    if(missionButtonTarget){
       event.preventDefault();
       event.stopImmediatePropagation();
+      const state=read();
+      ensureMissionState(state);
+      state.missionProgress.selectedCharacterId=defaultMissionCharacter(state,missionButtonTarget.dataset.hvMissionDefault||'').id;
+      write(state);
       missionOpen=true;
       flash='';
       renderMissionModal();
       return;
     }
-    const claim=target.closest('[data-hv-mission-claim]')?.dataset.hvMissionClaim;
-    if(claim){
+    const claimButton=target.closest('[data-hv-mission-claim]');
+    if(claimButton){
       event.preventDefault();
-      claimMission(claim);
+      claimMission(claimButton.dataset.hvMissionCid||'',claimButton.dataset.hvMissionClaim||'');
+      return;
+    }
+    if(target.closest('[data-hv-mission-reset-character]')){
+      event.preventDefault();
+      resetCharacterMissions();
+      return;
+    }
+    if(target.closest('[data-hv-mission-reset-all]')){
+      event.preventDefault();
+      resetAllMissions();
       return;
     }
     if(target.closest('[data-hv-mission-close]')||target.matches('[data-hv-mission-backdrop]')){
@@ -423,6 +552,11 @@
 
   document.addEventListener('input',event=>{
     if(event.target?.id==='hvPlayerName')validateIntro();
+  });
+
+  document.addEventListener('change',event=>{
+    const select=event.target instanceof Element?event.target.closest('[data-hv-mission-character]'):null;
+    if(select)selectMissionCharacter(select.value);
   });
 
   document.addEventListener('keydown',event=>{

@@ -1,0 +1,1 @@
+(()=>{window.__HV_PLAYER_SETTINGS_EDITOR__=1;})();

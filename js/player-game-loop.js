@@ -356,7 +356,6 @@
     }
     $('#hvPlayerSetup')?.remove();
     decorateMissionButtons(state);
-    if(missionOpen)renderMissionModal();
   }
 
   function schedule(){

@@ -1,0 +1,18 @@
+/* Prevent dialogue text from visibly blinking when the runtime rebuilds a dialogue page. */
+.dialogue-page,
+.dialogue-page .dialogue-line,
+.dialogue-page .dialogue-narration,
+.dialogue-lines .dialogue-line,
+.dialogue-lines .narration {
+  animation: none !important;
+}
+
+.dialogue-page.is-leaving {
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+.dialogue-page-text,
+.dialogue-lines {
+  contain: content;
+}

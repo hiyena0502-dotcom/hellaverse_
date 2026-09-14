@@ -1,0 +1,68 @@
+/* Live character mood indicator shown inside dialogue scenes. */
+.dialogue-mood-indicator{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:max-content;
+  max-width:calc(100% - 190px);
+  margin:0 0 12px;
+  padding:6px 10px 6px 8px;
+  border:1px solid rgba(201,166,107,.2);
+  background:rgba(11,8,10,.56);
+  box-shadow:0 8px 22px rgba(0,0,0,.14);
+  backdrop-filter:blur(4px);
+  font-size:.69rem;
+  line-height:1;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+  color:var(--muted,#b7aaa3);
+  pointer-events:none;
+}
+.dialogue-mood-indicator .mood-dot{
+  width:7px;
+  height:7px;
+  flex:0 0 7px;
+  border-radius:50%;
+  background:currentColor;
+  box-shadow:0 0 10px currentColor;
+}
+.dialogue-mood-indicator .mood-label{
+  color:var(--muted,#b7aaa3);
+  opacity:.78;
+}
+.dialogue-mood-indicator .mood-value{
+  color:var(--text,#f3ece8);
+  font-weight:650;
+}
+.dialogue-mood-indicator .mood-ko{
+  letter-spacing:.02em;
+  text-transform:none;
+  opacity:.7;
+}
+.dialogue-mood-indicator[data-mood="GOOD"]{color:#b8d2b0;border-color:rgba(184,210,176,.26)}
+.dialogue-mood-indicator[data-mood="EXCITED"]{color:#e1bd72;border-color:rgba(225,189,114,.3)}
+.dialogue-mood-indicator[data-mood="ANNOYED"]{color:#d36a79;border-color:rgba(211,106,121,.34);background:rgba(74,19,32,.32)}
+.dialogue-mood-indicator[data-mood="SAD"]{color:#9daabe;border-color:rgba(157,170,190,.28)}
+.dialogue-mood-indicator[data-mood="TIRED"]{color:#9d9693;border-color:rgba(157,150,147,.24)}
+.dialogue-mood-indicator[data-mood="NORMAL"]{color:var(--gold,#c9a66b)}
+.dialogue-mood-indicator.is-changing{
+  animation:moodPulse .46s ease both;
+}
+@keyframes moodPulse{
+  0%{transform:translateY(2px);opacity:.35;box-shadow:0 0 0 rgba(0,0,0,0)}
+  45%{transform:translateY(0);opacity:1;box-shadow:0 0 24px currentColor}
+  100%{transform:none;opacity:1;box-shadow:0 8px 22px rgba(0,0,0,.14)}
+}
+@media(max-width:800px){
+  .dialogue-mood-indicator{
+    max-width:calc(100% - 120px);
+    margin-bottom:10px;
+    padding:6px 8px;
+    gap:8px;
+    font-size:.64rem;
+  }
+  .dialogue-mood-indicator .mood-ko{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .dialogue-mood-indicator.is-changing{animation:none}
+}

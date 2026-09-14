@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hellaverse Dialogue</title>
+
+  <!-- BASE UI -->
+  <link rel="stylesheet" href="css/app.css?v=50">
+  <link rel="stylesheet" href="css/dialogue.css?v=50">
+  <link rel="stylesheet" href="css/dialogue-stability.css?v=1">
+  <link rel="stylesheet" href="css/dialogue-mood.css?v=1">
+
+  <!-- FEATURE UI -->
+  <link rel="stylesheet" href="css/thought-archive.css?v=50">
+  <link rel="stylesheet" href="css/relationship-editor.css?v=50">
+  <link rel="stylesheet" href="css/event-manager.css?v=50">
+  <link rel="stylesheet" href="css/gift-system.css?v=60">
+  <link rel="stylesheet" href="css/gift-context-system.css?v=3">
+  <link rel="stylesheet" href="css/collection-exchange-system.css?v=1">
+  <link rel="stylesheet" href="css/gacha-collection-addon.css?v=60">
+  <link rel="stylesheet" href="css/character-gacha-profiles.css?v=2">
+
+  <!-- UX / DIAGNOSTICS -->
+  <link rel="stylesheet" href="css/ux/runtime-diagnostics.css?v=1">
+
+  <style>
+    /* Consecutive lines from the same room character should read as one natural speech block. */
+    .dialogue-page-text .dialogue-line.character + .dialogue-line.character strong,
+    .dialogue-lines .dialogue-line.character + .dialogue-line.character strong,
+    .dialogue-log-scroll .dialogue-line.character + .dialogue-line.character strong {
+      display: none;
+    }
+    .dialogue-page-text .dialogue-line.character + .dialogue-line.character,
+    .dialogue-lines .dialogue-line.character + .dialogue-line.character,
+    .dialogue-log-scroll .dialogue-line.character + .dialogue-line.character {
+      margin-top: -8px;
+    }
+  </style>
+
+  <!-- CORE: shared helpers first. Existing modules remain compatible if they do not use HVState yet. -->
+  <script src="js/core/state-store.js?v=1"></script>
+
+  <!-- CONTENT / SEED DATA -->
+  <script src="js/base-dialogues.js?v=50"></script>
+  <script src="js/character-dialogues.js?v=51"></script>
+  <script src="js/lucifer-content.js?v=55"></script>
+  <script src="js/lucifer-s12-addon.js?v=1"></script>
+  <script src="js/lucifer-gift-expansion.js?v=1"></script>
+  <script src="js/character-dialogue-rules.js?v=57"></script>
+  <script src="js/gift-context-system.js?v=3"></script>
+  <script src="js/gift-context-editor.js?v=1"></script>
+  <script src="js/hotel-collection-pack.js?v=2"></script>
+  <script src="js/collection-exchange-system.js?v=1"></script>
+
+  <!-- MAIN APP / FEATURE RUNTIMES -->
+  <script type="module" src="js/dialogue-ui.js?v=54"></script>
+  <script type="module" src="js/hv-stable.js?v=50"></script>
+  <script type="module" src="js/event-manager.js?v=50"></script>
+  <script type="module" src="js/thought-archive.js?v=50"></script>
+  <script type="module" src="js/relationship-editor.js?v=50"></script>
+  <script type="module" src="js/gift-system.js?v=60"></script>
+  <script type="module" src="js/site-runtime.js?v=67"></script>
+  <script type="module" src="js/gacha-collection-addon.js?v=62"></script>
+  <script defer src="js/character-gacha-profiles.js?v=2"></script>
+
+  <!-- COMPATIBILITY / REPAIR: keep after the main renderers. -->
+  <script src="js/dialogue-mood-indicator.js?v=1"></script>
+  <script src="js/collection-runtime-repair.js?v=3"></script>
+  <script defer src="js/collection-emoji-corrections.js?v=2"></script>
+
+  <!-- UX / DEBUGGING: last so it can inspect the final DOM/state. -->
+  <script defer src="js/ux/runtime-diagnostics.js?v=2"></script>
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>

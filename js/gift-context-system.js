@@ -1,6 +1,6 @@
 (()=>{
-if(window.__HELLAVERSE_GIFT_CONTEXT_V2__)return;
-window.__HELLAVERSE_GIFT_CONTEXT_V2__=1;
+if(window.__HELLAVERSE_GIFT_CONTEXT_V3__)return;
+window.__HELLAVERSE_GIFT_CONTEXT_V3__=1;
 
 const K='hellaverse_dialogue_state_v1',LUCIFER='lucifer-morningstar';
 const CONTEXTS={
@@ -45,6 +45,7 @@ function meta(state,g,c,kind){
 }
 function reaction(state,g,c,kind,m){
   let custom=c.contextLines?.[kind];if(String(custom||'').trim())return String(custom).trim();
+  if(sourceRule(c).fixed===kind)return'';
   if(g.characterId!==LUCIFER)return{DIRECT:'직접 고른 선물이라는 말에 반응이 조금 누그러진다.',DELIVERY:'누가 보낸 물건인지 다시 확인한다.',FOUND:'주운 물건을 잠시 살펴본다.',PRANK:'장난이었다는 말에 표정이 굳는다.',JUNK:'왜 자신에게 이걸 주는지 이해하지 못한 표정이다.'}[kind]||'';
   let sender=String(c.sourceName||c.sourceType||'').toLowerCase();
   if(kind==='DIRECT')return m.h<30?'"네가 직접 골랐다고? ...그건 기억해둘게."':m.h<70?'"직접 골랐어? 취향 파악 속도가 제법인데."':'"네가 골랐다는 게 물건보다 더 신경 쓰이네."';
@@ -65,7 +66,19 @@ let activeGift='',bypassGift='',overlay=null,executing=false,returnBypass=false,
 function removeReaction(){document.querySelectorAll('.gift-context-reaction').forEach(x=>x.remove())}
 function clearActive(){activeGift='';removeReaction()}
 function close(){overlay?.remove();overlay=null}
-function allowed(state,id){let a=(state.giftContextConfig||{})[id]?.allowed;return Array.isArray(a)&&a.length?a.filter(x=>CONTEXTS[x]):ORDER}
+function sourceRule(c={}){
+  const type=String(c.sourceType||'PERSONAL').toUpperCase(),name=String(c.sourceName||'').trim().toLowerCase();
+  if(type==='FOUND')return{fixed:'FOUND',allowed:['FOUND']};
+  if(type==='TRASH'||name==='you'||name==='player')return{fixed:'',allowed:['DIRECT','PRANK','JUNK']};
+  if(['SEVEN_SINS','ALASTOR','CHARLIE','HOTEL','HEAVEN'].includes(type)||(name&&!['you','player','personal'].includes(name)))return{fixed:'DELIVERY',allowed:['DELIVERY']};
+  return{fixed:'',allowed:ORDER.slice()};
+}
+function allowed(state,id){
+  const rule=sourceRule(cfg(state,id)),custom=(state.giftContextConfig||{})[id]?.allowed;
+  if(!Array.isArray(custom)||!custom.length)return rule.allowed;
+  const valid=custom.filter(x=>CONTEXTS[x]&&rule.allowed.includes(x));
+  return valid.length?valid:rule.allowed;
+}
 function clearStalePending(){
   let s=read(),p=s.giftContextPending;
   if(!p)return;
@@ -76,20 +89,23 @@ function showPicker(button,id){
   let s=read(),g=(s.gifts||[]).find(x=>x.id===id);if(!g)return;
   let c=cfg(s,id);
   if((s.giftContextConfig||{})[id]?.enabled===false){bypassGift=id;activeGift=id;button.click();bypassGift='';return}
+  const modes=allowed(s,id);
+  if(modes.length===1){choose(modes[0],id,button);return}
   close();removeReaction();
   overlay=document.createElement('div');overlay.className='gift-context-backdrop';overlay.__button=button;
   let src=c.sourceName?`FROM ${c.sourceName}`:String(c.sourceType||'PERSONAL').replace(/_/g,' ');
-  overlay.innerHTML=`<section class="gift-context-card"><button type="button" class="gift-context-close" data-gift-context-back aria-label="Back to gifts">×</button><p class="label">HOW WILL YOU GIVE IT?</p><h2>${esc(g.name||'Gift')}</h2><p class="gift-context-source">${esc(src)}${c.category?` · ${esc(c.category)}`:''}</p><p class="muted">하나를 고르면 바로 선물을 건넵니다. 선택 문구는 대화창에 남지 않습니다.</p><div class="gift-context-options">${allowed(s,id).map((k,i)=>`<button type="button" data-gift-context="${k}" data-gift-id="${esc(id)}"><b>${String(i+1).padStart(2,'0')}</b><span><strong>${esc(CONTEXTS[k].label)}</strong><small>${esc(CONTEXTS[k].note)}</small></span></button>`).join('')}</div><button type="button" class="gift-context-back" data-gift-context-back>‹ BACK TO GIFT LIST</button></section>`;
+  overlay.innerHTML=`<section class="gift-context-card"><button type="button" class="gift-context-close" data-gift-context-back aria-label="Back to gifts">×</button><p class="label">HOW WILL YOU GIVE IT?</p><h2>${esc(g.name||'Gift')}</h2><p class="gift-context-source">${esc(src)}${c.category?` · ${esc(c.category)}`:''}</p><p class="muted">하나를 고르면 바로 선물을 건넵니다. 선택 문구는 대화창에 남지 않습니다.</p><div class="gift-context-options">${modes.map((k,i)=>`<button type="button" data-gift-context="${k}" data-gift-id="${esc(id)}"><b>${String(i+1).padStart(2,'0')}</b><span><strong>${esc(CONTEXTS[k].label)}</strong><small>${esc(CONTEXTS[k].note)}</small></span></button>`).join('')}</div><button type="button" class="gift-context-back" data-gift-context-back>‹ BACK TO GIFT LIST</button></section>`;
   document.body.appendChild(overlay);
 }
-function choose(kind,id){
+function choose(kind,id,buttonOverride=null){
   if(executing||!CONTEXTS[kind])return;
   let s=read(),g=(s.gifts||[]).find(x=>x.id===id);if(!g)return;
+  const modes=allowed(s,id);if(!modes.includes(kind))kind=modes[0];if(!kind)return;
   let c=cfg(s,id),m=meta(s,g,c,kind),token=`giftctx-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   s.giftContextPending={token,giftId:id,characterId:g.characterId,kind,preHeart:heart(s,g.characterId),sourceName:c.sourceName||'',sourceType:c.sourceType||'PERSONAL',note:CONTEXTS[kind].note,reaction:reaction(s,g,c,kind,m),contextDelta:m.delta,selectedAt:new Date().toISOString()};
   localStorage.setItem(K,JSON.stringify(s));
   activeGift=id;
-  let button=overlay?.__button;
+  let button=buttonOverride||overlay?.__button;
   close();removeReaction();
   if(!button||!button.isConnected){delete s.giftContextPending;write(s,'gift-context-cancelled');activeGift='';return}
   executing=true;bypassGift=id;

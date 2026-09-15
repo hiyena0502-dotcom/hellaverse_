@@ -43,7 +43,11 @@ function defaultRule(s,i,cid){
   const own=String(i?.characterId||'')===String(cid||''),name=charName(s,cid);
   return {preference:own?'LIKED':'NEUTRAL',affectionDelta:own?3:1,opening:`「${itemName(i)}」을 ${name}에게 건넸다.`,response:'',afterEvent:'',setFlags:'',removeFlags:'',moodChange:'',memoryTitle:`GIFT: ${itemName(i)}`,memorySummary:`${name}에게 「${itemName(i)}」을 선물했다.`,memoryTags:`gift, ${i?.id||''}`};
 }
-function makeDraft(s,i,cid){return {...defaultRule(s,i,cid),...(currentRule(s,i?.id,cid)||{})}}
+function makeDraft(s,i,cid){
+  const out={...defaultRule(s,i,cid),...(currentRule(s,i?.id,cid)||{})};
+  if(out.afterEvent)out.setFlags=split(out.setFlags).filter(x=>x!==out.afterEvent).join(', ');
+  return out;
+}
 function configuredCount(s,itemId){return Object.keys(rulesFor(s,itemId)).filter(cid=>currentRule(s,itemId,cid)).length}
 function sourceLabel(i){if(i?.gachaEnabled===false)return'DIALOGUE / SPECIAL';return'COLLECTION ITEM'}
 function itemList(s){
@@ -91,8 +95,8 @@ function rerender(){if(!open)return;const root=$('#itemManagerRoot');if(root)roo
 function saveRule(){
   const s=read(),i=item(s,selectedItemId),c=char(s,selectedCharacterId);if(!i||!c)return toast('ITEM / CHARACTER REQUIRED');const next=collect();if(!next)return;
   const validEvents=new Set(eventRows(s).map(e=>e.id));if(next.afterEvent&&!validEvents.has(next.afterEvent))return toast('AFTER EVENT NOT FOUND');
-  const set=[...new Set([next.afterEvent,...split(next.setFlags)].filter(Boolean))];next.setFlags=set.join(', ');next.updatedAt=new Date().toISOString();
-  s.inventoryV1.giftRules[String(i.id)]=s.inventoryV1.giftRules[String(i.id)]&&typeof s.inventoryV1.giftRules[String(i.id)]==='object'?s.inventoryV1.giftRules[String(i.id)]:{};s.inventoryV1.giftRules[String(i.id)][String(c.id)]=next;write(s,'item-manager-save');draft={...next};rerender();toast('REACTION SAVED')
+  const extraSet=split(next.setFlags).filter(x=>x!==next.afterEvent);const stored={...next,setFlags:[...new Set([next.afterEvent,...extraSet].filter(Boolean))].join(', '),updatedAt:new Date().toISOString()};
+  s.inventoryV1.giftRules[String(i.id)]=s.inventoryV1.giftRules[String(i.id)]&&typeof s.inventoryV1.giftRules[String(i.id)]==='object'?s.inventoryV1.giftRules[String(i.id)]:{};s.inventoryV1.giftRules[String(i.id)][String(c.id)]=stored;write(s,'item-manager-save');const fresh=read();draft=makeDraft(fresh,item(fresh,i.id),c.id);rerender();toast('REACTION SAVED')
 }
 function resetRule(){const s=read(),i=item(s,selectedItemId);if(!i)return;const root=s.inventoryV1.giftRules?.[String(i.id)];if(root)delete root[String(selectedCharacterId)];write(s,'item-manager-reset');draft=makeDraft(read(),item(read(),selectedItemId),selectedCharacterId);rerender();toast('DEFAULT REACTION RESTORED')}
 function preview(){const s=read(),i=item(s,selectedItemId),c=char(s,selectedCharacterId),d=collect();if(!i||!c||!d)return;$('#itmPreviewRoot')?.remove();const root=document.createElement('div');root.id='itmPreviewRoot';root.className='itm-preview-backdrop';root.innerHTML=`<section class="itm-preview-modal"><p class="label">GIFT PREVIEW</p><div class="itm-preview-symbol">${esc(i.symbol||'◆')}</div><h2>${esc(itemName(i))}</h2>${d.opening?`<p class="itm-preview-action">${esc(d.opening)}</p>`:''}${d.response?`<blockquote><strong>${esc(c.name)}</strong>${esc(d.response)}</blockquote>`:'<p class="muted">전용 반응 대사가 없습니다.</p>'}<div class="itm-preview-meta"><span>${esc(d.preference)}</span><b>HEART ${Number(d.affectionDelta)>0?'+':''}${Number(d.affectionDelta||0)}</b>${d.afterEvent?`<small>EVENT → ${esc(d.afterEvent)}</small>`:''}</div><button class="gold-button" data-itm-preview-close>CLOSE</button></section>`;document.body.appendChild(root)}

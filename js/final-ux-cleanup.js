@@ -74,8 +74,8 @@ function cleanGiftResult(){
       if(/건넨다|내민다|전해준다|준다[.!]?$/i.test(t)){n.classList.add('ux-hide-gift-repeat');n.remove()}
     }
     for(const b of $$('blockquote',result)){
-      const t=txt(b).replace(/^[^\n]+\s+/,'');
-      if(/가\s*[「“\"]?.+[」”\"]?을\s*받아\s*든다[.!]?$/i.test(t)||/전용 반응 없음|특수 반응 없음/i.test(t)){
+      const t=txt(b);
+      if(/가\s*[「“\"]?.+[」”\"]?을\s*받아\s*든다[.!]?/i.test(t)||/전용 반응 없음|특수 반응 없음/i.test(t)){
         b.classList.add('ux-generic-gift-response');b.remove();
       }
     }

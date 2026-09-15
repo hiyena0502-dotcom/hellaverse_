@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V3__)return;
-window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V3__=1;
+if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V4__)return;
+window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V4__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const META_KEY='hellaverse_dialogue_render_meta_v1';
@@ -57,8 +57,10 @@ function roomUtility(box){
  if(current)return current.outerHTML;
  return '<div class="dialogue-utility" style="display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap"><button type="button" data-vn-log>LOG</button><button type="button" data-vn-ask>ASK</button><button type="button" data-inventory-open>INVENTORY</button><button type="button" data-vn-leave>LEAVE ROOM</button></div>';
 }
+function ensureRoomUtility(box){if(box&&!$('.dialogue-utility',box))box.insertAdjacentHTML('afterbegin',roomUtility(box))}
 function emptyState(box,mode,message){
- const utility=roomUtility(box);
+ ensureRoomUtility(box);
+ const utility=$('.dialogue-utility',box)?.outerHTML||roomUtility(box);
  box.innerHTML=`${utility}<p class="speaker">${mode}</p><p class="dialogue-current">${message}</p><button class="dialogue-return" data-end>RETURN</button>`;
  pendingMode='';sessionStorage.removeItem(RKEY);
 }
@@ -70,6 +72,7 @@ function sceneButtonsFor(box,mode){
  });
 }
 function showQuestionPicker(box){
+ ensureRoomUtility(box);
  const all=$$('[data-scene]',box),questions=sceneButtonsFor(box,'QUESTION');
  if(!all.length)return false;
  for(const b of all)b.hidden=!questions.includes(b);
@@ -94,12 +97,7 @@ function autoStart(){
  const sceneButtons=$$('[data-scene]',box);if(!sceneButtons.length)return;
  const mode=pendingMode||up(sessionStorage.getItem(RKEY)||'');
  if(!['CONVERSATION','QUESTION','ACTION'].includes(mode))return;
-
- if(mode==='QUESTION'){
-  showQuestionPicker(box);
-  return;
- }
-
+ if(mode==='QUESTION'){showQuestionPicker(box);return}
  const target=chooseCandidate(box,mode);
  if(target){
   pendingMode='';sessionStorage.removeItem(RKEY);

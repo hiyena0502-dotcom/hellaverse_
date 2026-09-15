@@ -1,0 +1,15 @@
+(()=>{
+'use strict';
+if(window.__HELLAVERSE_ITEM_EVENT_BRIDGE_V2__)return;
+window.__HELLAVERSE_ITEM_EVENT_BRIDGE_V2__=1;
+const K='hellaverse_dialogue_state_v1';
+const split=v=>Array.isArray(v)?v.map(String).map(x=>x.trim()).filter(Boolean):String(v||'').split(/[\n,;/|]+/).map(x=>x.trim()).filter(Boolean);
+function read(){try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}}
+function allRules(s){const out=[],root=s.inventoryV2?.giftRules&&typeof s.inventoryV2.giftRules==='object'?s.inventoryV2.giftRules:{};for(const [itemId,chars] of Object.entries(root))for(const [characterId,rule] of Object.entries(chars&&typeof chars==='object'?chars:{}))if(rule&&typeof rule==='object')out.push({itemId,characterId,rule});return out}
+function uses(s,id){const out=[];for(const row of allRules(s)){const r=row.rule;if(String(r.afterEvent||'')===id||split(r.setFlags).includes(id)||split(r.removeFlags).includes(id)||(Array.isArray(r.approaches)&&r.approaches.some(a=>String(a?.afterEvent||'')===id)))out.push(row)}return out}
+function replaceList(v,oldId,newId){return split(v).map(x=>x===oldId?newId:x).join(', ')}
+function exists(s,id){return [s.events,s.eventCatalog].some(a=>Array.isArray(a)&&a.some(e=>String(e?.id||'')===String(id)))}
+function rename(oldId,newId){const s=read();if(!exists(s,newId)||exists(s,oldId))return;let changed=false;for(const {rule:r} of allRules(s)){if(String(r.afterEvent||'')===oldId){r.afterEvent=newId;changed=true}const a=replaceList(r.setFlags,oldId,newId),b=replaceList(r.removeFlags,oldId,newId);if(a!==String(r.setFlags||'')){r.setFlags=a;changed=true}if(b!==String(r.removeFlags||'')){r.removeFlags=b;changed=true}for(const p of Array.isArray(r.approaches)?r.approaches:[])if(String(p.afterEvent||'')===oldId){p.afterEvent=newId;changed=true}}if(!changed)return;const v=JSON.stringify(s);localStorage.setItem(K,v);try{window.dispatchEvent(new StorageEvent('storage',{key:K,newValue:v}))}catch{}window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'item-event-bridge-v2',clearDirty:false}}))}
+function toast(m){let r=document.querySelector('#toastRoot');if(!r){r=document.createElement('div');r.id='toastRoot';document.body.appendChild(r)}r.innerHTML=`<div class="toast">${String(m).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]))}</div>`;setTimeout(()=>{if(r)r.innerHTML=''},2100)}
+document.addEventListener('click',e=>{const t=e.target instanceof Element?e.target:null;if(!t)return;const del=t.closest('[data-delete-event-definition],[data-remove-orphan-event]');if(del){const id=del.dataset.deleteEventDefinition||del.dataset.removeOrphanEvent||'',n=uses(read(),id).length;if(n){e.preventDefault();e.stopImmediatePropagation();toast(`EVENT IS USED BY ${n} ITEM REACTION${n===1?'':'S'}`);return}}if(t.closest('[data-save-event-definition]')){const oldId=String(document.querySelector('#eventOriginalId')?.value||'').trim(),newId=String(document.querySelector('#eventDefId')?.value||'').trim();if(oldId&&newId&&oldId!==newId)setTimeout(()=>rename(oldId,newId),80)}},true);
+})();

@@ -1,0 +1,18 @@
+/* Player dialogue is episode-driven: scene file indexes are editor-only. */
+.dialogue-box:has([data-scene]) > .speaker,
+.dialogue-box:has([data-scene]) > .choice-list,
+.dialogue-box:has([data-scene]) > .dialogue-return {
+  display:none!important;
+}
+.dialogue-box:has([data-scene]):not(.turn-mode)::after {
+  content:'STARTING EPISODE…';
+  display:block;
+  padding:28px 18px;
+  text-align:center;
+  color:var(--muted);
+  font-size:.7rem;
+  letter-spacing:.16em;
+}
+/* MORE was a redundant indirection. Utilities stay directly visible. */
+.dialogue-utility > button,
+.room-caption .room-links > button { display:inline-flex; }

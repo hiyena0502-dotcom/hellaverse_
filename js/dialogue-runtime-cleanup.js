@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V4__)return;
-window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V4__=1;
+if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V5__)return;
+window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V5__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const META_KEY='hellaverse_dialogue_render_meta_v1';
@@ -52,15 +52,19 @@ function unwrapMore(){
   const parent=d.parentElement,box=$('.dialogue-more-menu',d);if(parent&&box){for(const b of Array.from(box.children))parent.insertBefore(b,d)}d.remove();
  }
 }
-function roomUtility(box){
- const current=$('.dialogue-utility',box);
- if(current)return current.outerHTML;
- return '<div class="dialogue-utility" style="display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap"><button type="button" data-vn-log>LOG</button><button type="button" data-vn-ask>ASK</button><button type="button" data-inventory-open>INVENTORY</button><button type="button" data-vn-leave>LEAVE ROOM</button></div>';
+function roomUtility(){
+ return '<div class="dialogue-utility hv-stable-dialogue-utility" style="display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap" data-stable-utility="LOG|ASK|ACTION|INVENTORY|LEAVE ROOM"><button type="button" data-vn-log>LOG</button><button type="button" data-action="ASK" data-dialogue-file-runtime="QUESTION">ASK</button><button type="button" data-action="TALK" data-dialogue-file-runtime="ACTION">ACTION</button><button type="button" data-inventory-open>INVENTORY</button><button type="button" data-page="characters" data-stable-leave-room>LEAVE ROOM</button></div>';
 }
-function ensureRoomUtility(box){if(box&&!$('.dialogue-utility',box))box.insertAdjacentHTML('afterbegin',roomUtility(box))}
+function ensureRoomUtility(box){
+ if(!box)return;
+ const current=$('.dialogue-utility',box);
+ if(!current){box.insertAdjacentHTML('afterbegin',roomUtility());return}
+ const expected='LOG|ASK|ACTION|INVENTORY|LEAVE ROOM';
+ if(current.dataset.stableUtility!==expected){const wrap=document.createElement('div');wrap.innerHTML=roomUtility();current.replaceWith(wrap.firstElementChild)}
+}
 function emptyState(box,mode,message){
  ensureRoomUtility(box);
- const utility=$('.dialogue-utility',box)?.outerHTML||roomUtility(box);
+ const utility=$('.dialogue-utility',box)?.outerHTML||roomUtility();
  box.innerHTML=`${utility}<p class="speaker">${mode}</p><p class="dialogue-current">${message}</p><button class="dialogue-return" data-end>RETURN</button>`;
  pendingMode='';sessionStorage.removeItem(RKEY);
 }
@@ -94,6 +98,7 @@ function chooseCandidate(box,mode){
 }
 function autoStart(){
  const box=$('.character-room .dialogue-box');if(!box)return;
+ ensureRoomUtility(box);
  const sceneButtons=$$('[data-scene]',box);if(!sceneButtons.length)return;
  const mode=pendingMode||up(sessionStorage.getItem(RKEY)||'');
  if(!['CONVERSATION','QUESTION','ACTION'].includes(mode))return;
@@ -104,7 +109,7 @@ function autoStart(){
   requestAnimationFrame(()=>{if(target.isConnected)target.click()});
  }else emptyState(box,mode,'지금 시작할 수 있는 에피소드가 없습니다.');
 }
-function run(){unwrapMore();syncDialogueRoles();autoStart()}
+function run(){unwrapMore();syncDialogueRoles();const box=$('.character-room .dialogue-box');if(box)ensureRoomUtility(box);autoStart()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 
 document.addEventListener('click',e=>{

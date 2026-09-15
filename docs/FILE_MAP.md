@@ -20,17 +20,13 @@
 
 ## Gift
 
-- `js/lucifer-gift-expansion.js` — Lucifer 선물 확장 데이터.
-- `js/gift-context-system.js` — 선물 전달 방식/의도.
-- `js/gift-context-editor.js` — 선물 context editor 확장.
-- `js/gift-system.js` — 선호도, 반복, mood 계산 및 gift UI.
-- `css/gift-system.css`
-- `css/gift-context-system.css`
+- `js/gift-system.js` — 독립 Gift Manager, 대화 선택지 획득, 선물 인벤토리, 캐릭터 전달 UI를 한 파일에서 관리.
+- `css/gift-system.css` — Gift Manager, 획득/전달 결과, 방 안 GIFT 목록 스타일.
+- 과거 `gift-context-*`, `collection-exchange-system`, `lucifer-gift-expansion` 파일은 데이터 호환을 위해 저장소에 남아 있지만 `index.html`에서는 로드하지 않음.
 
 ## Collection / Gacha
 
 - `js/hotel-collection-pack.js` — 호텔 핵심 캐릭터 8명의 컬렉션 데이터 팩.
-- `js/collection-exchange-system.js` — 컬렉션 아이템을 다른 캐릭터에게 전달.
 - `js/gacha-collection-addon.js` — 가챠 화면, draw, history, collection 통합 UI.
 - `js/character-gacha-profiles.js` — 캐릭터별 이모지/설명/Reveal Line/Gacha Editor.
 - `js/collection-runtime-repair.js` — 늦은 로딩/누락 데이터 복구 호환 코드.

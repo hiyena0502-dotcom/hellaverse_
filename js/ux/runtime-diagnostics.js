@@ -30,11 +30,22 @@ function scan(){
   const issues=[],warnings=[];
   const chars=Array.isArray(state.characters)?state.characters:[];
   const charIds=new Set(chars.map(c=>String(c?.id||'')).filter(Boolean));
-  const buckets=[['characters',chars],['dialogues',state.dialogues],['gifts',state.gifts],['collectionItems',state.collectionItems],['rewards',state.rewards],['thoughts',state.thoughts],['memories',state.memories]];
+  const buckets=[['characters',chars],['dialogues',state.dialogues],['collectionItems',state.collectionItems],['rewards',state.rewards],['thoughts',state.thoughts],['memories',state.memories]];
   for(const [name,list] of buckets){const d=duplicateIds(list);if(d.length)issues.push(`${name}: 중복 ID ${d.join(', ')}`)}
   for(const [name,list] of buckets.slice(1))for(const row of Array.isArray(list)?list:[]){const cid=String(row?.characterId||'');if(cid&&!charIds.has(cid))warnings.push(`${name}: 없는 characterId ${cid}`)}
   const items=Array.isArray(state.collectionItems)?state.collectionItems:[];
   const itemIds=new Set(items.map(i=>String(i?.id||'')).filter(Boolean));
+  const giftConfigs=state.giftInventoryConfig?.items&&typeof state.giftInventoryConfig.items==='object'?state.giftInventoryConfig.items:{};
+  const activeGiftConfigs=Object.entries(giftConfigs).filter(([,row])=>row?.enabled===true);
+  const dialogues=Array.isArray(state.dialogues)?state.dialogues:[];
+  for(const [id,row] of activeGiftConfigs){
+    if(!itemIds.has(id)){issues.push(`giftInventoryConfig: 없는 collection item ${id}`);continue}
+    if(!charIds.has(String(row.sourceCharacterId||'')))issues.push(`giftInventoryConfig: 없는 획득 캐릭터 ${row.sourceCharacterId||'(empty)'}`);
+    if(!charIds.has(String(row.targetCharacterId||'')))issues.push(`giftInventoryConfig: 없는 전달 대상 ${row.targetCharacterId||'(empty)'}`);
+    const scene=dialogues.find(scene=>String(scene?.id||'')===String(row.sceneId||''));
+    if(!scene)issues.push(`giftInventoryConfig: 없는 획득 대화 ${row.sceneId||'(empty)'}`);
+    else if(!scene.nodes?.some(node=>(node.choices||[]).some(choice=>String(choice?.id||'')===String(row.choiceId||'')&&String(choice?.unlockItemId||'')===id)))issues.push(`giftInventoryConfig: 선택지 연결 누락 ${row.choiceId||'(empty)'} → ${id}`);
+  }
   for(const id of Object.keys(state.collectionTransferConfig||{}))if(!itemIds.has(id))warnings.push(`collectionTransferConfig: orphan ${id}`);
   for(const id of Object.keys(state.gachaProfiles||{}))if(!charIds.has(id))warnings.push(`gachaProfiles: 없는 캐릭터 ${id}`);
   for(const item of items){
@@ -48,7 +59,7 @@ function scan(){
     ok:issues.length===0,
     issues,
     warnings:[...new Set(warnings)].slice(0,40),
-    stats:{characters:chars.length,dialogues:(state.dialogues||[]).length,gifts:(state.gifts||[]).length,collectionItems:items.length,owned:(state.ownedItems||[]).length,rewards:(state.rewards||[]).length,runtimeErrors:errors.length},
+    stats:{characters:chars.length,dialogues:(state.dialogues||[]).length,gifts:activeGiftConfigs.length,collectionItems:items.length,owned:(state.ownedItems||[]).length,rewards:(state.rewards||[]).length,runtimeErrors:errors.length},
     errors
   };
 }

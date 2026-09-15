@@ -1,48 +1,357 @@
 (()=>{
-if(window.__HELLAVERSE_GIFT_SYSTEM_V60__)return;
-window.__HELLAVERSE_GIFT_SYSTEM_V60__=1;
+'use strict';
+if(window.__HELLAVERSE_GIFT_INVENTORY_V1__)return;
+window.__HELLAVERSE_GIFT_INVENTORY_V1__=1;
+
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const PREFS={LOVED:5,LIKED:3,NEUTRAL:1,DISLIKED:-2,HATED:-4};
-const POS_MOOD={GOOD:1,NORMAL:1,TIRED:.75,ANNOYED:.25,SAD:.6,EXCITED:1.15};
-const NEG_MOOD={GOOD:.8,NORMAL:1,TIRED:1.1,ANNOYED:1.5,SAD:1.2,EXCITED:.8};
-const MOODS=['GOOD','NORMAL','TIRED','ANNOYED','SAD','EXCITED'];
-const SOURCE_OPTIONS=['PERSONAL','SEVEN_SINS','ALASTOR','CHARLIE','HOTEL','HEAVEN','FOUND','TRASH','STORY'];
-const SOURCE_LABELS={PERSONAL:'MY GIFT',SEVEN_SINS:'SEVEN SINS',ALASTOR:'ALASTOR',CHARLIE:'CHARLIE',HOTEL:'HOTEL',HEAVEN:'HEAVEN',FOUND:'FOUND',TRASH:'TRASH',STORY:'STORY'};
-const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-const esc=(v='')=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const clamp=v=>Math.max(0,Math.min(100,Number(v||0)));
-const split=v=>Array.isArray(v)?v.map(String).map(x=>x.trim()).filter(Boolean):String(v||'').split(/[\n,;/|]+/).map(x=>x.trim()).filter(Boolean);
-function readState(){try{return JSON.parse(localStorage.getItem(STATE_KEY)||'{}')||{}}catch{return{}}}
-function syncState(state){localStorage.setItem(STATE_KEY,JSON.stringify(state));window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'gift-system',clearDirty:true}}));try{window.dispatchEvent(new StorageEvent('storage',{key:STATE_KEY,newValue:localStorage.getItem(STATE_KEY)}))}catch{}}
-function relMultiplier(heart){heart=clamp(heart);if(heart<10)return.25;if(heart<20)return.35;if(heart<30)return.5;if(heart<40)return.65;if(heart<50)return.8;if(heart<60)return.9;if(heart<70)return 1;if(heart<80)return 1.05;if(heart<90)return 1.1;if(heart<100)return 1.15;return 1.2}
-function moodMultiplier(mood,positive){mood=String(mood||'NORMAL').toUpperCase();return (positive?POS_MOOD:NEG_MOOD)[mood]??1}
-function hasOverride(gift,mood){let o=gift?.moodOverrides;return o&&Object.prototype.hasOwnProperty.call(o,mood)&&o[mood]!==''&&o[mood]!=null&&Number.isFinite(Number(o[mood]))}
-function preferenceFor(gift,heart){let tiers=gift?.preferenceTiers||{},key=heart<40?'low':heart<80?'mid':'high',tier=String(tiers[key]||'').toUpperCase();return PREFS[tier]!=null?tier:String(gift?.preference||'NEUTRAL').toUpperCase()}
-function repeatCount(state,cid,gid){let count=0;for(const row of state.giftUseHistory||[]){if(row?.characterId!==cid)continue;if(row?.giftId===gid)count++;else break}return count}
-function repeatMultiplier(final,count,gift){if(!final||gift?.repeatMode==='none'||gift?.repeatPenalty===false)return 1;if(final>0){if(count<=0)return 1;if(count===1)return.75;if(count===2)return.4;return 0}let mode=gift?.negativeRepeatMode||'escalate';if(mode==='none')return 1;if(mode==='decay'){if(count===1)return.75;if(count===2)return.4;if(count>=3)return.25;return 1}if(count===1)return 1.1;if(count===2)return 1.25;if(count>=3)return 1.5;return 1}
-function calculate(raw,heart,mood,gift={},count=0){raw=Number(raw||0);mood=String(mood||'NORMAL').toUpperCase();let pref=preferenceFor(gift,heart),effective=gift.useTierPreference&&PREFS[pref]!=null?PREFS[pref]:raw;if(hasOverride(gift,mood)){let forced=Math.round(Number(gift.moodOverrides[mood])),rep=repeatMultiplier(forced,count,gift);return{final:Math.round(forced*rep),relationship:0,mood:0,repeat:rep,preference:pref,effective,override:true}}if(effective===0)return{final:0,relationship:1,mood:1,repeat:1,preference:pref,effective,override:false};let r=effective>0?(gift.ignoreRelationshipMultiplier?1:relMultiplier(heart)):1,m=gift.ignoreMoodMultiplier?1:moodMultiplier(mood,effective>0),pre=Math.round(effective*r*m),rep=repeatMultiplier(pre,count,gift);return{final:Math.round(pre*rep),relationship:r,mood:m,repeat:rep,preference:pref,effective,override:false}}
-function currentGift(state){let id=state.draft?.gift;return (state.gifts||[]).find(g=>g.id===id)||null}
-function giftConfig(state,id){return (state.giftAffectionConfig&&id&&state.giftAffectionConfig[id])||{}}
-function extraDataFromDom(){let moodOverrides={};for(const m of MOODS){let el=$(`[data-gift-mood-override="${m}"]`),v=String(el?.value||'').trim();if(v!=='')moodOverrides[m]=Number(v)}let tiers={low:String($('#gPrefLow')?.value||''),mid:String($('#gPrefMid')?.value||''),high:String($('#gPrefHigh')?.value||'')};return{preference:String($('#gPreference')?.value||'NEUTRAL'),moodOverrides,ignoreRelationshipMultiplier:!!$('#gIgnoreRelationship')?.checked,ignoreMoodMultiplier:!!$('#gIgnoreMood')?.checked,sourceType:String($('#gSourceType')?.value||'PERSONAL'),sourceName:String($('#gSourceName')?.value||'').trim(),category:String($('#gCategory')?.value||'').trim(),tags:split($('#gTags')?.value||''),repeatMode:String($('#gRepeatMode')?.value||'default'),negativeRepeatMode:String($('#gNegativeRepeat')?.value||'escalate'),useTierPreference:!!$('#gUseTierPreference')?.checked,preferenceTiers:tiers}}
-function previewGiftFromDom(){let state=readState(),gift=currentGift(state)||{},extra=extraDataFromDom(),cfg=giftConfig(state,gift.id);gift={...gift,...cfg,...extra};let cid=gift.characterId||state.active,heart=clamp(state.affection?.[cid]?.value),mood=String(state.moods?.[cid]||'NORMAL').toUpperCase(),base=Number($('#gDelta')?.value||0),a=Number($('#gADelta')?.value||0),b=Number($('#gBDelta')?.value||0),count=gift.id?repeatCount(state,cid,gift.id):0,baseCalc=calculate(base,heart,mood,gift,count),aCalc=calculate(base+a,heart,mood,gift,count),bCalc=calculate(base+b,heart,mood,gift,count);let root=$('[data-gift-affection-preview]');if(!root)return;let src=gift.sourceName||SOURCE_LABELS[gift.sourceType]||gift.sourceType||'MY GIFT';root.innerHTML=`<p class="label">AFFECTION PREVIEW</p><div class="gift-preview-grid"><span>Current Heart<b>${heart}</b></span><span>Current Mood<b>${esc(mood)}</b></span><span>Preference<b>${esc(baseCalc.preference)}</b></span><span>Source<b>${esc(src)}</b></span><span>Repeat<b>${count?`${count+1}th · × ${baseCalc.repeat}`:'first'}</b></span><span>Expected Result<b>♥ ${baseCalc.final>0?'+':''}${baseCalc.final}</b></span></div>${($('#gA')?.value||'').trim()?`<p class="gift-choice-preview">Choice A → ♥ ${aCalc.final>0?'+':''}${aCalc.final}</p>`:''}${($('#gB')?.value||'').trim()?`<p class="gift-choice-preview">Choice B → ♥ ${bCalc.final>0?'+':''}${bCalc.final}</p>`:''}<small>같은 선물을 반복하면 긍정 효과는 100% → 75% → 40% → 0%로 줄어듭니다. 싫어하는 선물을 반복하면 기본적으로 하락이 더 커집니다.</small>`}
-function prefOptions(value=''){value=String(value||'').toUpperCase();return`<option value="">DEFAULT</option>${Object.keys(PREFS).map(p=>`<option value="${p}" ${value===p?'selected':''}>${p}</option>`).join('')}`}
-function patchGiftEditor(){let card=$('#gName')?.closest('.editor-card');if(!card||card.dataset.giftSystemPatched)return;card.dataset.giftSystemPatched='1';let state=readState(),gift=currentGift(state)||{},cfg=giftConfig(state,gift.id),isNew=!currentGift(state),pref=String(cfg.preference||'NEUTRAL').toUpperCase(),short=$('#gShort')?.closest('label'),delta=$('#gDelta')?.closest('label');if(short)short.insertAdjacentHTML('afterend',`<label>PREFERENCE<select id="gPreference">${Object.keys(PREFS).map(p=>`<option value="${p}" ${pref===p?'selected':''}>${p} · suggested ${PREFS[p]>0?'+':''}${PREFS[p]}</option>`).join('')}</select></label>`);if(delta)delta.insertAdjacentHTML('afterend',`<div class="full gift-preference-help">Preference는 기본 반응 분류입니다. Story/전달 선물은 아래의 Source와 조건부 Preference를 같이 사용할 수 있습니다.</div>`);let form=$('.form-grid',card);if(form)form.insertAdjacentHTML('afterend',`<section class="gift-affection-preview" data-gift-affection-preview></section><details class="sub-editor gift-source-editor" open><summary>SOURCE / DELIVERY / TAGS</summary><div class="gift-source-grid"><label>Source Type<select id="gSourceType">${SOURCE_OPTIONS.map(s=>`<option value="${s}" ${String(cfg.sourceType||'PERSONAL')===s?'selected':''}>${SOURCE_LABELS[s]}</option>`).join('')}</select></label><label>From Character<input id="gSourceName" value="${esc(cfg.sourceName||'')}" placeholder="Satan / Alastor / Charlie..."></label><label>Category<input id="gCategory" value="${esc(cfg.category||'')}" placeholder="TOY / FOOD / PAPER..."></label><label>Tags<input id="gTags" value="${esc((cfg.tags||[]).join(', '))}" placeholder="duck, family, trash..."></label><label>Repeat Rule<select id="gRepeatMode"><option value="default" ${cfg.repeatMode!=='none'?'selected':''}>default penalty</option><option value="none" ${cfg.repeatMode==='none'?'selected':''}>no penalty</option></select></label><label>Negative Repeat<select id="gNegativeRepeat"><option value="escalate" ${cfg.negativeRepeatMode!=='decay'&&cfg.negativeRepeatMode!=='none'?'selected':''}>gets worse</option><option value="decay" ${cfg.negativeRepeatMode==='decay'?'selected':''}>decays</option><option value="none" ${cfg.negativeRepeatMode==='none'?'selected':''}>unchanged</option></select></label></div><label class="checkline"><input id="gUseTierPreference" type="checkbox" ${cfg.useTierPreference?'checked':''}> Heart 구간별 Preference로 Base Affection 자동 계산</label><div class="gift-tier-prefs"><label>Heart 0–39<select id="gPrefLow">${prefOptions(cfg.preferenceTiers?.low)}</select></label><label>Heart 40–79<select id="gPrefMid">${prefOptions(cfg.preferenceTiers?.mid)}</select></label><label>Heart 80–100<select id="gPrefHigh">${prefOptions(cfg.preferenceTiers?.high)}</select></label></div></details><details class="sub-editor gift-affection-advanced"><summary>ADVANCED AFFECTION</summary><p class="muted">Story Gift처럼 일반 공식을 무시해야 할 때만 사용하세요.</p><label class="checkline"><input id="gIgnoreRelationship" type="checkbox" ${cfg.ignoreRelationshipMultiplier?'checked':''}> Ignore Relationship Multiplier</label><label class="checkline"><input id="gIgnoreMood" type="checkbox" ${cfg.ignoreMoodMultiplier?'checked':''}> Ignore Mood Multiplier</label><div class="gift-mood-overrides"><p class="label">MOOD OVERRIDES</p><p class="muted">비워두면 기본 Mood 규칙을 사용합니다. 숫자를 넣으면 해당 Mood에서는 그 값을 최종 Affection으로 사용합니다.</p>${MOODS.map(m=>`<label>${m}<input type="number" data-gift-mood-override="${m}" value="${cfg.moodOverrides?.[m]??''}" placeholder="default"></label>`).join('')}</div></details>`);if(isNew){let select=$('#gPreference'),base=$('#gDelta');if(select)select.dataset.newGift='1';if(base&&Number(base.value)===0)base.dataset.canSuggest='1'}previewGiftFromDom()}
-function persistGiftExtras(){let extra=extraDataFromDom();setTimeout(()=>{let state=readState(),id=state.draft?.gift,g=(state.gifts||[]).find(x=>x.id===id);if(!g)return;state.giftAffectionConfig=state.giftAffectionConfig||{};state.giftAffectionConfig[id]={...(state.giftAffectionConfig[id]||{}),...extra};syncState(state);setTimeout(()=>{previewGiftFromDom();patchGiftMenus()},0)},0)}
-let currentGiftId='';
-function applyFinal(giftId,path,preHeart,preMood){setTimeout(()=>{let state=readState(),gift=(state.gifts||[]).find(g=>g.id===giftId);if(!gift)return;gift={...gift,...giftConfig(state,giftId)};let cid=gift.characterId,raw=Number(gift.affectionDelta||0)+(path==='A'?Number(gift.choiceADelta||0):path==='B'?Number(gift.choiceBDelta||0):0),count=repeatCount(state,cid,giftId),calc=calculate(raw,preHeart,preMood,gift,count);state.affection=state.affection||{};state.affection[cid]={...(state.affection[cid]||{}),value:clamp(preHeart+calc.final)};state.giftUseHistory=Array.isArray(state.giftUseHistory)?state.giftUseHistory:[];state.giftUseHistory.unshift({id:`giftuse-${Date.now()}-${Math.random().toString(16).slice(2)}`,giftId,characterId:cid,sourceType:gift.sourceType||'PERSONAL',sourceName:gift.sourceName||'',preference:calc.preference,heartBefore:preHeart,heartAfter:clamp(preHeart+calc.final),delta:calc.final,mood:preMood,at:new Date().toISOString()});state.giftUseHistory=state.giftUseHistory.slice(0,100);state.lastGiftResult={giftId,characterId:cid,delta:calc.final,preference:calc.preference,sourceType:gift.sourceType||'PERSONAL',sourceName:gift.sourceName||'',repeatCount:count+1};syncState(state);setTimeout(()=>{let flash=$('.affection-flash');if(flash)flash.textContent=`♥ ${calc.final>0?'+':''}${calc.final}${count?` · REPEAT ×${calc.repeat}`:''}`;patchGiftMenus()},0)},0)}
-function captureGiftStart(id){let state=readState(),gift=(state.gifts||[]).find(g=>g.id===id);if(!gift)return;currentGiftId=id;let cid=gift.characterId,preHeart=clamp(state.affection?.[cid]?.value),preMood=String(state.moods?.[cid]||'NORMAL').toUpperCase();if(!gift.choiceA&&!gift.choiceB)applyFinal(id,'',preHeart,preMood)}
-function captureGiftChoice(path){let state=readState(),gift=(state.gifts||[]).find(g=>g.id===currentGiftId);if(!gift)return;let cid=gift.characterId,preHeart=clamp(state.affection?.[cid]?.value),preMood=String(state.moods?.[cid]||'NORMAL').toUpperCase();applyFinal(gift.id,path,preHeart,preMood)}
-function sourceGroup(cfg){let t=String(cfg?.sourceType||'PERSONAL').toUpperCase();return SOURCE_LABELS[t]?t:'PERSONAL'}
-function applyGiftFilter(box){let list=$('.choice-list',box);if(!list)return;let filter=String(box.dataset.giftSourceFilter||'ALL'),q=String($('[data-gift-search]',box)?.value||'').trim().toLowerCase();$$('[data-gift]',list).forEach(btn=>{let okSource=filter==='ALL'||btn.dataset.giftSource===filter,okText=!q||String(btn.textContent||'').toLowerCase().includes(q);btn.hidden=!(okSource&&okText)});$$('[data-gift-source-filter]',box).forEach(b=>b.classList.toggle('active',b.dataset.giftSourceFilter===filter))}
-function decorateGiftSelect(box,state){let list=$('.choice-list',box),buttons=list?$$('[data-gift]',list):[];if(!buttons.length)return;let groups=new Set();for(const btn of buttons){let id=btn.dataset.gift,gift=(state.gifts||[]).find(x=>x.id===id),cfg=giftConfig(state,id),src=sourceGroup(cfg);groups.add(src);btn.dataset.giftSource=src;if(!$('.gift-source-badge',btn)){let label=cfg.sourceName?`FROM ${cfg.sourceName}`:SOURCE_LABELS[src];btn.insertAdjacentHTML('beforeend',`<small class="gift-source-badge source-${src.toLowerCase()}">${esc(label)}${cfg.category?` · ${esc(cfg.category)}`:''}</small>`)}}
-  if(!$('[data-gift-browser]',box)){let order=['PERSONAL','SEVEN_SINS','ALASTOR','CHARLIE','HOTEL','HEAVEN','FOUND','TRASH','STORY'].filter(x=>groups.has(x));list.insertAdjacentHTML('beforebegin',`<section class="gift-browser" data-gift-browser><input type="search" data-gift-search placeholder="Search gift..."><div class="gift-source-filters"><button type="button" class="active" data-gift-source-filter="ALL">ALL</button>${order.map(x=>`<button type="button" data-gift-source-filter="${x}">${esc(SOURCE_LABELS[x])}</button>`).join('')}</div></section>`)}
-  applyGiftFilter(box)
+const $=(selector,root=document)=>root.querySelector(selector);
+const $$=(selector,root=document)=>Array.from(root.querySelectorAll(selector));
+const esc=(value='')=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const clamp=value=>Math.max(0,Math.min(100,Number(value||0)));
+const normalize=value=>String(value||'').normalize('NFKC').replace(/[“”]/g,'"').replace(/\s+/g,' ').trim();
+
+let managerQuery='';
+let selectedItemId='';
+let managerDraft=null;
+let queued=false;
+
+function read(){
+  try{return ensure(JSON.parse(localStorage.getItem(STATE_KEY)||'{}')||{})}
+  catch{return ensure({})}
 }
-function decorateActiveGift(box,state){if(!currentGiftId||$('[data-gift-provenance]',box))return;let gift=(state.gifts||[]).find(x=>x.id===currentGiftId),cfg=giftConfig(state,currentGiftId);if(!gift||!cfg.sourceType)return;let label=cfg.sourceName?`FROM ${cfg.sourceName}`:SOURCE_LABELS[sourceGroup(cfg)];let anchor=$('.dialogue-lines,.dialogue-page-text',box);if(anchor)anchor.insertAdjacentHTML('beforebegin',`<p class="gift-provenance" data-gift-provenance><strong>${esc(label)}</strong>${cfg.category?` · ${esc(cfg.category)}`:''}${cfg.tags?.length?` · ${esc(cfg.tags.slice(0,4).join(' / '))}`:''}</p>`)}
-function patchGiftMenus(){let state=readState();$$('.character-room .dialogue-box').forEach(box=>{decorateGiftSelect(box,state);decorateActiveGift(box,state)})}
-function handleClick(e){let t=e.target;if(!(t instanceof Element))return;let filter=t.closest('[data-gift-source-filter]');if(filter){e.preventDefault();e.stopImmediatePropagation();let box=filter.closest('.dialogue-box');if(box){box.dataset.giftSourceFilter=filter.dataset.giftSourceFilter||'ALL';applyGiftFilter(box)}return}let gift=t.closest('[data-gift]')?.dataset.gift;if(gift){captureGiftStart(gift);return}let path=t.closest('[data-gc]')?.dataset.gc;if(path){captureGiftChoice(path);return}if(t.closest('[data-save-gift]')){persistGiftExtras();return}}
-function handleInput(e){let t=e.target;if(!(t instanceof Element))return;if(t.matches('[data-gift-search]')){applyGiftFilter(t.closest('.dialogue-box'));return}if(t.matches('#gDelta,#gADelta,#gBDelta,#gA,#gB,#gPreference,#gIgnoreRelationship,#gIgnoreMood,#gSourceType,#gSourceName,#gCategory,#gTags,#gRepeatMode,#gNegativeRepeat,#gUseTierPreference,#gPrefLow,#gPrefMid,#gPrefHigh,[data-gift-mood-override]'))previewGiftFromDom()}
-function handleChange(e){let t=e.target;if(!(t instanceof Element))return;if(t.id==='gPreference'){let base=$('#gDelta');if(base?.dataset.canSuggest==='1'){base.value=String(PREFS[t.value]??0);base.dataset.canSuggest='0'}previewGiftFromDom()}if(t.matches('#gIgnoreRelationship,#gIgnoreMood,#gUseTierPreference,#gSourceType,#gRepeatMode,#gNegativeRepeat,#gPrefLow,#gPrefMid,#gPrefHigh'))previewGiftFromDom()}
-function observe(){let app=$('#app');if(app&&!app.dataset.giftSystemV60){app.dataset.giftSystemV60='1';new MutationObserver(()=>queueMicrotask(()=>{patchGiftEditor();patchGiftMenus()})).observe(app,{childList:true,subtree:true})}}
-document.addEventListener('click',handleClick,true);document.addEventListener('input',handleInput,true);document.addEventListener('change',handleChange,true);document.addEventListener('DOMContentLoaded',()=>{observe();patchGiftEditor();patchGiftMenus()});window.addEventListener('load',()=>{patchGiftEditor();patchGiftMenus()});window.addEventListener('hellaverse:state-updated',patchGiftMenus);setTimeout(()=>{patchGiftEditor();patchGiftMenus()},150);
+
+function ensure(state){
+  state.characters=Array.isArray(state.characters)?state.characters:[];
+  state.dialogues=Array.isArray(state.dialogues)?state.dialogues:[];
+  state.collectionItems=Array.isArray(state.collectionItems)?state.collectionItems:(Array.isArray(state.items)?state.items:[]);
+  state.items=state.collectionItems;
+  state.ownedItems=Array.isArray(state.ownedItems)?[...new Set(state.ownedItems.map(String))]:[];
+  state.newCollectionItems=Array.isArray(state.newCollectionItems)?[...new Set(state.newCollectionItems.map(String))]:[];
+  state.affection=state.affection&&typeof state.affection==='object'?state.affection:{};
+  state.flags=state.flags&&typeof state.flags==='object'?state.flags:{};
+  state.visits=state.visits&&typeof state.visits==='object'?state.visits:{};
+  state.memories=Array.isArray(state.memories)?state.memories:[];
+  state.conversationHistory=Array.isArray(state.conversationHistory)?state.conversationHistory:[];
+
+  const rawInventory=state.giftInventory&&typeof state.giftInventory==='object'?state.giftInventory:{};
+  state.giftInventory={
+    version:1,
+    ownedCounts:rawInventory.ownedCounts&&typeof rawInventory.ownedCounts==='object'?rawInventory.ownedCounts:{},
+    acquiredChoiceIds:rawInventory.acquiredChoiceIds&&typeof rawInventory.acquiredChoiceIds==='object'?rawInventory.acquiredChoiceIds:{},
+    history:Array.isArray(rawInventory.history)?rawInventory.history:[]
+  };
+  const rawConfig=state.giftInventoryConfig&&typeof state.giftInventoryConfig==='object'?state.giftInventoryConfig:{};
+  state.giftInventoryConfig={
+    version:1,
+    items:rawConfig.items&&typeof rawConfig.items==='object'?rawConfig.items:{}
+  };
+  return state;
+}
+
+function write(state,source='gift-inventory'){
+  state=ensure(state);
+  const serialized=JSON.stringify(state);
+  localStorage.setItem(STATE_KEY,serialized);
+  window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source,state,clearDirty:false}}));
+  try{window.dispatchEvent(new StorageEvent('storage',{key:STATE_KEY,newValue:serialized}))}catch{}
+  return state;
+}
+
+function character(state,id){return state.characters.find(row=>String(row?.id||'')===String(id||''))||null}
+function collectionItem(state,id){return state.collectionItems.find(row=>String(row?.id||'')===String(id||''))||null}
+function itemName(item){return item?.name||item?.title||'Untitled Item'}
+function characterName(state,id){return character(state,id)?.name||'Unknown'}
+function count(state,id){return Math.max(0,Number(state.giftInventory.ownedCounts[String(id)]||0))}
+function config(state,id){return state.giftInventoryConfig.items[String(id)]||{}}
+
+function allChoices(state,characterId='',sceneId=''){
+  const rows=[];
+  for(const scene of state.dialogues){
+    if(characterId&&String(scene?.characterId||'')!==String(characterId))continue;
+    if(sceneId&&String(scene?.id||'')!==String(sceneId))continue;
+    for(const node of Array.isArray(scene?.nodes)?scene.nodes:[]){
+      for(const choice of Array.isArray(node?.choices)?node.choices:[]){
+        rows.push({scene,node,choice});
+      }
+    }
+  }
+  return rows;
+}
+
+function choiceLink(state,itemId){
+  return allChoices(state).find(row=>String(row.choice?.unlockItemId||'')===String(itemId||''))||null;
+}
+
+function defaultDraft(state,item){
+  const saved=config(state,item?.id),linked=choiceLink(state,item?.id);
+  const sourceId=saved.sourceCharacterId||linked?.scene?.characterId||item?.characterId||state.active||state.characters[0]?.id||'';
+  return{
+    enabled:saved.enabled===true,
+    sourceCharacterId:sourceId,
+    targetCharacterId:saved.targetCharacterId||'lucifer-morningstar',
+    sceneId:saved.sceneId||linked?.scene?.id||'',
+    choiceId:saved.choiceId||linked?.choice?.id||'',
+    reaction:saved.reaction||'',
+    preference:String(saved.preference||'NEUTRAL').toUpperCase(),
+    affectionDelta:Number.isFinite(Number(saved.affectionDelta))?Number(saved.affectionDelta):1,
+    dialogueOnly:saved.dialogueOnly!==false,
+    repeatableAcquisition:saved.repeatableAcquisition===true
+  };
+}
+
+function availableForTarget(state,targetId){
+  return state.collectionItems.filter(item=>{
+    const setting=config(state,item.id);
+    return setting.enabled===true&&String(setting.targetCharacterId||'')===String(targetId||'')&&count(state,item.id)>0;
+  });
+}
+
+function renderGiftMenu(targetId){
+  const state=read(),target=character(state,targetId),items=availableForTarget(state,targetId);
+  const title=target?.name||'CHARACTER';
+  if(!items.length){
+    return `<p class="speaker">GIVE A GIFT</p><div class="hvgift-empty"><span>◇</span><strong>아직 줄 수 있는 선물이 없습니다.</strong><p>다른 캐릭터와 대화하며 특정 말이나 행동을 선택하면 선물을 획득할 수 있습니다.</p></div><button class="dialogue-return" data-end>BACK TO CONVERSATION</button>`;
+  }
+  return `<p class="speaker">GIFT INVENTORY · ${esc(title)}</p><p class="hvgift-menu-note">대화에서 직접 획득한 선물만 표시됩니다.</p><div class="choice-list hvgift-choice-list">${items.map((item,index)=>{const setting=config(state,item.id),source=characterName(state,setting.sourceCharacterId||item.characterId);return `<button class="choice-option hvgift-choice" type="button" data-hvgift-give="${esc(item.id)}" data-hvgift-target="${esc(targetId)}"><b>${String(index+1).padStart(2,'0')}</b><span>${esc(item.symbol||'◆')} ${esc(itemName(item))}</span><small>FROM ${esc(source)} · ×${count(state,item.id)}</small></button>`}).join('')}</div><button class="dialogue-return" data-end>BACK TO CONVERSATION</button>`;
+}
+
+function reactionFor(state,item,setting,targetId){
+  const custom=String(setting.reaction||'').trim();
+  if(custom)return custom;
+  if(String(targetId)==='lucifer-morningstar'&&String(item.gachaLine||'').trim())return String(item.gachaLine).trim();
+  return `${characterName(state,targetId)}가 「${itemName(item)}」을 받아든다.`;
+}
+
+function showNotice(markup,kind='notice'){
+  $('#hvGiftNotice')?.remove();
+  const root=document.createElement('div');
+  root.id='hvGiftNotice';
+  root.className='hvgift-notice-backdrop';
+  root.dataset.hvgiftNoticeKind=kind;
+  root.innerHTML=markup;
+  document.body.appendChild(root);
+}
+
+function showAcquired(state,item,setting){
+  const source=characterName(state,setting.sourceCharacterId||item.characterId);
+  const target=characterName(state,setting.targetCharacterId);
+  showNotice(`<section class="hvgift-notice"><p class="label">NEW GIFT ACQUIRED</p><div class="hvgift-notice-symbol">${esc(item.symbol||'◆')}</div><h2>${esc(itemName(item))}</h2><p><b>${esc(source)}</b>와의 대화에서 획득했습니다.</p><small>이제 ${esc(target)}의 GIFT 메뉴에 표시됩니다.</small><button class="gold-button" type="button" data-hvgift-notice-close>CONTINUE</button></section>`,'acquired');
+}
+
+function acquireFromChoice(itemId,choiceId){
+  const state=read(),item=collectionItem(state,itemId),setting=config(state,itemId);
+  if(!item||setting.enabled!==true||String(setting.choiceId||'')!==String(choiceId||''))return;
+  if(!setting.repeatableAcquisition&&state.giftInventory.acquiredChoiceIds[choiceId])return;
+  state.giftInventory.ownedCounts[itemId]=count(state,itemId)+1;
+  if(!setting.repeatableAcquisition)state.giftInventory.acquiredChoiceIds[choiceId]=new Date().toISOString();
+  if(!state.ownedItems.includes(String(itemId)))state.ownedItems.push(String(itemId));
+  if(!state.newCollectionItems.includes(String(itemId)))state.newCollectionItems.push(String(itemId));
+  state.giftInventory.history.unshift({id:`gift-acquired-${Date.now()}`,type:'ACQUIRED',itemId:String(itemId),sourceCharacterId:setting.sourceCharacterId||'',sceneId:setting.sceneId||'',choiceId:String(choiceId),at:new Date().toISOString()});
+  state.giftInventory.history=state.giftInventory.history.slice(0,200);
+  write(state,'gift-acquired');
+  showAcquired(state,item,setting);
+}
+
+function giveItem(itemId,targetId){
+  const state=read(),item=collectionItem(state,itemId),setting=config(state,itemId),available=count(state,itemId);
+  if(!item||setting.enabled!==true||String(setting.targetCharacterId||'')!==String(targetId||'')||available<1)return;
+  const target=character(state,targetId);if(!target)return;
+  const delta=Number(setting.affectionDelta||0),before=clamp(state.affection?.[targetId]?.value||0),after=clamp(before+delta);
+  const reaction=reactionFor(state,item,setting,targetId),source=characterName(state,setting.sourceCharacterId||item.characterId);
+  state.giftInventory.ownedCounts[itemId]=available-1;
+  state.affection[targetId]={...(state.affection[targetId]||{}),value:after};
+  state.visits[targetId]={firstMet:'',visitCount:0,lastVisitDate:'',conversationsCount:0,giftsCount:0,recentSceneIds:[],...(state.visits[targetId]||{})};
+  state.visits[targetId].giftsCount=Number(state.visits[targetId].giftsCount||0)+1;
+  state.flags[`gift.${String(itemId).replace(/[^a-z0-9._-]+/gi,'-')}.given.${targetId}`]=true;
+  const now=new Date().toISOString();
+  state.giftInventory.history.unshift({id:`gift-given-${Date.now()}`,type:'GIVEN',itemId:String(itemId),sourceCharacterId:setting.sourceCharacterId||'',targetCharacterId:String(targetId),heartBefore:before,heartAfter:after,delta,at:now});
+  state.giftInventory.history=state.giftInventory.history.slice(0,200);
+  state.memories.unshift({id:`gift-memory-${Date.now()}`,characterId:String(targetId),type:'event',title:`GIFT: ${itemName(item)}`,summary:`${source}에게서 얻은 「${itemName(item)}」을 ${target.name}에게 건넸다.`,tags:['gift','dialogue-acquired',String(itemId)],sourceType:'giftInventory',sourceId:String(itemId),importance:'normal',createdAt:now,pinned:false,hidden:false});
+  state.conversationHistory.unshift({id:`gift-history-${Date.now()}`,characterId:String(targetId),sceneId:`gift-inventory:${itemId}`,sceneTitle:`Gift: ${itemName(item)}`,startedAt:now,endedAt:now,messages:[{speaker:'YOU',text:`「${itemName(item)}」을 건넸다.`,type:'speech'},{speaker:String(target.name||'CHARACTER').toUpperCase(),text:reaction,type:'speech'}]});
+  state.conversationHistory=state.conversationHistory.slice(0,150);
+  write(state,'gift-given');
+  showNotice(`<section class="hvgift-notice hvgift-result"><p class="label">GIFT</p><div class="hvgift-notice-symbol">${esc(item.symbol||'◆')}</div><h2>${esc(itemName(item))}</h2><p class="hvgift-route">${esc(source)} <span>→</span> ${esc(target.name)}</p><blockquote>${esc(reaction)}</blockquote><div class="hvgift-result-meta"><span>HEART <b>${delta>0?'+':''}${delta}</b></span><span>LEFT <b>×${Math.max(0,available-1)}</b></span></div><button class="gold-button" type="button" data-hvgift-return>BACK TO CONVERSATION</button></section>`,'result');
+}
+
+function scenesFor(state,characterId){
+  return state.dialogues.filter(scene=>String(scene?.characterId||'')===String(characterId||'')&&['TALK','ASK'].includes(String(scene?.kind||'').toUpperCase()));
+}
+
+function option(value,label,current){return `<option value="${esc(value)}" ${String(value)===String(current)?'selected':''}>${esc(label)}</option>`}
+function characterOptions(state,current){return state.characters.filter(row=>!row.hidden).map(row=>option(row.id,row.name,current)).join('')}
+
+function draftFromDom(){
+  const root=$('#hvGiftManager');if(!root||!managerDraft)return managerDraft;
+  return{
+    ...managerDraft,
+    enabled:!!$('#hvgiftEnabled',root)?.checked,
+    sourceCharacterId:$('#hvgiftSource',root)?.value||'',
+    targetCharacterId:$('#hvgiftTarget',root)?.value||'',
+    sceneId:$('#hvgiftScene',root)?.value||'',
+    choiceId:$('#hvgiftChoice',root)?.value||'',
+    reaction:$('#hvgiftReaction',root)?.value||'',
+    preference:$('#hvgiftPreference',root)?.value||'NEUTRAL',
+    affectionDelta:Number($('#hvgiftDelta',root)?.value||0),
+    dialogueOnly:!!$('#hvgiftDialogueOnly',root)?.checked,
+    repeatableAcquisition:!!$('#hvgiftRepeatable',root)?.checked
+  };
+}
+
+function itemListMarkup(state){
+  const q=normalize(managerQuery).toLocaleLowerCase();
+  const items=state.collectionItems.filter(item=>!q||[itemName(item),characterName(state,item.characterId),item.rarity].join(' ').toLocaleLowerCase().includes(q));
+  return items.length?items.map(item=>{const setting=config(state,item.id),active=setting.enabled===true,owned=count(state,item.id),route=setting.targetCharacterId?`${characterName(state,setting.sourceCharacterId||item.characterId)} → ${characterName(state,setting.targetCharacterId)}`:`${characterName(state,item.characterId)} COLLECTION · ${item.rarity||'COMMON'}`;return `<button type="button" class="hvgift-manager-item ${String(item.id)===String(selectedItemId)?'selected':''}" data-hvgift-select="${esc(item.id)}"><span>${esc(item.symbol||'◆')}</span><span><strong>${esc(itemName(item))}</strong><small>${esc(route)}</small></span><em>${active?owned?`×${owned}`:'ACTIVE':'OFF'}</em></button>`}).join(''):'<p class="hvgift-manager-empty">검색 결과가 없습니다.</p>';
+}
+
+function editorMarkup(state,item){
+  if(!item)return `<section class="hvgift-manager-empty-panel"><span>◇</span><h2>선물 아이템을 선택하세요.</h2><p>컬렉션 아이템 하나를 대화 획득형 선물로 연결할 수 있습니다.</p></section>`;
+  if(!managerDraft)managerDraft=defaultDraft(state,item);
+  const draft=managerDraft,scenes=scenesFor(state,draft.sourceCharacterId),scene=scenes.find(row=>String(row.id)===String(draft.sceneId));
+  const choices=scene?allChoices(state,draft.sourceCharacterId,scene.id):[];
+  const linked=choices.find(row=>String(row.choice.id)===String(draft.choiceId));
+  const currentCount=count(state,item.id);
+  const selectedText=linked?`${linked.choice.type==='action'?'행동':'말'} · ${linked.choice.text||linked.choice.playerLine||linked.choice.id}`:'아직 선택되지 않음';
+  return `<section class="hvgift-editor"><header><div><p class="label">GIFT ITEM</p><h2>${esc(item.symbol||'◆')} ${esc(itemName(item))}</h2><p>${esc(item.desc||item.description||'')}</p></div><span class="hvgift-status ${draft.enabled?'on':''}">${draft.enabled?'ACTIVE':'OFF'}</span></header><div class="hvgift-flow"><span><b>1</b>대화 선택</span><i>→</i><span><b>2</b>선물 획득</span><i>→</i><span><b>3</b>다른 캐릭터에게 전달</span></div><div class="hvgift-editor-grid"><label class="hvgift-check full"><input id="hvgiftEnabled" type="checkbox" ${draft.enabled?'checked':''}><span><b>선물 시스템에 사용</b><small>활성화해도 실제 대화에서 획득하기 전에는 GIFT 메뉴에 보이지 않습니다.</small></span></label><label>획득할 캐릭터<select id="hvgiftSource">${characterOptions(state,draft.sourceCharacterId)}</select></label><label>선물을 받을 캐릭터<select id="hvgiftTarget">${characterOptions(state,draft.targetCharacterId)}</select></label><label class="full">획득 대화<select id="hvgiftScene"><option value="">대화를 선택하세요</option>${scenes.map(row=>option(row.id,`${String(row.kind||'TALK').toUpperCase()} · ${row.title||row.id}`,draft.sceneId)).join('')}</select></label><label class="full">획득시키는 말 / 행동<select id="hvgiftChoice"><option value="">선택지를 선택하세요</option>${choices.map(row=>option(row.choice.id,`[${row.choice.type==='action'?'행동':'말'}] ${row.choice.text||row.choice.playerLine||row.choice.id}`,draft.choiceId)).join('')}</select><small class="hvgift-link-preview">${esc(selectedText)}</small></label><label>받는 캐릭터의 반응 분류<select id="hvgiftPreference">${Object.keys(PREFS).map(value=>option(value,`${value} · ${PREFS[value]>0?'+':''}${PREFS[value]}`,draft.preference)).join('')}</select></label><label>Heart 변화<input id="hvgiftDelta" type="number" min="-100" max="100" value="${esc(draft.affectionDelta)}"></label><label class="full">받는 캐릭터의 반응<textarea id="hvgiftReaction" rows="5" placeholder="비워두면 아이템에 저장된 캐릭터 반응을 사용합니다.">${esc(draft.reaction)}</textarea></label><label class="hvgift-check full"><input id="hvgiftDialogueOnly" type="checkbox" ${draft.dialogueOnly?'checked':''}><span><b>대화 전용 획득</b><small>이 아이템을 가챠 풀에서 제외해 다른 캐릭터와 대화해야만 얻도록 합니다.</small></span></label><label class="hvgift-check full"><input id="hvgiftRepeatable" type="checkbox" ${draft.repeatableAcquisition?'checked':''}><span><b>같은 선택지에서 반복 획득 허용</b><small>꺼두면 해당 말이나 행동으로는 한 번만 획득합니다.</small></span></label></div><footer><div><span>현재 선물 인벤토리</span><b>×${currentCount}</b></div><div class="hvgift-actions"><button class="ghost-button" type="button" data-hvgift-grant="${esc(item.id)}">TEST +1</button><button class="ghost-button" type="button" data-hvgift-clear="${esc(item.id)}" ${currentCount?'':'disabled'}>COUNT 0</button><button class="gold-button" type="button" data-hvgift-save>SAVE GIFT</button></div></footer></section>`;
+}
+
+function managerMarkup(state){
+  const selected=collectionItem(state,selectedItemId);
+  const active=Object.values(state.giftInventoryConfig.items).filter(row=>row?.enabled===true).length;
+  const inventory=Object.values(state.giftInventory.ownedCounts).reduce((sum,value)=>sum+Math.max(0,Number(value||0)),0);
+  return `<div class="hvgift-manager-backdrop" data-hvgift-manager-backdrop><section class="hvgift-manager-shell"><header class="hvgift-manager-head"><div><small>HELLAVERSE SYSTEM</small><h1>GIFT MANAGER</h1><p>컬렉션 아이템을 특정 대화 선택지와 연결하고, 누구에게 줄 수 있는지 한곳에서 관리합니다.</p></div><div class="hvgift-manager-stats"><span>ACTIVE <b>${active}</b></span><span>INVENTORY <b>${inventory}</b></span></div><button type="button" data-hvgift-manager-close aria-label="Close">×</button></header><div class="hvgift-manager-layout"><aside><input type="search" data-hvgift-search value="${esc(managerQuery)}" placeholder="Search gift item..."><div class="hvgift-manager-list">${itemListMarkup(state)}</div></aside><main>${editorMarkup(state,selected)}</main></div></section></div>`;
+}
+
+function openManager(itemId=''){
+  const state=read();
+  if(itemId)selectedItemId=String(itemId);
+  if(!selectedItemId||!collectionItem(state,selectedItemId))selectedItemId=state.collectionItems[0]?.id||'';
+  managerDraft=selectedItemId?defaultDraft(state,collectionItem(state,selectedItemId)):null;
+  let root=$('#hvGiftManager');if(!root){root=document.createElement('div');root.id='hvGiftManager';document.body.appendChild(root)}
+  root.innerHTML=managerMarkup(state);
+  document.body.classList.add('hvgift-manager-open');
+}
+
+function closeManager(){document.body.classList.remove('hvgift-manager-open');$('#hvGiftManager')?.remove();managerDraft=null}
+
+function rerenderManager(){const root=$('#hvGiftManager');if(root)root.innerHTML=managerMarkup(read())}
+
+function saveManager(){
+  const state=read(),item=collectionItem(state,selectedItemId);if(!item)return;
+  const next=draftFromDom();
+  if(next.enabled&&(!next.sourceCharacterId||!next.targetCharacterId||!next.sceneId||!next.choiceId))return toast('획득 캐릭터, 대화, 선택지를 모두 골라주세요.');
+  const link=next.choiceId?allChoices(state,next.sourceCharacterId,next.sceneId).find(row=>String(row.choice.id)===String(next.choiceId)):null;
+  if(next.enabled&&!link)return toast('선택한 대화 선택지를 찾을 수 없습니다.');
+  if(link&&link.choice.unlockItemId&&String(link.choice.unlockItemId)!==String(item.id))return toast('이 선택지는 이미 다른 아이템을 해금합니다.');
+  const previous=config(state,item.id);
+  if(previous.choiceId&&String(previous.choiceId)!==String(next.choiceId)){
+    const old=allChoices(state).find(row=>String(row.choice.id)===String(previous.choiceId));
+    if(old&&String(old.choice.unlockItemId||'')===String(item.id))old.choice.unlockItemId='';
+  }
+  if(next.enabled&&link)link.choice.unlockItemId=String(item.id);
+  if(!next.enabled&&link&&String(link.choice.unlockItemId||'')===String(item.id))link.choice.unlockItemId='';
+  if(next.enabled)item.gachaEnabled=!next.dialogueOnly;
+  state.giftInventoryConfig.items[String(item.id)]={...next,version:1,updatedAt:new Date().toISOString()};
+  write(state,'gift-manager-save');
+  managerDraft={...next};
+  rerenderManager();
+  toast(next.enabled?'대화 획득형 선물로 연결했습니다.':'선물 설정을 저장했습니다.');
+}
+
+function adjustInventory(itemId,mode){
+  const state=read(),item=collectionItem(state,itemId);if(!item)return;
+  state.giftInventory.ownedCounts[itemId]=mode==='clear'?0:count(state,itemId)+1;
+  if(mode!=='clear'){
+    if(!state.ownedItems.includes(String(itemId)))state.ownedItems.push(String(itemId));
+    if(!state.newCollectionItems.includes(String(itemId)))state.newCollectionItems.push(String(itemId));
+  }
+  state.giftInventory.history.unshift({id:`gift-manager-${Date.now()}`,type:mode==='clear'?'COUNT_RESET':'TEST_GRANT',itemId:String(itemId),at:new Date().toISOString()});
+  state.giftInventory.history=state.giftInventory.history.slice(0,200);
+  write(state,'gift-manager-inventory');
+  rerenderManager();
+  toast(mode==='clear'?'선물 인벤토리 수량을 0으로 만들었습니다.':'테스트용 선물 1개를 추가했습니다.');
+}
+
+function injectManagerButton(){
+  for(const menu of $$('.admin-menu')){
+    if($('[data-hvgift-manage]',menu))continue;
+    const button=document.createElement('button');button.type='button';button.dataset.hvgiftManage='1';button.textContent='GIFT MANAGER';menu.prepend(button);
+  }
+}
+
+function patchGiftMenus(){
+  const state=read();
+  for(const box of $$('.character-room .dialogue-box')){
+    const text=String(box.textContent||'');
+    const isGiftMenu=!!$('[data-gift]',box)||/SELECT A GIFT|GIVE A GIFT|There is nothing to give yet/i.test(text);
+    if(!isGiftMenu&&!box.dataset.hvgiftMenu)return;
+    const targetId=String(state.active||'');
+    const signature=JSON.stringify([targetId,state.giftInventory.ownedCounts,state.giftInventoryConfig.items]);
+    if(box.dataset.hvgiftMenu===signature)return;
+    box.dataset.hvgiftMenu=signature;
+    box.innerHTML=renderGiftMenu(targetId);
+  }
+}
+
+function captureChoice(choiceId){
+  const state=read(),row=allChoices(state).find(entry=>String(entry.choice.id)===String(choiceId));
+  if(!row?.choice?.unlockItemId)return;
+  const itemId=String(row.choice.unlockItemId),setting=config(state,itemId);
+  if(setting.enabled!==true||String(setting.choiceId||'')!==String(choiceId))return;
+  setTimeout(()=>acquireFromChoice(itemId,choiceId),80);
+}
+
+function toast(message){
+  let root=$('#toastRoot');if(!root){root=document.createElement('div');root.id='toastRoot';document.body.appendChild(root)}
+  root.innerHTML=`<div class="toast">${esc(message)}</div>`;
+  setTimeout(()=>{if(root)root.innerHTML=''},1700);
+}
+
+function enhance(){injectManagerButton();patchGiftMenus()}
+function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;enhance()})}
+
+document.addEventListener('click',event=>{
+  const target=event.target instanceof Element?event.target:null;if(!target)return;
+  const choice=target.closest('[data-choice]');if(choice)captureChoice(choice.dataset.choice);
+  const give=target.closest('[data-hvgift-give]');if(give){event.preventDefault();event.stopImmediatePropagation();giveItem(give.dataset.hvgiftGive,give.dataset.hvgiftTarget);return}
+  if(target.closest('[data-hvgift-manage]')){event.preventDefault();event.stopImmediatePropagation();openManager();return}
+  if(target.closest('[data-hvgift-manager-close]')||target.matches('[data-hvgift-manager-backdrop]')){event.preventDefault();closeManager();return}
+  const select=target.closest('[data-hvgift-select]');if(select){event.preventDefault();selectedItemId=select.dataset.hvgiftSelect;const state=read();managerDraft=defaultDraft(state,collectionItem(state,selectedItemId));rerenderManager();return}
+  if(target.closest('[data-hvgift-save]')){event.preventDefault();saveManager();return}
+  const grant=target.closest('[data-hvgift-grant]');if(grant){event.preventDefault();adjustInventory(grant.dataset.hvgiftGrant,'grant');return}
+  const clear=target.closest('[data-hvgift-clear]');if(clear){event.preventDefault();adjustInventory(clear.dataset.hvgiftClear,'clear');return}
+  if(target.closest('[data-hvgift-notice-close]')){event.preventDefault();$('#hvGiftNotice')?.remove();return}
+  if(target.closest('[data-hvgift-return]')){event.preventDefault();$('#hvGiftNotice')?.remove();$('.character-room .dialogue-box [data-end]')?.click();return}
+},true);
+
+document.addEventListener('input',event=>{
+  const target=event.target instanceof Element?event.target:null;if(!target)return;
+  if(target.matches('[data-hvgift-search]')){managerQuery=target.value;const list=$('.hvgift-manager-list');if(list)list.innerHTML=itemListMarkup(read())}
+},true);
+
+document.addEventListener('change',event=>{
+  const target=event.target instanceof Element?event.target:null;if(!target||!$('#hvGiftManager'))return;
+  if(target.id==='hvgiftSource'){
+    managerDraft=draftFromDom();managerDraft.sourceCharacterId=target.value;managerDraft.sceneId='';managerDraft.choiceId='';rerenderManager();return;
+  }
+  if(target.id==='hvgiftScene'){
+    managerDraft=draftFromDom();managerDraft.sceneId=target.value;managerDraft.choiceId='';rerenderManager();return;
+  }
+  managerDraft=draftFromDom();
+},true);
+
+function boot(){
+  const state=read();
+  const reminder=state.collectionItems.find(item=>normalize(itemName(item))==='사탄의 독촉장');
+  if(reminder&&!state.giftInventoryConfig.items[String(reminder.id)]){
+    state.giftInventoryConfig.items[String(reminder.id)]={...defaultDraft(state,reminder),enabled:false,sourceCharacterId:'satan',targetCharacterId:'lucifer-morningstar',reaction:String(reminder.gachaLine||''),dialogueOnly:true,preference:'LIKED',affectionDelta:3};
+    write(state,'gift-manager-example');
+  }
+  enhance();
+  const app=$('#app');if(app)new MutationObserver(schedule).observe(app,{childList:true,subtree:true});
+}
+
+window.HVGiftInventory={renderGiftMenu,openManager,readState:read};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+window.addEventListener('hellaverse:state-updated',schedule);
 })();

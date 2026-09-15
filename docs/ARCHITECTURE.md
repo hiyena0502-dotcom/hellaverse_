@@ -39,7 +39,7 @@
 2. Base content / character content
 3. Feature seeders (gift, collection pack)
 4. Main renderers (`hv-stable`, `dialogue-ui`)
-5. Feature runtime modules (gift, event, collection, gacha)
+5. Feature runtime modules (dialogue-acquired gift inventory, event, collection, gacha)
 6. Repair/sync compatibility modules
 7. UX / diagnostics
 
@@ -89,9 +89,18 @@ Settings 화면의 Runtime Diagnostics 카드에서 검사 결과와 복사용 �
 
 권장 순서:
 1. collection / gacha
-2. gifts
+2. dialogue-acquired gift inventory
 3. dialogue runtime
 4. editor extensions
 5. legacy/unused 파일 정리
 
 기존 파일을 삭제하기 전에는 `index.html`에서 더 이상 로드하지 않는지 확인합니다.
+
+## 8. Gift Inventory 기준
+
+- 선물로 사용할 원본은 `collectionItems`입니다. 별도의 공개 선물 목록을 다시 만들지 않습니다.
+- 실제 전달 가능 수량은 `giftInventory.ownedCounts`에만 저장합니다. `ownedItems`는 컬렉션 해금 기록이므로 선물을 건네도 유지됩니다.
+- `giftInventoryConfig.items[itemId]`가 획득 캐릭터, 대화, 선택지, 전달 대상, 반응을 연결합니다.
+- 연결된 선택지는 기존 `unlockItemId`를 사용해 컬렉션도 함께 해금합니다.
+- GIFT 메뉴에는 활성화된 설정 중 현재 수량이 1개 이상이고 현재 캐릭터가 전달 대상인 항목만 표시합니다.
+- 예전 `gifts`, `giftContextConfig`, `collectionTransferConfig` 데이터는 백업 호환을 위해 삭제하지 않지만 현재 플레이 UX에서는 사용하지 않습니다.

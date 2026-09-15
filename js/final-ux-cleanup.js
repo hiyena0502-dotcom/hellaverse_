@@ -18,7 +18,10 @@ function cleanNav(){
       }
       if(t.includes('SETTINGS'))settings=b;
     }
-    if(settings){settings.classList.add('ux-settings-last');nav.appendChild(settings)}
+    if(settings){
+      settings.classList.add('ux-settings-last');
+      if(nav.lastElementChild!==settings)nav.appendChild(settings);
+    }
   }
 }
 
@@ -33,7 +36,6 @@ function cleanRoomHud(){
 
 function cleanRoomPreview(){
   for(const q of $$('.room-caption blockquote'))q.remove();
-  // Markers are editor storage syntax; never expose them on player-facing teaser text.
   for(const el of $$('.quote-line,.room-caption p,.room-caption strong')){
     if(/\[\[(?:CHARACTER|NARRATION)\]\]/.test(el.textContent||''))el.textContent=String(el.textContent||'').replace(/\[\[(?:CHARACTER|NARRATION)\]\]\s*/g,'');
   }
@@ -51,7 +53,6 @@ function removeSettingsByTitle(grid,title){
 function cleanSettings(){
   const grid=$('.settings-grid');if(!grid)return;
   grid.classList.add('ux-settings-clean');
-  // The top management hub already owns Backup/Restore. Keep Appearance and Danger Zone only.
   removeSettingsByTitle(grid,'GACHA SETTINGS');
   removeSettingsByTitle(grid,'DATA BACKUP');
   removeSettingsByTitle(grid,'DATA / BACKUP');
@@ -63,16 +64,13 @@ function cleanSettings(){
   }
 }
 
-function cleanInventory(){
-  for(const p of $$('.iv2-gift-preview>p'))p.remove();
-}
+function cleanInventory(){for(const p of $$('.iv2-gift-preview>p'))p.remove()}
 
 function cleanGiftResult(){
   for(const result of $$('.iv2-result')){
     for(const p of $$('.iv2-player',result))p.remove();
     for(const n of $$('.iv2-narration',result)){
       const t=txt(n);
-      // Delivery/action was already selected on the preceding HOW DO YOU GIVE IT screen.
       if(/건넨다|내민다|전해준다|준다[.!]?$/i.test(t)){n.classList.add('ux-hide-gift-repeat');n.remove()}
     }
     for(const b of $$('blockquote',result)){

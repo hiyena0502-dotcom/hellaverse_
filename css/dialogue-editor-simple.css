@@ -1,0 +1,58 @@
+/* Simplified dialogue editor UI — presentation only; existing dialogue fields/IDs stay intact. */
+.hv-dialogue-editor-simple{padding:0!important;overflow:hidden;border-color:rgba(201,166,107,.2)!important;background:rgba(14,10,13,.88)!important}
+.hv-dialogue-editor-simple .hv-dialogue-editor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:20px 22px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(201,166,107,.055),transparent)}
+.hv-dialogue-editor-simple .hv-dialogue-editor-head .label{margin-bottom:5px}
+.hv-dialogue-editor-simple .hv-dialogue-editor-head h2{margin:0;font:500 clamp(1.25rem,2.2vw,1.8rem)/1.2 Georgia,"Times New Roman",serif;letter-spacing:.05em}
+.hv-dialogue-editor-simple .hv-dialogue-editor-head p{margin:7px 0 0;color:var(--muted);font-size:.82rem;line-height:1.55}
+.hv-dialogue-editor-simple .hv-simple-badge{flex:0 0 auto;border:1px solid var(--line-strong);border-radius:999px;padding:6px 9px;color:var(--gold);font-size:.65rem;letter-spacing:.13em}
+.hv-dialogue-editor-simple .hv-dialogue-section{padding:20px 22px;border-bottom:1px solid var(--line)}
+.hv-dialogue-editor-simple .hv-dialogue-section:last-child{border-bottom:0}
+.hv-dialogue-editor-simple .hv-section-title{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:14px}
+.hv-dialogue-editor-simple .hv-section-title strong{font-size:.76rem;letter-spacing:.16em;color:var(--gold)}
+.hv-dialogue-editor-simple .hv-section-title small{color:var(--muted);font-size:.72rem}
+.hv-dialogue-editor-simple .hv-basic-grid{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(220px,1.3fr);gap:12px}
+.hv-dialogue-editor-simple .hv-basic-grid .hv-wide{grid-column:1/-1}
+.hv-dialogue-editor-simple label{gap:6px}
+.hv-dialogue-editor-simple label>input,.hv-dialogue-editor-simple label>textarea,.hv-dialogue-editor-simple label>select{margin-top:1px}
+.hv-dialogue-editor-simple textarea{min-height:72px}
+.hv-dialogue-editor-simple .hv-advanced-box,.hv-dialogue-editor-simple .hv-choice-more{margin-top:12px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.018);overflow:hidden}
+.hv-dialogue-editor-simple .hv-advanced-box>summary,.hv-dialogue-editor-simple .hv-choice-more>summary{list-style:none;cursor:pointer;padding:12px 14px;color:var(--muted);font-size:.74rem;letter-spacing:.11em;text-transform:uppercase}
+.hv-dialogue-editor-simple .hv-advanced-box>summary::-webkit-details-marker,.hv-dialogue-editor-simple .hv-choice-more>summary::-webkit-details-marker{display:none}
+.hv-dialogue-editor-simple .hv-advanced-box>summary:after,.hv-dialogue-editor-simple .hv-choice-more>summary:after{content:'+';float:right;color:var(--gold)}
+.hv-dialogue-editor-simple .hv-advanced-box[open]>summary:after,.hv-dialogue-editor-simple .hv-choice-more[open]>summary:after{content:'−'}
+.hv-dialogue-editor-simple .hv-advanced-grid,.hv-dialogue-editor-simple .hv-choice-more-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0 14px 14px}
+.hv-dialogue-editor-simple .hv-advanced-grid .full,.hv-dialogue-editor-simple .hv-choice-more-grid .full{grid-column:1/-1}
+.hv-dialogue-editor-simple .hv-choice-stack{display:grid;gap:10px}
+.hv-dialogue-editor-simple .hv-choice-card{border:1px solid var(--line);border-radius:10px;background:rgba(21,16,20,.56);overflow:hidden}
+.hv-dialogue-editor-simple .hv-choice-card>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;color:var(--text)}
+.hv-dialogue-editor-simple .hv-choice-card>summary::-webkit-details-marker{display:none}
+.hv-dialogue-editor-simple .hv-choice-number{display:grid;place-items:center;width:25px;height:25px;border:1px solid var(--line-strong);border-radius:50%;color:var(--gold);font-size:.7rem}
+.hv-dialogue-editor-simple .hv-choice-title{min-width:0;flex:1;font-size:.82rem;letter-spacing:.08em}
+.hv-dialogue-editor-simple .hv-choice-preview{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;max-width:52ch;color:var(--muted);font-size:.72rem;letter-spacing:0;text-transform:none}
+.hv-dialogue-editor-simple .hv-choice-card>summary:after{content:'+';color:var(--gold)}
+.hv-dialogue-editor-simple .hv-choice-card[open]>summary:after{content:'−'}
+.hv-dialogue-editor-simple .hv-choice-body{padding:2px 16px 16px;border-top:1px solid var(--line)}
+.hv-dialogue-editor-simple .hv-choice-core{display:grid;grid-template-columns:minmax(120px,.55fr) minmax(220px,1.45fr);gap:12px;padding-top:14px}
+.hv-dialogue-editor-simple .hv-choice-core .full{grid-column:1/-1}
+.hv-dialogue-editor-simple .hv-actions{display:flex;gap:10px;align-items:center;position:sticky;bottom:0;z-index:3;padding:14px 22px;background:rgba(11,8,10,.94);border-top:1px solid var(--line);backdrop-filter:blur(10px)}
+.hv-dialogue-editor-simple .hv-actions .gold-button{min-width:150px}
+.hv-dialogue-editor-simple .hv-actions .ghost-button{margin-left:auto}
+.hv-dialogue-editor-simple>.muted{display:none}
+.hv-dialogue-editor-simple details.sub-editor.hv-original-choice{margin:0;border:0;background:transparent}
+.hv-dialogue-editor-simple details.sub-editor.hv-original-choice>summary{display:none}
+.hv-dialogue-editor-simple .hv-node-json{margin:0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent}
+.hv-dialogue-editor-simple .hv-node-json>summary{padding:14px 22px}
+.hv-dialogue-editor-simple .hv-node-json>p,.hv-dialogue-editor-simple .hv-node-json>textarea{margin-left:22px;margin-right:22px;width:calc(100% - 44px)}
+.editor-main>.saved-panel.hv-dialogue-saved-simple{padding:0;overflow:hidden}
+.editor-main>.saved-panel.hv-dialogue-saved-simple>.label{display:block;margin:0;padding:14px 16px;border-bottom:1px solid var(--line);color:var(--gold)}
+.editor-main>.saved-panel.hv-dialogue-saved-simple .saved-card{padding:12px 16px;align-items:center}
+.editor-main>.saved-panel.hv-dialogue-saved-simple .saved-card p{margin:4px 0 0;max-width:70ch;color:var(--muted);font-size:.78rem}
+.editor-main>.saved-panel.hv-dialogue-saved-simple .saved-card small{display:block;margin-top:5px;color:var(--gold);font-size:.66rem}
+@media(max-width:760px){
+  .hv-dialogue-editor-simple .hv-dialogue-editor-head{padding:16px}
+  .hv-dialogue-editor-simple .hv-dialogue-section{padding:16px}
+  .hv-dialogue-editor-simple .hv-basic-grid,.hv-dialogue-editor-simple .hv-choice-core,.hv-dialogue-editor-simple .hv-advanced-grid,.hv-dialogue-editor-simple .hv-choice-more-grid{grid-template-columns:1fr}
+  .hv-dialogue-editor-simple .hv-basic-grid .hv-wide,.hv-dialogue-editor-simple .hv-choice-core .full,.hv-dialogue-editor-simple .hv-advanced-grid .full,.hv-dialogue-editor-simple .hv-choice-more-grid .full{grid-column:auto}
+  .hv-dialogue-editor-simple .hv-actions{padding:12px 16px}
+  .hv-dialogue-editor-simple .hv-actions .gold-button{min-width:0;flex:1}
+}

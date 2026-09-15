@@ -1,12 +1,13 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_RUNTIME_DIAGNOSTICS_V1__)return;
-window.__HELLAVERSE_RUNTIME_DIAGNOSTICS_V1__=1;
+if(window.__HELLAVERSE_RUNTIME_DIAGNOSTICS_V2__)return;
+window.__HELLAVERSE_RUNTIME_DIAGNOSTICS_V2__=1;
 
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const ERROR_KEY='hellaverse_runtime_errors_v1';
 const $=(s,r=document)=>r.querySelector(s);
-const esc=(v='')=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc=(v='')=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
 
 function parse(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'')||fallback}catch{return fallback}}
 function saveErrors(rows){try{localStorage.setItem(ERROR_KEY,JSON.stringify(rows.slice(0,50)))}catch{}}
@@ -87,15 +88,27 @@ function reportText(r=scan()){
     ...(r.errors.length?r.errors.slice(0,10).map(x=>`${x.time} | ${x.type} | ${x.message} | ${x.source}:${x.line||''}`):['none'])
   ].join('\n');
 }
-function currentPage(){try{return JSON.parse(localStorage.getItem(STATE_KEY)||'{}')?.page||''}catch{return''}}
 function signature(r){return JSON.stringify({ok:r.ok,issues:r.issues,warnings:r.warnings,stats:r.stats})}
 function panelMarkup(r,sig){
   const status=r.ok?'OK':'CHECK';
   return `<section class="hv-diagnostics settings-panel" data-hv-diagnostics data-hv-sig="${esc(sig)}"><div class="hv-diag-head"><div><p class="label">RUNTIME DIAGNOSTICS</p><h3>${status}</h3><p class="muted">파일이 늘어날수록 생기기 쉬운 중복 ID, 잘못된 캐릭터 연결, 가챠/컬렉션 참조 오류와 브라우저 런타임 오류를 빠르게 확인합니다.</p></div><span class="hv-diag-badge ${r.ok?'ok':'warn'}">${r.ok?'NO CRITICAL ISSUE':'CHECK NEEDED'}</span></div><div class="hv-diag-stats"><span>CHAR ${r.stats.characters||0}</span><span>DIALOGUE ${r.stats.dialogues||0}</span><span>GIFT ${r.stats.gifts||0}</span><span>COLLECTION ${r.stats.collectionItems||0}</span><span>ERROR ${r.stats.runtimeErrors||0}</span></div>${r.issues.length?`<details open><summary>Issues (${r.issues.length})</summary><ul>${r.issues.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`:'<p class="hv-diag-good">현재 구조 검사에서 치명적인 문제는 발견되지 않았습니다.</p>'}${r.warnings.length?`<details><summary>Warnings (${r.warnings.length})</summary><ul>${r.warnings.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`:''}<div class="button-row"><button class="ghost-button" type="button" data-hv-diag-run>RUN CHECK</button><button class="ghost-button" type="button" data-hv-diag-copy>COPY REPORT</button><button class="ghost-button danger" type="button" data-hv-diag-clear>CLEAR ERROR LOG</button></div></section>`;
 }
+function settingsPage(){
+  const shell=$('.site-shell');
+  if(!shell||!shell.classList.contains('page-settings'))return null;
+  const page=$('.page.active',shell)||$('.page',shell);
+  if(!page)return null;
+  if($('.thought-page,.mystery-page',page))return null;
+  return page;
+}
+function removeOutsideSettings(){
+  const page=settingsPage();
+  if(page)return;
+  for(const panel of $$('[data-hv-diagnostics]'))panel.remove();
+}
 function mount(force=false){
-  if(currentPage()!=='settings')return;
-  const page=$('.page.active')||$('#app');if(!page)return;
+  const page=settingsPage();
+  if(!page){removeOutsideSettings();return}
   const r=scan(),sig=signature(r),old=$('[data-hv-diagnostics]',page);
   if(old&&old.dataset.hvSig===sig&&!force)return;
   const html=panelMarkup(r,sig);

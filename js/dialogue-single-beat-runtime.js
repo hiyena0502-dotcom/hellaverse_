@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V1__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V1__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V2__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V2__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -23,12 +23,13 @@ function controlsFor(page){
 function restoreControls(page){for(const el of controlsFor(page))if(!el.matches('[data-single-beat-next]'))show(el)}
 function hideControls(page){for(const el of controlsFor(page))if(!el.matches('[data-single-beat-next]'))hide(el)}
 
+function currentBeats(page){
+ const text=$('.dialogue-page-text',page);if(!text)return[];
+ for(const you of $$('.dialogue-line.you',text))hide(you);
+ return messageRows(text).filter(el=>!el.matches('.dialogue-line.you'));
+}
 function setBeat(page,index){
- const text=$('.dialogue-page-text',page);if(!text)return;
- const beats=messageRows(text).filter(el=>!el.matches('.dialogue-line.you'));
- const playerRows=messageRows(text).filter(el=>el.matches('.dialogue-line.you'));
- playerRows.forEach(hide);
- if(!beats.length){restoreControls(page);return}
+ const beats=currentBeats(page);if(!beats.length){restoreControls(page);return}
  const safe=Math.max(0,Math.min(index,beats.length-1));
  beats.forEach((el,i)=>{el.dataset.singleBeatCurrent=i===safe?'1':'0';el.hidden=i!==safe});
  page.dataset.singleBeatIndex=String(safe);
@@ -42,29 +43,33 @@ function setBeat(page,index){
  }
 }
 
-function install(page){
- const text=$('.dialogue-page-text',page);if(!text)return;
- // A selected player line is already visible in the choice itself; do not echo it beside the reply.
- for(const you of $$('.dialogue-line.you',text))hide(you);
- const beats=messageRows(text).filter(el=>!el.matches('.dialogue-line.you'));
- if(beats.length<=1){page.dataset.singleBeat='ready';return}
- if(page.dataset.singleBeat==='ready')return;
- page.dataset.singleBeat='ready';
- const btn=document.createElement('button');
+function ensureButton(page){
+ let btn=$('[data-single-beat-next]',page);if(btn)return btn;
+ btn=document.createElement('button');
  btn.type='button';
  btn.className='dialogue-next single-beat-next';
  btn.dataset.singleBeatNext='1';
  btn.innerHTML='NEXT <span>›</span>';
  page.appendChild(btn);
- setBeat(page,0);
+ return btn;
+}
+function install(page){
+ const beats=currentBeats(page);
+ if(beats.length<=1)return; // marker splitting may happen a moment later; do not mark complete yet.
+ ensureButton(page);
+ if(page.dataset.singleBeat!=='ready'){
+  page.dataset.singleBeat='ready';
+  setBeat(page,0);
+  return;
+ }
+ const index=Number(page.dataset.singleBeatIndex||0);
+ setBeat(page,index);
 }
 
 function enhanceLegacyBox(box){
- // Fallback for a core dialogue render that appears before dialogue-ui replaces it.
  const lines=$('.dialogue-lines',box);if(!lines)return;
  for(const you of $$('.dialogue-line.you',lines))hide(you);
 }
-
 function run(){
  for(const page of $$('.dialogue-page[data-vn-page]'))install(page);
  for(const box of $$('.dialogue-box'))enhanceLegacyBox(box);
@@ -76,8 +81,7 @@ document.addEventListener('click',e=>{
  const btn=t.closest('[data-single-beat-next]');if(!btn)return;
  e.preventDefault();e.stopImmediatePropagation();
  const page=btn.closest('.dialogue-page');if(!page)return;
- const index=Number(page.dataset.singleBeatIndex||0)+1;
- setBeat(page,index);
+ setBeat(page,Number(page.dataset.singleBeatIndex||0)+1);
 },true);
 
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});

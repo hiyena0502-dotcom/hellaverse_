@@ -5,6 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hellaverse Dialogue</title>
 
+  <script>
+  (() => {
+    try {
+      const K='hellaverse_dialogue_state_v1';
+      const raw=localStorage.getItem(K);
+      if(!raw)return;
+      const state=JSON.parse(raw)||{};
+      const key='royalArchiveRedesignV1';
+      const archived=state.archivedContent&&state.archivedContent[key];
+      if(!archived||!state.migrations||!state.migrations[key])return;
+
+      if(Array.isArray(archived.dialogues))state.dialogues=archived.dialogues;
+      if(Array.isArray(archived.gifts))state.gifts=archived.gifts;
+      if(Array.isArray(archived.thoughts))state.thoughts=archived.thoughts;
+
+      const samples=new Map((Array.isArray(archived.characterSampleLines)?archived.characterSampleLines:[])
+        .filter(x=>x&&x.characterId)
+        .map(x=>[x.characterId,Array.isArray(x.sampleLines)?x.sampleLines:[]]));
+      if(Array.isArray(state.characters)&&samples.size){
+        state.characters=state.characters.map(c=>samples.has(c.id)?{...c,sampleLines:samples.get(c.id)}:c);
+      }
+
+      delete state.migrations[key];
+      state.migrations.royalArchiveRollbackV1={at:new Date().toISOString(),restored:true};
+      localStorage.setItem(K,JSON.stringify(state));
+    }catch(error){console.warn('Pre-redesign content recovery skipped safely.',error)}
+  })();
+  </script>
+
   <!-- BASE UI -->
   <link rel="stylesheet" href="css/app.css?v=50">
   <link rel="stylesheet" href="css/dialogue.css?v=50">

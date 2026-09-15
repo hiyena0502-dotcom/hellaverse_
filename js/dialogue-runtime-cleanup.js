@@ -1,9 +1,10 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V2__)return;
-window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V2__=1;
+if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V3__)return;
+window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V3__=1;
 
 const K='hellaverse_dialogue_state_v1';
+const META_KEY='hellaverse_dialogue_render_meta_v1';
 const RKEY='hellaverse_dialogue_runtime_file_v1';
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -11,6 +12,7 @@ const up=v=>String(v||'').trim().toUpperCase();
 let queued=false,pendingMode='';
 
 function read(){try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}}
+function readMeta(){try{return JSON.parse(localStorage.getItem(META_KEY)||'{}')||{}}catch{return{}}}
 function choices(sc){return (sc?.nodes||[]).flatMap(n=>Array.isArray(n?.choices)?n.choices:[])}
 function fileOf(sc,s){
  const explicit=up(s?.dialogueFileMap?.[sc?.id]);
@@ -22,6 +24,17 @@ function fileOf(sc,s){
   const all=choices(sc);return all.length&&all.filter(c=>c?.type==='action').length>all.length/2?'ACTION':'CONVERSATION';
  }
  return'CONVERSATION';
+}
+function syncDialogueRoles(){
+ const state=read(),meta=readMeta();let changed=false;
+ for(const sc of state.dialogues||[]){
+  if(!sc?.id)continue;
+  const file=fileOf(sc,state),wanted=file==='ACTION'?'ACTION':file==='QUESTION'?'ASK':file==='CONVERSATION'?'CONVERSATION':'';
+  if(!wanted)continue;
+  const row=meta[sc.id]&&typeof meta[sc.id]==='object'?meta[sc.id]:{};
+  if(up(row.sceneRole)!==wanted){meta[sc.id]={...row,sceneRole:wanted};changed=true}
+ }
+ if(changed)try{localStorage.setItem(META_KEY,JSON.stringify(meta))}catch{}
 }
 function modeFromButton(btn){
  const explicit=up(btn?.dataset?.dialogueFileRuntime);if(explicit)return explicit;
@@ -39,6 +52,16 @@ function unwrapMore(){
   const parent=d.parentElement,box=$('.dialogue-more-menu',d);if(parent&&box){for(const b of Array.from(box.children))parent.insertBefore(b,d)}d.remove();
  }
 }
+function roomUtility(box){
+ const current=$('.dialogue-utility',box);
+ if(current)return current.outerHTML;
+ return '<div class="dialogue-utility" style="display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap"><button type="button" data-vn-log>LOG</button><button type="button" data-vn-ask>ASK</button><button type="button" data-inventory-open>INVENTORY</button><button type="button" data-vn-leave>LEAVE ROOM</button></div>';
+}
+function emptyState(box,mode,message){
+ const utility=roomUtility(box);
+ box.innerHTML=`${utility}<p class="speaker">${mode}</p><p class="dialogue-current">${message}</p><button class="dialogue-return" data-end>RETURN</button>`;
+ pendingMode='';sessionStorage.removeItem(RKEY);
+}
 function sceneButtonsFor(box,mode){
  const state=read(),byId=new Map((state.dialogues||[]).map(sc=>[String(sc.id),sc]));
  return $$('[data-scene]',box).filter(b=>{
@@ -51,17 +74,13 @@ function showQuestionPicker(box){
  if(!all.length)return false;
  for(const b of all)b.hidden=!questions.includes(b);
  box.dataset.hvQuestionPicker='1';
- box.removeAttribute('data-hv-episode-auto');
- pendingMode='';
- sessionStorage.removeItem(RKEY);
- if(!questions.length){
-  box.innerHTML='<p class="speaker">QUESTION</p><p class="dialogue-current">지금 물어볼 수 있는 질문이 없습니다.</p><button class="dialogue-return" data-end>RETURN</button>';
- }
+ pendingMode='';sessionStorage.removeItem(RKEY);
+ if(!questions.length)emptyState(box,'QUESTION','지금 물어볼 수 있는 질문이 없습니다.');
  return true;
 }
 function chooseCandidate(box,mode){
  const state=read(),cid=String(state.active||''),byId=new Map((state.dialogues||[]).map(sc=>[String(sc.id),sc]));
- let buttons=$$('[data-scene]',box).filter(b=>!b.disabled&&!b.classList.contains('locked'));
+ let buttons=$$('[data-scene]',box).filter(b=>!b.disabled&&!b.classList.contains('locked')&&!b.hidden);
  buttons=buttons.filter(b=>{const sc=byId.get(String(b.dataset.scene||''));return sc&&fileOf(sc,state)===mode});
  if(!buttons.length)return null;
  const recent=new Set(state.visits?.[cid]?.recentSceneIds||[]);
@@ -76,26 +95,18 @@ function autoStart(){
  const mode=pendingMode||up(sessionStorage.getItem(RKEY)||'');
  if(!['CONVERSATION','QUESTION','ACTION'].includes(mode))return;
 
- // QUESTION is intentionally manual: show the available questions and let the player choose.
  if(mode==='QUESTION'){
   showQuestionPicker(box);
   return;
  }
 
- if(box.dataset.hvEpisodeAuto==='1')return;
  const target=chooseCandidate(box,mode);
- box.dataset.hvEpisodeAuto='1';
  if(target){
-  pendingMode='';
-  sessionStorage.removeItem(RKEY);
+  pendingMode='';sessionStorage.removeItem(RKEY);
   requestAnimationFrame(()=>{if(target.isConnected)target.click()});
- }else{
-  box.innerHTML=`<p class="speaker">${mode}</p><p class="dialogue-current">지금 시작할 수 있는 에피소드가 없습니다.</p><button class="dialogue-return" data-end>RETURN</button>`;
-  pendingMode='';
-  sessionStorage.removeItem(RKEY);
- }
+ }else emptyState(box,mode,'지금 시작할 수 있는 에피소드가 없습니다.');
 }
-function run(){unwrapMore();autoStart()}
+function run(){unwrapMore();syncDialogueRoles();autoStart()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 
 document.addEventListener('click',e=>{
@@ -106,6 +117,8 @@ document.addEventListener('click',e=>{
   if(['CONVERSATION','QUESTION','ACTION'].includes(mode)){
    pendingMode=mode;
    sessionStorage.setItem(RKEY,mode);
+   const box=$('.character-room .dialogue-box');
+   if(box){box.removeAttribute('data-hv-episode-auto');box.removeAttribute('data-hv-question-picker')}
   }
  }
 },true);

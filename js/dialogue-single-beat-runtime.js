@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V4__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V4__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V5__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V5__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -22,47 +22,81 @@ function hasActualChoices(host){return actualChoices(host).length>0}
 function vnControls(host){return $$('[data-vn-next],[data-vn-finish]',host).filter(b=>!b.matches('[data-single-beat-next]'))}
 function rawFinish(host){return $('[data-finish]',host)}
 function rawEnd(host){return $('[data-end]',host)}
-function hideProgress(host){
+function hideCoreProgress(host){
  vnControls(host).forEach(hide);
  const f=rawFinish(host);if(f)hide(f);
  const e=rawEnd(host);if(e)hide(e);
 }
+function hideChoices(host){const list=choiceList(host);if(list)hide(list)}
 function showChoices(host){
  const list=choiceList(host);if(list)show(list);
  for(const b of $$('button',list||document.createElement('div'))){
   if(b.matches('[data-choice],[data-gc]'))show(b);
   else if(b.matches('[data-finish]'))hide(b);
  }
- hideProgress(host);
+ hideCoreProgress(host);
 }
-function hideChoices(host){const list=choiceList(host);if(list)hide(list)}
+
+function utilityMarkup(){
+ return '<button type="button" data-vn-log>LOG</button>'+
+        '<button type="button" data-action="ASK" data-dialogue-file-runtime="QUESTION">ASK</button>'+
+        '<button type="button" data-action="TALK" data-dialogue-file-runtime="ACTION">ACTION</button>'+
+        '<button type="button" data-inventory-open>INVENTORY</button>'+
+        '<button type="button" data-page="characters" data-stable-leave-room>LEAVE ROOM</button>';
+}
 function ensureUtility(host){
- const box=host.closest?.('.dialogue-box')||host;
- if(!box?.closest('.character-room')||$('.dialogue-utility',box))return;
- box.insertAdjacentHTML('afterbegin','<div class="dialogue-utility hv-stable-dialogue-utility" style="display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap"><button type="button" data-vn-log>LOG</button><button type="button" data-vn-ask>ASK</button><button type="button" data-inventory-open>INVENTORY</button><button type="button" data-vn-leave>LEAVE ROOM</button></div>');
+ const box=host?.closest?.('.dialogue-box')||host;
+ if(!box?.closest('.character-room'))return;
+ let util=$('.dialogue-utility',box);
+ if(!util){
+  util=document.createElement('div');
+  util.className='dialogue-utility hv-stable-dialogue-utility';
+  box.insertBefore(util,box.firstChild);
+ }
+ util.classList.add('hv-stable-dialogue-utility');
+ util.style.cssText='display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap';
+ const expected='LOG|ASK|ACTION|INVENTORY|LEAVE ROOM';
+ if(util.dataset.stableUtility!==expected){
+  util.innerHTML=utilityMarkup();
+  util.dataset.stableUtility=expected;
+ }
 }
+
 function ensureLocalNext(host){
  let b=$('[data-single-beat-next]',host);if(b)return b;
- b=document.createElement('button');b.type='button';b.className='dialogue-next single-beat-next';b.dataset.singleBeatNext='1';b.innerHTML='NEXT <span>›</span>';
+ b=document.createElement('button');b.type='button';b.className='dialogue-next single-beat-next';b.dataset.singleBeatNext='1';
  host.appendChild(b);return b;
 }
-function signature(beats){return beats.map(el=>`${el.tagName}:${el.className}:${el.textContent}`).join('|')}
-function setLocalMode(button,mode){button.dataset.singleBeatMode=mode||'beat';button.innerHTML='NEXT <span>›</span>'}
-function revealFinal(host,local){
+function setLocalMode(button,mode,label='NEXT'){
+ button.dataset.singleBeatMode=mode||'beat';
+ button.innerHTML=`${label} <span>›</span>`;
+}
+function signature(beats,host){
+ const choiceSig=actualChoices(host).map(b=>b.dataset.choice||b.dataset.gc||b.textContent).join(',');
+ return beats.map(el=>`${el.tagName}:${el.className}:${el.textContent}`).join('|')+'::'+choiceSig;
+}
+function finalCoreAction(host){
+ const vnNext=$('[data-vn-next]',host);
+ if(vnNext)return{mode:'vn-next',label:String(vnNext.textContent||'NEXT').replace(/›/g,'').trim()||'NEXT'};
+ const vnFinish=$('[data-vn-finish]',host);
+ if(vnFinish)return{mode:'vn-finish',label:String(vnFinish.textContent||'CONTINUE').replace(/›/g,'').trim()||'CONTINUE'};
+ if(rawFinish(host))return{mode:'finish',label:'CONTINUE'};
+ if(rawEnd(host))return{mode:'end',label:'RETURN'};
+ return null;
+}
+function revealAfterLastBeat(host,local){
+ const phase=host.dataset.singleBeatPhase||'beat';
  if(hasActualChoices(host)){
-  hide(local);showChoices(host);return;
+  if(phase==='choices'){
+   hide(local);showChoices(host);
+  }else{
+   hideChoices(host);hideCoreProgress(host);setLocalMode(local,'choices','NEXT');show(local);
+  }
+  return;
  }
  hideChoices(host);
- const vn=vnControls(host).find(visible)||vnControls(host)[0];
- if(vn){
-  hide(local);show(vn);return;
- }
- const finish=rawFinish(host);
- if(finish){
-  hide(finish);setLocalMode(local,'finish');show(local);return;
- }
- const end=rawEnd(host);
- if(end){hide(local);show(end);return}
+ const action=finalCoreAction(host);
+ if(action){hideCoreProgress(host);setLocalMode(local,action.mode,action.label);show(local);return}
  hide(local);
 }
 function paginate(host,text){
@@ -71,8 +105,12 @@ function paginate(host,text){
  const all=Array.from(text.children).filter(isBeat);
  for(const row of all)if(isPlayer(row))hide(row);
  const beats=all.filter(row=>!isPlayer(row));
- const sig=signature(beats);
- if(host.dataset.singleBeatSig!==sig){host.dataset.singleBeatSig=sig;host.dataset.singleBeatIndex='0'}
+ const sig=signature(beats,host);
+ if(host.dataset.singleBeatSig!==sig){
+  host.dataset.singleBeatSig=sig;
+  host.dataset.singleBeatIndex='0';
+  host.dataset.singleBeatPhase='beat';
+ }
  if(!beats.length){
   const local=$('[data-single-beat-next]',host);if(local)hide(local);
   if(hasActualChoices(host))showChoices(host);
@@ -83,8 +121,8 @@ function paginate(host,text){
  beats.forEach((row,i)=>i===index?show(row):hide(row));
  const local=ensureLocalNext(host);
  if(index<beats.length-1){
-   hideChoices(host);hideProgress(host);setLocalMode(local,'beat');show(local);
- }else revealFinal(host,local);
+  hideChoices(host);hideCoreProgress(host);setLocalMode(local,'beat','NEXT');show(local);
+ }else revealAfterLastBeat(host,local);
 }
 function enhanceNew(page){const text=$('.dialogue-page-text',page);if(text)paginate(page,text)}
 function enhanceLegacy(box){const lines=$('.dialogue-lines',box);if(lines)paginate(box,lines)}
@@ -94,13 +132,17 @@ function stripPlayerEcho(){
 }
 function run(){
  stripPlayerEcho();
+ for(const box of $$('.character-room .dialogue-box'))ensureUtility(box);
  for(const page of $$('.dialogue-page[data-vn-page]'))enhanceNew(page);
  for(const box of $$('.dialogue-box'))if(!$('.dialogue-page[data-vn-page]',box))enhanceLegacy(box);
 }
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>requestAnimationFrame(()=>{queued=false;run()}))}
-function syntheticEnd(box){
- if(!box?.isConnected)return;
- const b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.end='';box.appendChild(b);b.click();b.remove();
+function clickHidden(target){
+ if(!target)return false;
+ const oldHidden=target.hidden,oldDisplay=target.style.display;
+ target.hidden=false;target.style.removeProperty('display');
+ try{target.click()}finally{target.hidden=oldHidden;target.style.display=oldDisplay}
+ return true;
 }
 
 document.addEventListener('click',e=>{
@@ -110,18 +152,19 @@ document.addEventListener('click',e=>{
   e.preventDefault();e.stopImmediatePropagation();
   const host=b.closest('.dialogue-page[data-vn-page],.dialogue-box');if(!host)return;
   const mode=b.dataset.singleBeatMode||'beat';
-  if(mode==='finish'){
-   const finish=rawFinish(host);if(finish){show(finish);finish.click();return}
+  if(mode==='beat'){
+   host.dataset.singleBeatIndex=String(Number(host.dataset.singleBeatIndex||0)+1);
+   host.dataset.singleBeatPhase='beat';
+   const text=$('.dialogue-page-text',host)||$('.dialogue-lines',host);paginate(host,text);return;
   }
-  host.dataset.singleBeatIndex=String(Number(host.dataset.singleBeatIndex||0)+1);
-  const text=$('.dialogue-page-text',host)||$('.dialogue-lines',host);paginate(host,text);return;
- }
- const leave=t.closest('[data-vn-leave]');
- if(leave){
-  const box=leave.closest('.dialogue-box');
-  if(!box)return;
-  const marker=box.innerHTML;
-  setTimeout(()=>{if(leave.isConnected&&box.isConnected&&box.innerHTML===marker)syntheticEnd(box)},220);
+  if(mode==='choices'){
+   host.dataset.singleBeatPhase='choices';
+   const text=$('.dialogue-page-text',host)||$('.dialogue-lines',host);paginate(host,text);return;
+  }
+  if(mode==='vn-next'){clickHidden($('[data-vn-next]',host));return}
+  if(mode==='vn-finish'){clickHidden($('[data-vn-finish]',host));return}
+  if(mode==='finish'){clickHidden(rawFinish(host));return}
+  if(mode==='end'){clickHidden(rawEnd(host));return}
  }
 },true);
 

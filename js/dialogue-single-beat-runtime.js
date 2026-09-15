@@ -1,17 +1,17 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V5__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V5__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V6__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V6__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-let queued=false;
+const RKEY='hellaverse_dialogue_runtime_file_v1';
+let queued=false,ambientResumeLocked=false;
 
 const isPlayer=el=>el instanceof Element&&(el.matches('.dialogue-line.you')||String($('strong',el)?.textContent||'').trim().toUpperCase()==='YOU');
 const isBeat=el=>el instanceof Element&&(el.matches('article.dialogue-line')||el.matches('p.narration')||el.matches('p.dialogue-current'));
 const hide=el=>{if(el){el.hidden=true;el.style.display='none'}};
 const show=el=>{if(el){el.hidden=false;el.style.removeProperty('display')}};
-const visible=el=>!!(el&&el.isConnected&&!el.hidden&&getComputedStyle(el).display!=='none');
 
 function choiceList(host){return $('.choice-list',host)}
 function actualChoices(host){
@@ -77,11 +77,11 @@ function signature(beats,host){
 }
 function finalCoreAction(host){
  const vnNext=$('[data-vn-next]',host);
- if(vnNext)return{mode:'vn-next',label:String(vnNext.textContent||'NEXT').replace(/›/g,'').trim()||'NEXT'};
+ if(vnNext)return{mode:'vn-next',label:'NEXT'};
  const vnFinish=$('[data-vn-finish]',host);
- if(vnFinish)return{mode:'vn-finish',label:String(vnFinish.textContent||'CONTINUE').replace(/›/g,'').trim()||'CONTINUE'};
- if(rawFinish(host))return{mode:'finish',label:'CONTINUE'};
- if(rawEnd(host))return{mode:'end',label:'RETURN'};
+ if(vnFinish)return{mode:'vn-finish',label:'NEXT'};
+ if(rawFinish(host))return{mode:'finish',label:'NEXT'};
+ if(rawEnd(host))return{mode:'end',label:'NEXT'};
  return null;
 }
 function revealAfterLastBeat(host,local){
@@ -130,8 +130,43 @@ function stripPlayerEcho(){
  for(const you of $$('.dialogue-line.you'))hide(you);
  for(const line of $$('article.dialogue-line'))if(String($('strong',line)?.textContent||'').trim().toUpperCase()==='YOU')hide(line);
 }
+
+function isQuietFallback(box){
+ if(!box?.classList?.contains('synthetic-dialogue'))return false;
+ return /잠시\s*조용한\s*시간이\s*흐른다/i.test(String(box.textContent||''));
+}
+function conversationTrigger(){
+ const direct=$('[data-dialogue-file-runtime="CONVERSATION"]');
+ if(direct&&!direct.closest('.editor-main,.modal-backdrop,#hellaverseGachaRoot'))return direct;
+ return $$('button,a').find(el=>{
+  if(el.closest('.editor-main,.modal-backdrop,#hellaverseGachaRoot,.dialogue-box'))return false;
+  const label=String(el.textContent||'').replace(/^\s*\d+\s*/,'').trim().toUpperCase();
+  return label==='CONVERSATION';
+ })||null;
+}
+function resumeFromQuietFallback(){
+ const box=$('.character-room .dialogue-box.synthetic-dialogue');
+ if(!isQuietFallback(box))return false;
+ hide(box);
+ if(ambientResumeLocked)return true;
+ ambientResumeLocked=true;
+ try{sessionStorage.setItem(RKEY,'CONVERSATION')}catch{}
+ requestAnimationFrame(()=>{
+  const trigger=conversationTrigger();
+  if(trigger&&trigger.isConnected){
+   trigger.click();
+  }else{
+   const talk=$$('[data-action="TALK"]').find(el=>!el.closest('.dialogue-box,.editor-main,.modal-backdrop,#hellaverseGachaRoot'));
+   if(talk?.isConnected)talk.click();
+  }
+  setTimeout(()=>{ambientResumeLocked=false;schedule()},120);
+ });
+ return true;
+}
+
 function run(){
  stripPlayerEcho();
+ if(resumeFromQuietFallback())return;
  for(const box of $$('.character-room .dialogue-box'))ensureUtility(box);
  for(const page of $$('.dialogue-page[data-vn-page]'))enhanceNew(page);
  for(const box of $$('.dialogue-box'))if(!$('.dialogue-page[data-vn-page]',box))enhanceLegacy(box);
@@ -164,7 +199,7 @@ document.addEventListener('click',e=>{
   if(mode==='vn-next'){clickHidden($('[data-vn-next]',host));return}
   if(mode==='vn-finish'){clickHidden($('[data-vn-finish]',host));return}
   if(mode==='finish'){clickHidden(rawFinish(host));return}
-  if(mode==='end'){clickHidden(rawEnd(host));return}
+  if(mode==='end'){clickHidden(rawEnd(host));setTimeout(schedule,0);return}
  }
 },true);
 

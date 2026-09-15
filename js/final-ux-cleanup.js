@@ -1,10 +1,10 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V8__)return;
-window.__HELLAVERSE_FINAL_UX_CLEANUP_V8__=1;
+if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V9__)return;
+window.__HELLAVERSE_FINAL_UX_CLEANUP_V9__=1;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-let queued=false,observer=null,roomHold=null,roomHoldTimer=null;
+let queued=false,observer=null,roomHold=null,roomHoldTimer=null,lastDialogueSnapshot=null,lastDialogueRect=null,roomHoldSawBridge=false;
 const NAV_KEY='hellaverse_current_main_nav_v1';
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const PLAYER_ORIGINS={HELLBORN:'HELL',SINNER:'HELL',ANGEL:'HEAVEN',WINNER:'HEAVEN'};
@@ -35,36 +35,47 @@ function cleanRedundantSpeakers(){
 function releaseRoomHold(){
   if(roomHold){roomHold.remove();roomHold=null}
   if(roomHoldTimer){clearTimeout(roomHoldTimer);roomHoldTimer=null}
+  roomHoldSawBridge=false;
 }
-function holdRoomFrame(){
-  if(roomHold)return;
-  const room=$('#app .character-room');
-  if(!room)return;
+function cacheDialogueFrame(){
+  const room=$('#app .character-room'),box=room&&$('.dialogue-box',room);
+  if(!room||!box||room.id==='hvRoomTransitionHold')return;
   const rect=room.getBoundingClientRect();
   if(rect.width<1||rect.height<1)return;
-  const clone=room.cloneNode(true);
+  lastDialogueSnapshot=room.cloneNode(true);
+  lastDialogueRect={left:rect.left,top:rect.top,width:rect.width,height:rect.height};
+}
+function mountCachedRoomHold(){
+  if(roomHold||!lastDialogueSnapshot||!lastDialogueRect)return;
+  const clone=lastDialogueSnapshot.cloneNode(true);
   clone.id='hvRoomTransitionHold';
   clone.setAttribute('aria-hidden','true');
   $$('[id]',clone).forEach(el=>el.removeAttribute('id'));
   $$('button,a,input,select,textarea',clone).forEach(el=>{el.tabIndex=-1});
-  Object.assign(clone.style,{position:'fixed',left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`,margin:'0',zIndex:'2147483000',pointerEvents:'none',overflow:'hidden'});
+  const r=lastDialogueRect;
+  Object.assign(clone.style,{position:'fixed',left:`${r.left}px`,top:`${r.top}px`,width:`${r.width}px`,height:`${r.height}px`,margin:'0',zIndex:'2147483000',pointerEvents:'none',overflow:'hidden'});
   document.body.appendChild(clone);
   roomHold=clone;
-  roomHoldTimer=setTimeout(releaseRoomHold,900);
+  roomHoldTimer=setTimeout(releaseRoomHold,1800);
 }
-function shouldHoldRoomTransition(target){
-  if(!(target instanceof Element)||!target.closest('.character-room'))return false;
-  if(target.closest('[data-stable-leave-room],[data-vn-leave]'))return false;
-  const control=target.closest('[data-choice],[data-gc],[data-scene],[data-gift],[data-finish],[data-end],[data-vn-next],[data-vn-finish],[data-single-beat-next]');
-  if(!control)return false;
-  if(control.matches('[data-single-beat-next]')){
-    const mode=String(control.dataset.singleBeatMode||'beat');
-    if(mode==='beat'||mode==='choices')return false;
+function guardAutomaticRoomBridge(){
+  const room=$('#app .character-room');
+  if(!room)return;
+  const box=$('.dialogue-box',room);
+  if(!box&&lastDialogueSnapshot){
+    roomHoldSawBridge=true;
+    mountCachedRoomHold();
+    return;
   }
-  return true;
+  if(box&&roomHold&&roomHoldSawBridge){
+    cleanRedundantSpeakers();
+    const enhanced=$('.dialogue-page[data-vn-page]',box);
+    const rawReady=$('.dialogue-lines',box)&&!$(':scope > .speaker:not([style*="display: none"])',box);
+    if(enhanced||rawReady)requestAnimationFrame(()=>requestAnimationFrame(releaseRoomHold));
+  }
 }
 function releaseRoomHoldWhenReady(){
-  if(!roomHold)return;
+  if(!roomHold||roomHoldSawBridge)return;
   const room=$('#app .character-room'),box=room&&$('.dialogue-box',room);
   if(!box)return;
   cleanRedundantSpeakers();
@@ -142,12 +153,11 @@ function cleanGiftResult(){
     for(const b of $$('blockquote',result)){const t=txt(b);if(/가\s*[「“\"]?.+[」”\"]?을\s*받아\s*든다[.!]?/i.test(t)||/전용 반응 없음|특수 반응 없음/i.test(t))b.remove()}
   }
 }
-function run(){ensureDialogueContinuityStyle();cleanRedundantSpeakers();cleanNav();cleanRoomHud();cleanRoomPreview();cleanSettings();ensureGachaGlobalNav();cleanInventory();cleanGiftResult();releaseRoomHoldWhenReady()}
+function run(){ensureDialogueContinuityStyle();cleanRedundantSpeakers();cleanNav();cleanRoomHud();cleanRoomPreview();cleanSettings();ensureGachaGlobalNav();cleanInventory();cleanGiftResult();guardAutomaticRoomBridge();releaseRoomHoldWhenReady();cacheDialogueFrame()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
-function boot(){const app=$('#app');if(app&&!observer){observer=new MutationObserver(schedule);observer.observe(app,{childList:true,subtree:true})}schedule()}
+function boot(){const app=$('#app');if(app&&!observer){observer=new MutationObserver(()=>{guardAutomaticRoomBridge();schedule()});observer.observe(app,{childList:true,subtree:true})}schedule()}
 window.addEventListener('click',e=>{
   const t=e.target instanceof Element?e.target:null;if(!t)return;
-  if(shouldHoldRoomTransition(t))holdRoomFrame();
   if(t.closest('[data-open-thoughts]')&&!t.closest('#hellaverseGachaRoot'))saveGoodNav($('.main-nav'));
   const gachaNav=t.closest('#hellaverseGachaRoot .hvg-global-hud');
   if(gachaNav){if(t.closest('[data-hvg-open]')){e.preventDefault();e.stopPropagation();return}document.body.classList.remove('hvg-open');$('#hellaverseGachaRoot')?.remove()}

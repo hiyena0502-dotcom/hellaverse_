@@ -1,14 +1,36 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V3__)return;
-window.__HELLAVERSE_FINAL_UX_CLEANUP_V3__=1;
+if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V4__)return;
+window.__HELLAVERSE_FINAL_UX_CLEANUP_V4__=1;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 let queued=false,observer=null;
+const NAV_KEY='hellaverse_current_main_nav_v1';
 const txt=el=>String(el?.textContent||'').replace(/\s+/g,' ').trim();
+
+function saveGoodNav(nav){
+  if(!nav)return;
+  const hasSettings=!!nav.querySelector('[data-page="settings"],[data-hv-settings-rescue]');
+  const hasThoughts=!!nav.querySelector('[data-open-thoughts]');
+  const hasCurrentExtras=!!nav.querySelector('[data-hvg-open],[data-hv-missions]');
+  if(hasSettings&&hasThoughts&&hasCurrentExtras){
+    try{sessionStorage.setItem(NAV_KEY,nav.innerHTML)}catch{}
+  }
+}
+
+function restoreThoughtNav(nav){
+  if(!nav||!$('.thought-page'))return;
+  const broken=!nav.querySelector('[data-page="settings"],[data-hv-settings-rescue]')||!nav.querySelector('[data-hvg-open]')||!nav.querySelector('[data-hv-missions]');
+  if(!broken)return;
+  let saved='';
+  try{saved=sessionStorage.getItem(NAV_KEY)||''}catch{}
+  if(saved&&nav.innerHTML!==saved)nav.innerHTML=saved;
+}
 
 function cleanNav(){
   for(const nav of $$('.main-nav')){
+    if($('.thought-page'))restoreThoughtNav(nav);
+    else saveGoodNav(nav);
     for(const b of $$('button,a',nav)){
       const t=txt(b).toUpperCase();
       if(t.includes('GACHA')){
@@ -41,14 +63,13 @@ function cleanSettings(){
   if(!grid)return;
   grid.classList.add('ux-settings-clean');
 
-  // gacha-collection-addon renders GACHA SETTINGS inside .hvg-settings-accordion,
-  // not as a direct child of .settings-grid. Remove that nested panel only.
+  // Gacha settings is intentionally not part of the Settings page anymore.
   for(const details of $$('details',grid)){
     const summary=$(':scope > summary',details);
     if(summary&&txt(summary).toUpperCase()==='GACHA SETTINGS')details.remove();
   }
 
-  // Runtime Diagnostics belongs in the same Settings stack as Appearance/Data/Danger.
+  // Runtime Diagnostics stays beside Appearance / Data Backup / Danger Zone.
   const page=grid.closest('.page-settings')||grid.closest('.page')||$('#app');
   const diag=$('[data-hv-diagnostics]',page||document);
   const accordion=$('.hvg-settings-accordion',grid);
@@ -96,6 +117,13 @@ function boot(){
   if(app&&!observer){observer=new MutationObserver(schedule);observer.observe(app,{childList:true,subtree:true})}
   schedule();
 }
+
+// Capture the current full nav before the legacy Thoughts handler replaces it.
+window.addEventListener('click',e=>{
+  const t=e.target instanceof Element?e.target:null;if(!t)return;
+  if(t.closest('[data-open-thoughts]'))saveGoodNav($('.main-nav'));
+},true);
+
 document.addEventListener('DOMContentLoaded',boot,{once:true});
 window.addEventListener('load',schedule);
 window.addEventListener('hellaverse:state-updated',schedule);

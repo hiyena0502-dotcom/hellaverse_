@@ -15,33 +15,29 @@
   <link rel="stylesheet" href="css/thought-archive.css?v=50">
   <link rel="stylesheet" href="css/relationship-editor.css?v=50">
   <link rel="stylesheet" href="css/event-manager.css?v=50">
-  <link rel="stylesheet" href="css/item-inventory.css?v=1">
-  <link rel="stylesheet" href="css/item-manager.css?v=1">
+  <link rel="stylesheet" href="css/item-system-v2.css?v=1">
+  <link rel="stylesheet" href="css/item-manager-v2.css?v=1">
+  <link rel="stylesheet" href="css/settings-management-hub.css?v=1">
   <link rel="stylesheet" href="css/gacha-collection-addon.css?v=61">
   <link rel="stylesheet" href="css/character-gacha-profiles.css?v=2">
   <link rel="stylesheet" href="css/player-game-loop.css?v=3">
   <link rel="stylesheet" href="css/dialogue-editor-simple.css?v=1">
   <link rel="stylesheet" href="css/editor-ux-suite.css?v=1">
+  <link rel="stylesheet" href="css/dialogue-response-builder.css?v=1">
   <link rel="stylesheet" href="css/dialogue-foundation.css?v=1">
 
   <!-- UX / DIAGNOSTICS -->
   <link rel="stylesheet" href="css/ux/runtime-diagnostics.css?v=1">
 
   <style>
-    /* Consecutive lines from the same room character should read as one natural speech block. */
     .dialogue-page-text .dialogue-line.character + .dialogue-line.character strong,
     .dialogue-lines .dialogue-line.character + .dialogue-line.character strong,
-    .dialogue-log-scroll .dialogue-line.character + .dialogue-line.character strong {
-      display: none;
-    }
+    .dialogue-log-scroll .dialogue-line.character + .dialogue-line.character strong {display:none}
     .dialogue-page-text .dialogue-line.character + .dialogue-line.character,
     .dialogue-lines .dialogue-line.character + .dialogue-line.character,
-    .dialogue-log-scroll .dialogue-line.character + .dialogue-line.character {
-      margin-top: -8px;
-    }
+    .dialogue-log-scroll .dialogue-line.character + .dialogue-line.character {margin-top:-8px}
   </style>
 
-  <!-- CORE: shared helpers first. Existing modules remain compatible if they do not use HVState yet. -->
   <script src="js/core/state-store.js?v=1"></script>
 
   <!-- CONTENT / SEED DATA -->
@@ -64,43 +60,41 @@
 
   <!-- MAIN APP / FEATURE RUNTIMES -->
   <script type="module" src="js/dialogue-ui.js?v=54"></script>
-  <!-- SETTINGS is consolidated in hv-stable: player / appearance / mystery box / backup / reset. -->
   <script type="module" src="js/hv-stable.js?v=55"></script>
   <script type="module" src="js/event-manager.js?v=50"></script>
   <script type="module" src="js/thought-archive.js?v=50"></script>
   <script type="module" src="js/relationship-editor.js?v=50"></script>
-  <!-- UNIFIED ITEMS: Collection = archive, Inventory = current quantity, every item can be gifted. -->
+
+  <!-- UNIFIED ITEM SYSTEM: Collection + Basic Inventory + Gift routes. -->
   <script defer src="js/item-inventory-migration.js?v=1"></script>
-  <script defer src="js/item-inventory.js?v=1"></script>
-  <!-- ITEM MANAGER: per-character preference, heart, reaction dialogue and follow-up Event. -->
-  <script defer src="js/item-manager.js?v=1"></script>
-  <script defer src="js/item-event-bridge.js?v=1"></script>
+  <script defer src="js/item-catalog-rebalance.js?v=1"></script>
+  <script defer src="js/item-system-v2.js?v=1"></script>
+  <script defer src="js/item-manager-v2.js?v=1"></script>
+  <script defer src="js/item-event-bridge-v2.js?v=1"></script>
+
   <script type="module" src="js/site-runtime.js?v=67"></script>
   <script type="module" src="js/gacha-collection-addon.js?v=63"></script>
   <script defer src="js/character-gacha-profiles.js?v=2"></script>
   <script defer src="js/gacha-item-copy-pack.js?v=1"></script>
   <script defer src="js/room-compact-ui.js?v=2"></script>
-  <!-- PLAYER PROFILE / PERMANENT MISSIONS -->
   <script defer src="js/player-game-loop.js?v=5"></script>
-  <!-- SETTINGS ACCESS: guarantees exactly one visible SETTINGS entry in home/room HUDs. -->
+
+  <!-- SETTINGS: one management hub; no duplicate admin/editor shortcuts. -->
   <script defer src="js/settings-rescue.js?v=1"></script>
-  <!-- SIMPLE CHARACTER PROFILE: one-line character descriptions only. -->
+  <script defer src="js/settings-management-hub.js?v=1"></script>
+
   <script defer src="js/simple-character-profile.js?v=1"></script>
-  <!-- SIMPLE DIALOGUE EDITOR: same data/features, progressive-disclosure UI. -->
   <script defer src="js/dialogue-editor-simple-ui.js?v=1"></script>
-  <!-- UNIFIED EDITOR UX: Event + dialogue validation safety. -->
   <script defer src="js/editor-ux-suite.js?v=2"></script>
-  <!-- MEMORY is automatic game state; manual Memory Editor is intentionally removed. -->
+  <script defer src="js/dialogue-response-builder.js?v=1"></script>
   <script defer src="js/memory-editor-removal.js?v=1"></script>
-  <!-- DIALOGUE FOUNDATION: global health check + runtime click/scroll/accessibility guards. -->
   <script defer src="js/dialogue-foundation-safety.js?v=2"></script>
 
-  <!-- COMPATIBILITY / REPAIR: keep after the main renderers. -->
+  <!-- COMPATIBILITY / REPAIR -->
   <script src="js/dialogue-mood-indicator.js?v=1"></script>
   <script src="js/collection-runtime-repair.js?v=3"></script>
   <script defer src="js/collection-emoji-corrections.js?v=2"></script>
 
-  <!-- UX / DEBUGGING: last so it can inspect the final DOM/state. -->
   <script defer src="js/ux/runtime-diagnostics.js?v=3"></script>
 </head>
 <body>

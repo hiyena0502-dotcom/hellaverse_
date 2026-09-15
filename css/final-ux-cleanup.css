@@ -1,0 +1,42 @@
+/* Final player-facing cleanup: remove duplicate/technical UI without changing game data. */
+.room-caption blockquote{display:none!important}
+.hvg-nav-button::after{display:none!important;content:none!important}
+.main-nav{flex:1;min-width:0}.main-nav .ux-settings-last{margin-left:auto}
+
+/* SETTINGS: management stays prominent; redundant/technical panels are removed by JS. */
+.settings-grid.ux-settings-clean{grid-template-columns:minmax(0,1fr)!important;max-width:1120px;margin-right:auto}
+.settings-grid.ux-settings-clean>.settings-management-hub{grid-column:1/-1!important}
+.settings-grid.ux-settings-clean>.settings-panel:not(.settings-management-hub){max-width:760px}
+
+/* Gacha should sit close to the top edge and waste less vertical space. */
+.hvg-backdrop{padding:8px 16px!important}
+.hvg-shell{min-height:calc(100vh - 16px)!important;border-radius:16px!important}
+.hvg-header{padding:14px 20px!important}
+.hvg-tabs{padding:9px 20px!important}
+.hvg-body{padding:18px 20px!important}
+.hvg-gacha-layout{gap:18px!important}
+.hvg-machine-panel,.hvg-result-panel{border-radius:16px!important}
+.hvg-machine{min-height:310px!important}
+.hvg-empty-result{min-height:390px!important}
+
+/* Inventory detail should not preview canned character dialogue. */
+.iv2-gift-preview>p{display:none!important}
+.iv2-gift-preview{display:grid;gap:10px}
+
+/* Gift choice/result is a deliberate interaction screen, not a tiny alert. */
+.iv2-modal-backdrop{place-items:start center!important;padding-top:min(9vh,72px)!important;overflow:auto}
+.iv2-choice-modal,.iv2-result{width:min(760px,94vw)!important;padding:28px!important;border-radius:18px!important}
+.iv2-choice-modal .iv2-approaches{margin-top:22px}
+.iv2-result .iv2-player,.iv2-result .iv2-narration.ux-hide-gift-repeat{display:none!important}
+.iv2-result blockquote.ux-generic-gift-response{display:none!important}
+
+/* Dialogue: never reserve layout for hidden echoed player lines. */
+.dialogue-line.you[hidden]{display:none!important}
+.choice-list:not([hidden])~.dialogue-next{display:none}
+
+@media(max-width:760px){
+ .hvg-backdrop{padding:0!important}.hvg-shell{min-height:100vh!important;border-radius:0!important}
+ .hvg-gacha-layout{grid-template-columns:1fr!important}.hvg-machine{min-height:250px!important}.hvg-empty-result{min-height:260px!important}
+ .settings-grid.ux-settings-clean>.settings-panel:not(.settings-management-hub){max-width:none}
+ .iv2-choice-modal,.iv2-result{width:100%!important;padding:22px!important}
+}

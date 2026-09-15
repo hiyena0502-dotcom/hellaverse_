@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V6__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V6__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V7__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V7__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -42,7 +42,7 @@ function utilityMarkup(){
         '<button type="button" data-action="ASK" data-dialogue-file-runtime="QUESTION">ASK</button>'+
         '<button type="button" data-action="TALK" data-dialogue-file-runtime="ACTION">ACTION</button>'+
         '<button type="button" data-inventory-open>INVENTORY</button>'+
-        '<button type="button" data-page="characters" data-stable-leave-room>LEAVE ROOM</button>';
+        '<button type="button" data-vn-leave>LEAVE ROOM</button>';
 }
 function ensureUtility(host){
  const box=host?.closest?.('.dialogue-box')||host;

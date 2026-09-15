@@ -11,8 +11,14 @@
     Keep gameplay on one core renderer. Old dialogue/content runtimes are intentionally
     not loaded here; they remain preserved on the archive branch.
   -->
-  <link rel="stylesheet" href="css/app.css?v=80">
-  <link rel="stylesheet" href="css/dialogue.css?v=80">
+  <link rel="stylesheet" href="css/app.css?v=81">
+  <link rel="stylesheet" href="css/dialogue.css?v=81">
+  <style>
+    /* Character art alignment belongs to the scene, never to a portrait card. */
+    .room-character{display:flex;align-items:flex-end;justify-content:center;padding-left:38%}
+    .room-character.silhouette{align-items:center;justify-content:center}
+    @media(max-width:900px){.room-character{padding-left:0;align-items:flex-start;justify-content:center}}
+  </style>
 
   <script>
   (() => {
@@ -62,7 +68,7 @@
   })();
   </script>
 
-  <script type="module" src="js/hv-stable.js?v=80"></script>
+  <script type="module" src="js/hv-stable.js?v=81"></script>
 </head>
 <body>
   <div id="app"></div>

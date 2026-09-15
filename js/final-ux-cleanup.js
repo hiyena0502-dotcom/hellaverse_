@@ -1,26 +1,21 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V1__)return;
-window.__HELLAVERSE_FINAL_UX_CLEANUP_V1__=1;
+if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V2__)return;
+window.__HELLAVERSE_FINAL_UX_CLEANUP_V2__=1;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-let queued=false;
+let queued=false,observer=null;
 const txt=el=>String(el?.textContent||'').replace(/\s+/g,' ').trim();
 
 function cleanNav(){
   for(const nav of $$('.main-nav')){
-    let settings=null;
     for(const b of $$('button,a',nav)){
       const t=txt(b).toUpperCase();
       if(t.includes('GACHA')){
         b.classList.add('hvg-nav-button');
         if(t!=='GACHA')b.textContent='GACHA';
       }
-      if(t.includes('SETTINGS'))settings=b;
-    }
-    if(settings){
-      settings.classList.add('ux-settings-last');
-      if(nav.lastElementChild!==settings)nav.appendChild(settings);
+      if(t.includes('SETTINGS'))b.classList.add('ux-settings-last');
     }
   }
 }
@@ -41,25 +36,33 @@ function cleanRoomPreview(){
   }
 }
 
-function settingsPanelLabel(el){
-  const l=$('.label',el);return String(l?.textContent||$('summary',el)?.textContent||'').replace(/\s+/g,' ').trim().toUpperCase();
+function settingsTitle(el){
+  const summary=$(':scope > summary',el),label=$(':scope > .label',el);
+  return txt(summary||label).toUpperCase();
 }
-function removeSettingsByTitle(grid,title){
-  for(const el of $$(':scope > .settings-panel,:scope > details,:scope > section',grid)){
-    const label=settingsPanelLabel(el),whole=txt(el).toUpperCase();
-    if(label===title||whole.startsWith(title))el.remove();
-  }
+function settingsChildren(grid){
+  return Array.from(grid.children).filter(el=>el instanceof Element);
 }
 function cleanSettings(){
-  const grid=$('.settings-grid');if(!grid)return;
+  const grid=$('.site-shell.page-settings .settings-grid')||$('.page-settings .settings-grid');
+  if(!grid)return;
   grid.classList.add('ux-settings-clean');
-  removeSettingsByTitle(grid,'GACHA SETTINGS');
-  removeSettingsByTitle(grid,'DATA BACKUP');
-  removeSettingsByTitle(grid,'DATA / BACKUP');
-  for(const el of $$('[data-runtime-diagnostics],.runtime-diagnostics,.runtime-diagnostics-panel'))el.remove();
-  for(const el of $$('section,article,div',grid.parentElement||document)){
-    if(/^RUNTIME DIAGNOSTICS\b/i.test(txt(el))){
-      const panel=el.closest('section,article,.settings-panel')||el;panel.remove();break;
+
+  // Only Gacha Settings is intentionally removed. Appearance, Data/Backup,
+  // Danger Zone and Runtime Diagnostics all stay in the Settings stack.
+  for(const el of settingsChildren(grid)){
+    if(settingsTitle(el)==='GACHA SETTINGS')el.remove();
+  }
+
+  const page=grid.closest('.page-settings')||grid.closest('.page')||$('#app');
+  const diag=$('[data-hv-diagnostics]',page||document);
+  if(diag&&diag.parentElement!==grid){
+    const dataPanel=settingsChildren(grid).find(el=>['DATA / BACKUP','DATA BACKUP'].includes(settingsTitle(el)));
+    if(dataPanel)grid.insertBefore(diag,dataPanel);
+    else{
+      const appearance=settingsChildren(grid).find(el=>settingsTitle(el)==='APPEARANCE');
+      if(appearance&&appearance.nextSibling)grid.insertBefore(diag,appearance.nextSibling);
+      else grid.appendChild(diag);
     }
   }
 }
@@ -71,13 +74,11 @@ function cleanGiftResult(){
     for(const p of $$('.iv2-player',result))p.remove();
     for(const n of $$('.iv2-narration',result)){
       const t=txt(n);
-      if(/건넨다|내민다|전해준다|준다[.!]?$/i.test(t)){n.classList.add('ux-hide-gift-repeat');n.remove()}
+      if(/건넨다|내민다|전해준다|준다[.!]?$/i.test(t))n.remove();
     }
     for(const b of $$('blockquote',result)){
       const t=txt(b);
-      if(/가\s*[「“\"]?.+[」”\"]?을\s*받아\s*든다[.!]?/i.test(t)||/전용 반응 없음|특수 반응 없음/i.test(t)){
-        b.classList.add('ux-generic-gift-response');b.remove();
-      }
+      if(/가\s*[「“\"]?.+[」”\"]?을\s*받아\s*든다[.!]?/i.test(t)||/전용 반응 없음|특수 반응 없음/i.test(t))b.remove();
     }
   }
 }
@@ -93,6 +94,14 @@ function cleanChoiceNextCollision(){
 
 function run(){cleanNav();cleanRoomHud();cleanRoomPreview();cleanSettings();cleanInventory();cleanGiftResult();cleanChoiceNextCollision()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
-new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
-document.addEventListener('DOMContentLoaded',schedule);window.addEventListener('load',schedule);window.addEventListener('hellaverse:state-updated',schedule);window.addEventListener('storage',schedule);if(document.readyState!=='loading')schedule();
+function boot(){
+  const app=$('#app');
+  if(app&&!observer){observer=new MutationObserver(schedule);observer.observe(app,{childList:true,subtree:true})}
+  schedule();
+}
+document.addEventListener('DOMContentLoaded',boot,{once:true});
+window.addEventListener('load',schedule);
+window.addEventListener('hellaverse:state-updated',schedule);
+window.addEventListener('storage',schedule);
+if(document.readyState!=='loading')boot();
 })();

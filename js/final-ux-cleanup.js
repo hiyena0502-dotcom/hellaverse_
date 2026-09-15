@@ -1,10 +1,10 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V7__)return;
-window.__HELLAVERSE_FINAL_UX_CLEANUP_V7__=1;
+if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V8__)return;
+window.__HELLAVERSE_FINAL_UX_CLEANUP_V8__=1;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-let queued=false,observer=null;
+let queued=false,observer=null,roomHold=null,roomHoldTimer=null;
 const NAV_KEY='hellaverse_current_main_nav_v1';
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const PLAYER_ORIGINS={HELLBORN:'HELL',SINNER:'HELL',ANGEL:'HEAVEN',WINNER:'HEAVEN'};
@@ -20,8 +20,58 @@ function ensureDialogueContinuityStyle(){
     .character-room .dialogue-page{animation:none!important}
     .character-room .dialogue-page.is-leaving{opacity:1!important;transition:none!important}
     .character-room .dialogue-line,.character-room .dialogue-narration{animation:none!important}
+    .character-room .dialogue-stage .room-character img{animation:none!important;opacity:1!important;transform:none!important}
+    .character-room .dialogue-box:has(.dialogue-lines)>.speaker{display:none!important}
+    #hvRoomTransitionHold,#hvRoomTransitionHold *{animation:none!important;transition:none!important}
   `;
   document.head.appendChild(style);
+}
+function cleanRedundantSpeakers(){
+  for(const box of $$('.character-room .dialogue-box')){
+    const speaker=$(':scope > .speaker',box);
+    if(speaker&&$('.dialogue-lines',box))speaker.style.setProperty('display','none','important');
+  }
+}
+function releaseRoomHold(){
+  if(roomHold){roomHold.remove();roomHold=null}
+  if(roomHoldTimer){clearTimeout(roomHoldTimer);roomHoldTimer=null}
+}
+function holdRoomFrame(){
+  if(roomHold)return;
+  const room=$('#app .character-room');
+  if(!room)return;
+  const rect=room.getBoundingClientRect();
+  if(rect.width<1||rect.height<1)return;
+  const clone=room.cloneNode(true);
+  clone.id='hvRoomTransitionHold';
+  clone.setAttribute('aria-hidden','true');
+  $$('[id]',clone).forEach(el=>el.removeAttribute('id'));
+  $$('button,a,input,select,textarea',clone).forEach(el=>{el.tabIndex=-1});
+  Object.assign(clone.style,{position:'fixed',left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`,margin:'0',zIndex:'2147483000',pointerEvents:'none',overflow:'hidden'});
+  document.body.appendChild(clone);
+  roomHold=clone;
+  roomHoldTimer=setTimeout(releaseRoomHold,900);
+}
+function shouldHoldRoomTransition(target){
+  if(!(target instanceof Element)||!target.closest('.character-room'))return false;
+  if(target.closest('[data-stable-leave-room],[data-vn-leave]'))return false;
+  const control=target.closest('[data-choice],[data-gc],[data-scene],[data-gift],[data-finish],[data-end],[data-vn-next],[data-vn-finish],[data-single-beat-next]');
+  if(!control)return false;
+  if(control.matches('[data-single-beat-next]')){
+    const mode=String(control.dataset.singleBeatMode||'beat');
+    if(mode==='beat'||mode==='choices')return false;
+  }
+  return true;
+}
+function releaseRoomHoldWhenReady(){
+  if(!roomHold)return;
+  const room=$('#app .character-room'),box=room&&$('.dialogue-box',room);
+  if(!box)return;
+  cleanRedundantSpeakers();
+  const enhanced=$('.dialogue-page[data-vn-page]',box);
+  const rawReady=$('.dialogue-lines',box)&&!$(':scope > .speaker:not([style*="display: none"])',box);
+  if(!enhanced&&!rawReady)return;
+  requestAnimationFrame(()=>requestAnimationFrame(releaseRoomHold));
 }
 function saveGoodNav(nav){
   if(!nav)return;
@@ -92,11 +142,12 @@ function cleanGiftResult(){
     for(const b of $$('blockquote',result)){const t=txt(b);if(/가\s*[「“\"]?.+[」”\"]?을\s*받아\s*든다[.!]?/i.test(t)||/전용 반응 없음|특수 반응 없음/i.test(t))b.remove()}
   }
 }
-function run(){ensureDialogueContinuityStyle();cleanNav();cleanRoomHud();cleanRoomPreview();cleanSettings();ensureGachaGlobalNav();cleanInventory();cleanGiftResult()}
+function run(){ensureDialogueContinuityStyle();cleanRedundantSpeakers();cleanNav();cleanRoomHud();cleanRoomPreview();cleanSettings();ensureGachaGlobalNav();cleanInventory();cleanGiftResult();releaseRoomHoldWhenReady()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 function boot(){const app=$('#app');if(app&&!observer){observer=new MutationObserver(schedule);observer.observe(app,{childList:true,subtree:true})}schedule()}
 window.addEventListener('click',e=>{
   const t=e.target instanceof Element?e.target:null;if(!t)return;
+  if(shouldHoldRoomTransition(t))holdRoomFrame();
   if(t.closest('[data-open-thoughts]')&&!t.closest('#hellaverseGachaRoot'))saveGoodNav($('.main-nav'));
   const gachaNav=t.closest('#hellaverseGachaRoot .hvg-global-hud');
   if(gachaNav){if(t.closest('[data-hvg-open]')){e.preventDefault();e.stopPropagation();return}document.body.classList.remove('hvg-open');$('#hellaverseGachaRoot')?.remove()}

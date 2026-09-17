@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V10__)return;
-window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V10__=1;
+if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V11__)return;
+window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V11__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const META_KEY='hellaverse_dialogue_render_meta_v1';
@@ -9,7 +9,7 @@ const RKEY='hellaverse_dialogue_runtime_file_v1';
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const up=v=>String(v||'').trim().toUpperCase();
-let queued=false,pendingMode='',navigationBridge=false,leaveFlow=null;
+let queued=false,pendingMode='',navigationBridge=false,leaveFlow=null,specialTransition=false,coreReturnBridge=false;
 
 function read(){try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}}
 function readMeta(){try{return JSON.parse(localStorage.getItem(META_KEY)||'{}')||{}}catch{return{}}}
@@ -117,6 +117,37 @@ function autoStart(){
  else emptyState(box,mode,'지금 시작할 수 있는 에피소드가 없습니다.');
 }
 
+function specialBox(){return $('.character-room .dialogue-box[data-hv-special-menu],.character-room .dialogue-box[data-hv-question-picker="1"]')}
+function coreReturn(){
+ const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
+ b.type='button';b.hidden=true;b.dataset.end='';b.dataset.hvRuntimeBridge='1';host.appendChild(b);coreReturnBridge=true;
+ try{b.click()}finally{coreReturnBridge=false;b.remove()}
+ setTimeout(schedule,0);
+}
+function syntheticCoreAction(mode){
+ const normalized=up(mode);if(!['QUESTION','ACTION'].includes(normalized))return;
+ try{sessionStorage.setItem(RKEY,normalized)}catch{}
+ const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
+ b.type='button';b.hidden=true;b.dataset.hvRuntimeBridge='1';b.dataset.action=normalized==='QUESTION'?'ASK':'TALK';b.dataset.dialogueFileRuntime=normalized;host.appendChild(b);
+ try{b.click()}finally{b.remove()}
+ setTimeout(schedule,0);
+}
+function switchSpecialMode(mode){
+ if(specialTransition)return;specialTransition=true;
+ const open=!!specialBox();if(open)coreReturn();
+ setTimeout(()=>{specialTransition=false;syntheticCoreAction(mode)},open?80:0);
+}
+function openInventoryFromSpecial(){
+ if(specialTransition)return;specialTransition=true;coreReturn();
+ setTimeout(()=>{
+  specialTransition=false;
+  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
+  b.type='button';b.hidden=true;b.dataset.hvRuntimeBridge='1';b.dataset.inventoryOpen='';host.appendChild(b);
+  try{b.click()}finally{b.remove()}
+  setTimeout(schedule,0);
+ },80);
+}
+
 function newLeaveFlow(){
  const flow={phase:'requested',startedAt:Date.now(),initialBox:$('.character-room .dialogue-box')||null};
  setTimeout(schedule,220);setTimeout(schedule,1000);return flow;
@@ -154,9 +185,16 @@ function run(){unwrapMore();syncDialogueRoles();const box=$('.character-room .di
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 
 window.addEventListener('click',e=>{
- if(navigationBridge)return;
+ if(navigationBridge||coreReturnBridge)return;
  const t=e.target instanceof Element?e.target:null;if(!t)return;
- if(t.closest('[data-hv-leave-bridge]'))return;
+ if(t.closest('[data-hv-leave-bridge],[data-hv-runtime-bridge]'))return;
+ const specialSwitch=t.closest('.hv-stable-dialogue-utility [data-dialogue-file-runtime]');
+ if(specialSwitch){
+  const mode=up(specialSwitch.dataset.dialogueFileRuntime);
+  if(mode==='QUESTION'||mode==='ACTION'){e.preventDefault();e.stopImmediatePropagation();switchSpecialMode(mode);return}
+ }
+ if(t.closest('[data-runtime-return]')){e.preventDefault();e.stopImmediatePropagation();specialTransition=false;coreReturn();return}
+ if(t.closest('.hv-stable-dialogue-utility [data-inventory-open]')&&specialBox()){e.preventDefault();e.stopImmediatePropagation();openInventoryFromSpecial();return}
  const inRoom=!!$('.character-room');
  if(inRoom&&t.closest('[data-page="characters"]')&&!t.closest('#hellaverseGachaRoot')){
   e.preventDefault();e.stopImmediatePropagation();beginLeaveNavigation();return;
@@ -165,7 +203,7 @@ window.addEventListener('click',e=>{
 },true);
 
 document.addEventListener('click',e=>{
- const t=e.target instanceof Element?e.target:null;if(!t)return;
+ const t=e.target instanceof Element?e.target:null;if(!t||t.closest('[data-hv-runtime-bridge]'))return;
  const btn=t.closest('[data-dialogue-file-runtime],[data-action]');
  if(btn){
   const mode=modeFromButton(btn);

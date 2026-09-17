@@ -3,25 +3,6 @@ if(ready&&typeof ready.then==='function'){
   try{await ready}catch(error){console.warn('Default content readiness failed safely.',error)}
 }
 
-// The canonical backup still carries eight legacy Eve dialogue index entries even though Eve is excluded.
-// Remove those orphan indexes after the default merge so the deleted character leaves no dialogue-map residue.
-try{
-  const key='hellaverse_dialogue_state_v1';
-  const raw=localStorage.getItem(key);
-  if(raw){
-    const state=JSON.parse(raw)||{};
-    const ids=[
-      'base-v1-eve-entry-1','base-v1-eve-entry-2','base-v1-eve-entry-3',
-      'base-v1-eve-ask-1','base-v1-eve-ask-2','base-v1-eve-ask-3',
-      'base-v1-eve-talk-1','base-v1-eve-talk-2'
-    ];
-    for(const mapKey of ['dialogueFileMap','dialogueMeta']){
-      if(state[mapKey]&&typeof state[mapKey]==='object')for(const id of ids)delete state[mapKey][id];
-    }
-    localStorage.setItem(key,JSON.stringify(state));
-  }
-}catch(error){console.warn('Excluded dialogue index cleanup skipped safely.',error)}
-
 const scripts=[
   ['module','js/dialogue-ui.js?v=55'],
   ['module','js/hv-stable.js?v=56'],
@@ -45,12 +26,13 @@ const scripts=[
   ['classic','js/settings-management-hub.js?v=3'],
 
   ['classic','js/dialogue-file-editor.js?v=2'],
-  ['classic','js/dialogue-runtime-cleanup.js?v=13'],
+  ['classic','js/dialogue-runtime-cleanup.js?v=14'],
   ['classic','js/dialogue-episode-flow.js?v=2'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
   ['classic','js/dialogue-single-beat-runtime.js?v=13'],
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/dialogue-foundation-safety.js?v=4'],
+  ['classic','js/runtime-integrity-fixes.js?v=1'],
 
   ['classic','js/collection-emoji-corrections.js?v=2'],
   ['classic','js/ux/runtime-diagnostics.js?v=6'],

@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V2__)return;
-window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V2__=1;
+if(window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V3__)return;
+window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V3__=1;
 
 const KEY='hellaverse_dialogue_state_v1';
 const $=(s,r=document)=>r.querySelector(s);
@@ -15,6 +15,7 @@ function activeCharacterName(){
   return (state.characters||[]).find(c=>c?.id===cid)?.name||'CHARACTER';
 }
 function clean(v){return String(v??'').replace(/\s+/g,' ').trim()}
+function upper(v){return clean(v).toUpperCase()}
 function kindOf(el){
   if(el?.matches?.('p.narration,.dialogue-narration'))return'NARRATION';
   if(el?.matches?.('.dialogue-line.you'))return'PLAYER';
@@ -50,14 +51,23 @@ function normalizeBeat(el){
   for(const part of parts){if(clean(part.text))frag.appendChild(makeBeat(part,name))}
   el.replaceWith(frag);return true;
 }
+function syncSpeaker(box){
+  if(!(box instanceof Element))return;
+  const header=Array.from(box.children).find(el=>el.matches?.('.speaker'))||null;
+  if(!header)return;
+  const charName=upper(activeCharacterName()),headerName=upper(header.textContent);
+  const hasInlineSpeaker=!!box.querySelector('.dialogue-lines article.dialogue-line > strong,.dialogue-page-text article.dialogue-line > strong');
+  const isCharacterHeader=headerName===charName||headerName==='YOU';
+  header.classList.toggle('is-redundant-speaker',hasInlineSpeaker&&isCharacterHeader);
+}
 function normalizeContainer(container){
   if(!(container instanceof Element))return;
   for(const el of Array.from(container.children))if(el.matches?.('article.dialogue-line,p.narration,p.dialogue-current'))normalizeBeat(el);
-  // Do not dedupe by text here. Repeated lines can be intentional and DOM-level
-  // deletion caused legitimate dialogue to disappear. Duplicate prevention belongs
-  // to scene/state logic, not the renderer.
 }
-function run(){for(const container of $$('.character-room .dialogue-page-text,.character-room .dialogue-lines'))normalizeContainer(container)}
+function run(){
+  for(const container of $$('.character-room .dialogue-page-text,.character-room .dialogue-lines'))normalizeContainer(container);
+  for(const box of $$('.character-room .dialogue-box'))syncSpeaker(box);
+}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
 window.addEventListener('hellaverse:runtime-ready',schedule);

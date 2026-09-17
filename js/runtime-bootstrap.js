@@ -20,9 +20,9 @@ try{
 const scripts=[
   ['classic','js/dialogue-episode-upgrade-all.js?v=4'],
 
-  // Capture TALK / repeated-scene / room-exit transitions before older dialogue listeners.
+  // Dialogue ownership: continuity picks TALK scenes, exit transition owns leaving, dialogue-ui owns state, single-beat owns pacing.
   ['classic','js/dialogue-continuity-controller.js?v=4'],
-  ['classic','js/room-exit-transition.js?v=1'],
+  ['classic','js/room-exit-transition.js?v=2'],
   ['module','js/dialogue-ui.js?v=55'],
   ['module','js/hv-stable.js?v=56'],
   ['module','js/event-manager.js?v=50'],
@@ -46,7 +46,7 @@ const scripts=[
   ['classic','js/dialogue-file-editor.js?v=2'],
   ['classic','js/dialogue-episode-flow.js?v=2'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
-  ['classic','js/dialogue-single-beat-runtime.js?v=17'],
+  ['classic','js/dialogue-single-beat-runtime.js?v=18'],
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/dialogue-foundation-safety.js?v=4'],
 
@@ -58,7 +58,8 @@ const scripts=[
   ['classic','js/collection-emoji-corrections.js?v=2'],
   ['classic','js/ux/runtime-diagnostics.js?v=6'],
   ['classic','js/final-ux-cleanup.js?v=14'],
-  ['classic','js/dialogue-utility-controls.js?v=1']
+  ['classic','js/dialogue-utility-controls.js?v=1'],
+  ['classic','js/profile-direct-dialogue.js?v=1']
 ];
 
 function absolute(src){return new URL(src,document.baseURI).href}

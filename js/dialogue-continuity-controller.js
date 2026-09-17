@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V2__)return;
-window.__HELLAVERSE_DIALOGUE_CONTINUITY_V2__=1;
+if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V3__)return;
+window.__HELLAVERSE_DIALOGUE_CONTINUITY_V3__=1;
 
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const META_KEY='hellaverse_dialogue_render_meta_v1';
@@ -80,13 +80,16 @@ function stopChain(){document.body.classList.remove(CHAIN_CLASS);continuing=fals
 function finishRawAndContinue(button){
   if(continuing)return;continuing=true;
   const box=button.closest('.dialogue-box');if(box)box.dataset.hvContinuing='1';
-  bridge=true;try{button.click()}finally{bridge=false}
-  const resume=()=>{
-    if(!$('.character-room')){stopChain();return}
-    if($('.character-room .dialogue-box')){setTimeout(resume,24);return}
-    continuing=false;if(!startConversation())stopChain();
-  };
-  setTimeout(resume,16);
+  setTimeout(()=>{
+    if(!button.isConnected){continuing=false;if(!startConversation())stopChain();return}
+    bridge=true;try{button.click()}finally{bridge=false}
+    const resume=()=>{
+      if(!$('.character-room')){stopChain();return}
+      if($('.character-room .dialogue-box')){setTimeout(resume,24);return}
+      continuing=false;if(!startConversation())stopChain();
+    };
+    setTimeout(resume,16);
+  },0);
 }
 function normalizeEndButtons(){
   if(!document.body.classList.contains(CHAIN_CLASS))return;

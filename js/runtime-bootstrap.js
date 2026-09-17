@@ -57,6 +57,11 @@ await loadClassic('js/hazbin-major-dialogue-expansion-a.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-b.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-c.js?v=1');
 
+// Relationship progression should be earned: compress routine positive gains,
+// amplify negative choices, then add explicit character-boundary conversations.
+await loadClassic('js/affection-balance-v2.js?v=1');
+await loadClassic('js/relationship-friction-dialogues.js?v=1');
+
 await loadClassic('js/dialogue-episode-upgrade-all.js?v=4');
 await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 

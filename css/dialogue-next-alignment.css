@@ -1,0 +1,36 @@
+/* Keep every forward/continue control at the far right edge of the dialogue panel. */
+.character-room .dialogue-box .dialogue-next,
+.character-room .dialogue-box [data-single-beat-next],
+.character-room .dialogue-box [data-vn-next],
+.character-room .dialogue-box [data-vn-finish],
+.character-room .dialogue-box [data-finish],
+.character-room.hv-conversation-chain .dialogue-box [data-end],
+body.hv-conversation-chain .character-room .dialogue-box [data-end],
+body.hv-room-exiting .character-room .dialogue-box [data-end] {
+  align-self: flex-end;
+  justify-self: end;
+  width: max-content;
+  min-width: 92px;
+  margin-left: auto;
+  margin-right: 0;
+  text-align: right;
+}
+
+.character-room .dialogue-page [data-single-beat-next],
+.character-room .dialogue-page [data-vn-next],
+.character-room .dialogue-page [data-vn-finish] {
+  justify-self: end;
+  margin-left: auto;
+}
+
+@media (max-width: 800px) {
+  .character-room .dialogue-box .dialogue-next,
+  .character-room .dialogue-box [data-single-beat-next],
+  .character-room .dialogue-box [data-vn-next],
+  .character-room .dialogue-box [data-vn-finish],
+  .character-room .dialogue-box [data-finish],
+  body.hv-conversation-chain .character-room .dialogue-box [data-end],
+  body.hv-room-exiting .character-room .dialogue-box [data-end] {
+    min-width: 84px;
+  }
+}

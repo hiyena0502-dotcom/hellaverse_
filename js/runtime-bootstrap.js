@@ -57,7 +57,7 @@ const scripts=[
   ['classic','js/dialogue-foundation-safety.js?v=4'],
 
   ['classic','js/thought-render-bridge.js?v=1'],
-  ['classic','js/dialogue-action-control.js?v=1'],
+  ['classic','js/dialogue-action-control.js?v=2'],
   ['classic','js/collection-gacha-editor.js?v=4'],
   ['classic','js/collection-reveal-line-bridge.js?v=1'],
 

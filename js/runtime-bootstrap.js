@@ -49,7 +49,7 @@ try{
 
 await loadClassic('js/dialogue-episode-upgrade-all.js?v=4');
 
-await loadClassic('js/dialogue-continuity-controller.js?v=5');
+await loadClassic('js/dialogue-continuity-controller-v6.js?v=1');
 await loadClassic('js/room-exit-transition.js?v=2');
 await loadStableCore();
 

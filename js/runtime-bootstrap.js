@@ -28,9 +28,8 @@ try{
 const scripts=[
   ['classic','js/dialogue-episode-upgrade-all.js?v=4'],
 
-  // One owner advances dialogue state. Other dialogue files below are editor/presentation helpers only.
+  // dialogue-ui owns state transitions. single-beat below only controls visual pacing.
   ['module','js/dialogue-ui.js?v=55'],
-  ['classic','js/room-entry-ui-guard.js?v=1'],
   ['module','js/hv-stable.js?v=56'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],
@@ -53,6 +52,7 @@ const scripts=[
   ['classic','js/dialogue-file-editor.js?v=2'],
   ['classic','js/dialogue-episode-flow.js?v=2'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
+  ['classic','js/dialogue-single-beat-runtime.js?v=14'],
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/dialogue-foundation-safety.js?v=4'],
 

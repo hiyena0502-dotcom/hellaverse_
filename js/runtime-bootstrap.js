@@ -84,12 +84,15 @@ await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 
 // Migrations are one-shot only. No dialogue graph is mutated while a scene is playing.
 await loadClassic('js/dialogue-content-normalize-once-v1.js?v=1');
-await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=4');
+await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=5');
 
 // One conversation selector, one exit controller, one state machine.
 await loadClassic('js/dialogue-continuity-controller-v6.js?v=2');
 await loadClassic('js/room-exit-transition.js?v=2');
 await loadStableCore();
+
+// Retire the old automatic editor migration. Authoring tools may write only on explicit editor actions.
+try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}catch{}
 
 const scripts=[
   ['classic','js/dialogue-token-renderer.js?v=3'],
@@ -122,7 +125,7 @@ const scripts=[
   ['classic','js/collection-reveal-line-bridge.js?v=1'],
   ['classic','js/collection-emoji-corrections.js?v=2'],
   ['classic','js/ux/runtime-diagnostics.js?v=6'],
-  ['classic','js/final-ux-cleanup.js?v=14'],
+  ['classic','js/final-ux-cleanup.js?v=15'],
 
   ['classic','js/dialogue-interaction-engine-v2.js?v=1'],
   ['classic','js/dialogue-room-controller-v3.js?v=3']

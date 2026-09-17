@@ -21,8 +21,8 @@ const scripts=[
   ['classic','js/dialogue-episode-upgrade-all.js?v=4'],
 
   // Dialogue ownership: continuity owns TALK chaining, exit transition owns leaving,
-  // dialogue-ui owns scene state, single-beat owns pacing, room-controller owns room actions.
-  ['classic','js/dialogue-continuity-controller.js?v=4'],
+  // dialogue-ui owns scene state, single-beat owns pacing, room-controller owns room actions and direct entry.
+  ['classic','js/dialogue-continuity-controller.js?v=5'],
   ['classic','js/room-exit-transition.js?v=2'],
   ['module','js/dialogue-ui.js?v=55'],
   ['module','js/hv-stable.js?v=56'],
@@ -58,7 +58,7 @@ const scripts=[
   ['classic','js/collection-emoji-corrections.js?v=2'],
   ['classic','js/ux/runtime-diagnostics.js?v=6'],
   ['classic','js/final-ux-cleanup.js?v=14'],
-  ['classic','js/dialogue-room-controller.js?v=1']
+  ['classic','js/dialogue-room-controller.js?v=2']
 ];
 
 function absolute(src){return new URL(src,document.baseURI).href}

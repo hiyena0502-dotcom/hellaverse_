@@ -1,18 +1,12 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V14__)return;
-window.__HELLAVERSE_FINAL_UX_CLEANUP_V14__=1;
+if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V15__)return;
+window.__HELLAVERSE_FINAL_UX_CLEANUP_V15__=1;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 let queued=false,observer=null;
 const txt=el=>String(el?.textContent||'').replace(/\s+/g,' ').trim();
 
-function cleanRedundantSpeakers(){
-  for(const box of $$('.character-room .dialogue-box')){
-    const speaker=$(':scope > .speaker',box);
-    if(speaker&&$('.dialogue-lines',box))speaker.style.setProperty('display','none','important');
-  }
-}
 function cleanNav(){
   for(const nav of $$('.main-nav')){
     for(const b of $$('button,a',nav)){
@@ -47,7 +41,7 @@ function cleanGiftResult(){
     for(const b of $$('blockquote',result)){const t=txt(b);if(/가\s*[「“\"]?.+[」”\"]?을\s*받아\s*든다[.!]?/i.test(t)||/전용 반응 없음|특수 반응 없음/i.test(t))b.remove()}
   }
 }
-function run(){cleanRedundantSpeakers();cleanNav();cleanRoomHud();cleanRoomPreview();ensureGachaGlobalNav();cleanInventory();cleanGiftResult()}
+function run(){cleanNav();cleanRoomHud();cleanRoomPreview();ensureGachaGlobalNav();cleanInventory();cleanGiftResult()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 function boot(){const app=$('#app');if(app&&!observer){observer=new MutationObserver(schedule);observer.observe(app,{childList:true,subtree:true})}schedule()}
 window.addEventListener('click',e=>{

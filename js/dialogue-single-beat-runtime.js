@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V17__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V17__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V18__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V18__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -32,48 +32,40 @@ function revealAfterLastBeat(host,local){const phase=host.dataset.singleBeatPhas
 function removePlayerEchoes(text){for(const row of Array.from(text?.children||[]).filter(isPlayer))row.remove()}
 function autoAdvanceEmptyChoice(host,text){if(host.dataset.hvChoiceCommitted!=='1'||host.dataset.singleBeatAutoAdvanced==='1')return false;const next=$('[data-vn-next]',host);if(!next)return false;host.dataset.singleBeatAutoAdvanced='1';requestAnimationFrame(()=>{if(!host.isConnected)return;clickHidden(next);setTimeout(schedule,0)});return true}
 
-function choiceTransitionIndex(beats){
-  if(!pendingChoice)return null;
-  if(performance.now()-pendingChoice.at>1800){pendingChoice=null;return null}
-  const keys=beats.map(beatKey),old=pendingChoice.keys;
-  let prefix=0;
-  while(prefix<keys.length&&prefix<old.length&&keys[prefix]===old[prefix])prefix++;
-  // The DOM still contains only the pre-choice transcript. Keep it hidden until a new response arrives.
-  if(prefix===old.length&&keys.length<=old.length)return-1;
-  // If the renderer replaced the transcript entirely, the first beat is already the new response.
-  const index=prefix>0&&prefix<keys.length?prefix:0;
+function prunePreChoiceTranscript(text){
+  if(!pendingChoice||!text)return;
+  if(performance.now()-pendingChoice.at>2500){pendingChoice=null;return}
+  removePlayerEchoes(text);
+  let beats=Array.from(text.children).filter(isBeat);
+  if(!beats.length)return;
+  let matched=0;
+  while(matched<pendingChoice.keys.length&&matched<beats.length&&beatKey(beats[matched])===pendingChoice.keys[matched])matched++;
+  if(matched>0){
+    for(let i=0;i<matched;i++)beats[i]?.remove();
+    beats=Array.from(text.children).filter(isBeat);
+  }
+  // Old renderer can briefly rebuild only the pre-choice transcript. Leave the area empty until a new response arrives.
+  if(!beats.length)return;
+  // If no prefix matched, the renderer has replaced the transcript with the new response already.
+  // If a prefix matched, everything left is post-choice content. Either way the transition is complete.
   pendingChoice=null;
-  return index;
 }
 
 function paginate(host,text){
   if(!host||!text)return;
   removePlayerEchoes(text);
+  prunePreChoiceTranscript(text);
   const beats=Array.from(text.children).filter(isBeat);
-  const transitionIndex=choiceTransitionIndex(beats);
-  if(transitionIndex===-1){
-    beats.forEach(hide);hideChoices(host);hideCoreProgress(host);hide($('[data-single-beat-next]',host));
-    host.dataset.hvChoiceCommitted='1';
-    return;
-  }
   const sig=signature(beats,host);
-  if(host.dataset.singleBeatSig!==sig){
-    host.dataset.singleBeatSig=sig;
-    host.dataset.singleBeatIndex=String(transitionIndex==null?0:transitionIndex);
-    host.dataset.singleBeatPhase='beat';
-  }else if(transitionIndex!=null){
-    host.dataset.singleBeatIndex=String(transitionIndex);
-    host.dataset.singleBeatPhase='beat';
-  }
+  if(host.dataset.singleBeatSig!==sig){host.dataset.singleBeatSig=sig;host.dataset.singleBeatIndex='0';host.dataset.singleBeatPhase='beat'}
   if(!beats.length){
     const local=$('[data-single-beat-next]',host);if(local)hide(local);
     if(autoAdvanceEmptyChoice(host,text))return;
-    if(hasChoiceOptions(host))showChoices(host);
+    if(hasChoiceOptions(host)&&!pendingChoice)showChoices(host);
     return;
   }
   host.dataset.hvChoiceCommitted='0';host.dataset.singleBeatAutoAdvanced='0';
-  let index=Math.max(0,Math.min(Number(host.dataset.singleBeatIndex||0),beats.length-1));
-  host.dataset.singleBeatIndex=String(index);
+  let index=Math.max(0,Math.min(Number(host.dataset.singleBeatIndex||0),beats.length-1));host.dataset.singleBeatIndex=String(index);
   beats.forEach((row,i)=>i===index?show(row):hide(row));
   const local=ensureLocalNext(host);
   if(index<beats.length-1){hideChoices(host);hideCoreProgress(host);setLocalMode(local,'beat','NEXT');show(local)}else revealAfterLastBeat(host,local)
@@ -81,8 +73,7 @@ function paginate(host,text){
 function enhanceNew(page){const text=$('.dialogue-page-text',page);if(text)paginate(page,text)}
 function enhanceLegacy(box){const lines=$('.dialogue-lines',box);if(lines)paginate(box,lines)}
 function clearChosenScreen(target){
-  const chosen=target?.closest?.('.character-room .dialogue-box [data-choice],.character-room .dialogue-box [data-gc]');
-  if(!chosen)return false;
+  const chosen=target?.closest?.('.character-room .dialogue-box [data-choice],.character-room .dialogue-box [data-gc]');if(!chosen)return false;
   const host=chosen.closest('.dialogue-page[data-vn-page],.dialogue-box');if(!host)return false;
   const text=$('.dialogue-page-text',host)||$('.dialogue-lines',host);
   const previous=Array.from(text?.children||[]).filter(isBeat).filter(el=>!isPlayer(el));
@@ -90,6 +81,8 @@ function clearChosenScreen(target){
   if(text)Array.from(text.children).filter(isBeat).forEach(hide);
   hideChoices(host);hide($('[data-single-beat-next]',host));hideCoreProgress(host);
   host.dataset.singleBeatSig='';host.dataset.singleBeatIndex='0';host.dataset.singleBeatPhase='beat';host.dataset.singleBeatAutoAdvanced='0';host.dataset.hvChoiceCommitted='1';
+  // Run once after the click dispatch so the legacy renderer cannot leave the old transcript visible for a frame.
+  queueMicrotask(schedule);setTimeout(schedule,0);setTimeout(schedule,40);
   return true;
 }
 function externalLogRoot(){let root=$('#hvDialogueLogRoot');if(!root){root=document.createElement('div');root.id='hvDialogueLogRoot';document.body.appendChild(root)}return root}

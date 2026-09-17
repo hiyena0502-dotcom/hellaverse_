@@ -1,19 +1,25 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V20__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V20__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V21__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V21__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-let queued=false,logMoveQueued=false,bridge=false,pendingChoice=null,choiceFallback=null;
+const STATE_KEY='hellaverse_dialogue_state_v1';
+const TOKEN_RE=/\[\[(?:CHARACTER|NARRATION|PLAYER)\]\]/i;
+const TOKEN_STRIP=/\[\[(?:CHARACTER|NARRATION|PLAYER)\]\]/ig;
+let queued=false,logMoveQueued=false,bridge=false,pendingChoice=null,choiceFallback=null,recentPrefix=null;
 
 const isBeat=el=>el instanceof Element&&(el.matches('article.dialogue-line')||el.matches('p.narration')||el.matches('p.dialogue-current'));
 const isPlayer=el=>el instanceof Element&&(el.matches('.dialogue-line.you')||String($('strong',el)?.textContent||'').trim().toUpperCase()==='YOU');
+const isActiveBeat=el=>isBeat(el)&&el.dataset.hvChoiceStale!=='1';
 const hide=el=>{if(el){el.hidden=true;el.style.display='none'}};
 const show=el=>{if(el){el.hidden=false;el.style.removeProperty('display')}};
 const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
-const beatKey=el=>`${el?.matches?.('p.narration')?'N':'D'}:${clean(el?.textContent||'')}`;
+const beatText=el=>clean((el?.matches?.('article.dialogue-line')?$('p',el)?.textContent:el?.textContent)||'').replace(TOKEN_STRIP,'').trim();
+const beatKey=el=>`${el?.matches?.('p.narration,.dialogue-narration')?'N':isPlayer(el)?'P':'D'}:${beatText(el)}`;
 
+function readState(){try{return JSON.parse(localStorage.getItem(STATE_KEY)||'{}')||{}}catch{return{}}}
 function choiceList(host){return $('.choice-list',host)}
 function choiceButtons(host){const list=choiceList(host);return list?$$('[data-choice],[data-gc]',list):[]}
 function hasChoiceOptions(host){return choiceButtons(host).length>0}
@@ -25,52 +31,81 @@ function hideChoices(host){hide(choiceList(host))}
 function showChoices(host){const list=choiceList(host);if(list)show(list);for(const b of choiceButtons(host))show(b);hideCoreProgress(host)}
 function ensureLocalNext(host){let b=$('[data-single-beat-next]',host);if(!b){b=document.createElement('button');b.type='button';b.className='dialogue-next single-beat-next hv-next-control';b.dataset.singleBeatNext='1';host.appendChild(b)}else b.classList.add('hv-next-control');return b}
 function setLocalMode(button,mode,label='NEXT'){button.dataset.singleBeatMode=mode||'beat';button.innerHTML=`${label} <span>›</span>`;button.classList.add('hv-next-control')}
+function activeBeats(text){return Array.from(text?.children||[]).filter(isActiveBeat)}
 function signature(beats,host){const choiceSig=choiceButtons(host).map(b=>`${b.dataset.choice||b.dataset.gc||b.textContent}:${b.disabled?'locked':'open'}`).join(',');return beats.map(beatKey).join('|')+'::'+choiceSig}
 function finalCoreAction(host){if($('[data-vn-next]',host))return{mode:'vn-next',label:'NEXT'};if($('[data-vn-finish]',host))return{mode:'vn-finish',label:'NEXT'};if(rawFinish(host))return{mode:'finish',label:'NEXT'};if(rawEnd(host))return{mode:'end',label:'NEXT'};return null}
 function clickHidden(target){if(!target||bridge)return false;const oldHidden=target.hidden,oldDisplay=target.style.display;bridge=true;target.hidden=false;target.style.removeProperty('display');try{target.click()}finally{target.hidden=oldHidden;target.style.display=oldDisplay;bridge=false}return true}
 function revealAfterLastBeat(host,local){const phase=host.dataset.singleBeatPhase||'beat';if(hasChoiceOptions(host)){if(phase==='choices'){hide(local);showChoices(host)}else{hideChoices(host);hideCoreProgress(host);setLocalMode(local,'choices','NEXT');show(local)}return}hideChoices(host);const action=finalCoreAction(host);if(action){hideCoreProgress(host);setLocalMode(local,action.mode,action.label);show(local);return}hide(local)}
-function removePlayerEchoes(text){for(const row of Array.from(text?.children||[]).filter(isPlayer))row.remove()}
 function autoAdvanceEmptyChoice(host,text){if(host.dataset.hvChoiceCommitted!=='1'||host.dataset.singleBeatAutoAdvanced==='1')return false;const next=$('[data-vn-next]',host);if(!next)return false;host.dataset.singleBeatAutoAdvanced='1';requestAnimationFrame(()=>{if(!host.isConnected)return;clickHidden(next);setTimeout(schedule,0)});return true}
 function clearChoiceTransition(){pendingChoice=null;clearTimeout(choiceFallback);choiceFallback=null;document.body.classList.remove('hv-choice-transition')}
+function hasRawTokens(text){return Array.from(text?.children||[]).filter(isBeat).some(el=>TOKEN_RE.test(String(el.textContent||'')))}
 
-function prunePreChoiceTranscript(text){
-  if(!pendingChoice||!text)return;
-  if(performance.now()-pendingChoice.at>4500){clearChoiceTransition();return}
-  removePlayerEchoes(text);
-  let beats=Array.from(text.children).filter(isBeat);
-  if(!beats.length)return;
+function lookupChoiceEcho(target){
+  const id=String(target?.dataset?.choice||'');
+  if(id){
+    const state=readState();
+    for(const scene of state.dialogues||[])for(const node of scene?.nodes||[]){const ch=(node?.choices||[]).find(x=>String(x?.id||'')===id);if(ch)return clean(ch.playerLine||ch.text||'')}
+  }
+  return '';
+}
+function suppressSelectedEcho(text,host){
+  const until=Number(host?.dataset?.hvSuppressPlayerEchoUntil||0),wanted=clean(host?.dataset?.hvSuppressPlayerEcho||'');
+  if(!wanted||performance.now()>until){if(host){delete host.dataset.hvSuppressPlayerEcho;delete host.dataset.hvSuppressPlayerEchoUntil}return}
+  for(const row of Array.from(text?.children||[]).filter(isPlayer)){
+    const value=clean(($('p',row)?.textContent||row.textContent||''));
+    if(value===wanted)row.remove();
+  }
+}
+function exactPrefixLength(keys,old){let i=0;while(i<keys.length&&i<old.length&&keys[i]===old[i])i++;return i}
+function markStale(rows,count){for(let i=0;i<count;i++){const row=rows[i];if(!row)continue;row.dataset.hvChoiceStale='1';hide(row)}}
+function applyRecentPrefix(text){
+  if(!recentPrefix||performance.now()>recentPrefix.until){recentPrefix=null;return false}
+  const rows=Array.from(text.children).filter(isBeat),keys=rows.map(beatKey),old=recentPrefix.keys;
+  if(!old.length||keys.length<old.length)return false;
+  const matched=exactPrefixLength(keys,old);
+  if(matched!==old.length)return false;
+  markStale(rows,old.length);
+  return true;
+}
+function prunePreChoiceTranscript(text,host){
+  if(!text)return;
+  suppressSelectedEcho(text,host);
+  applyRecentPrefix(text);
+  if(!pendingChoice)return;
+  if(performance.now()-pendingChoice.at>6000){clearChoiceTransition();return}
 
-  // Legacy hv-stable can rebuild the WHOLE transcript after a choice. The old code
-  // only compared from index 0, so an earlier opening line looked "new" and was
-  // shown again. Use the last visible pre-choice beat as an anchor instead: remove
-  // everything through its last occurrence, regardless of how much old history was
-  // prepended by the legacy renderer.
-  const keys=beats.map(beatKey);
-  let anchor=-1;
-  for(let i=keys.length-1;i>=0;i--){if(keys[i]===pendingChoice.lastKey){anchor=i;break}}
-  if(anchor>=0){
-    for(let i=0;i<=anchor;i++)beats[i]?.remove();
-    beats=Array.from(text.children).filter(isBeat);
-    if(!beats.length)return;
-    clearChoiceTransition();
+  const rows=Array.from(text.children).filter(isActiveBeat);
+  if(!rows.length)return;
+  const keys=rows.map(beatKey),old=pendingChoice.keys;
+  const matched=exactPrefixLength(keys,old);
+
+  // Only suppress an OLD transcript when it is an exact prefix of the new render.
+  // Never search for the old anchor later in the transcript: that deleted legitimate
+  // new dialogue whenever a new response happened to repeat an older line.
+  if(old.length&&matched===old.length){
+    markStale(rows,old.length);
+    recentPrefix={keys:[...old],until:performance.now()+6000};
+    if(activeBeats(text).length)clearChoiceTransition();
     return;
   }
 
-  // If we only have beats that existed before the choice, keep the transition hidden
-  // and wait for genuinely new response content. This prevents flashes of opening /
-  // previous character lines on every character, not just Lucifer.
-  const oldKeys=pendingChoice.keySet;
-  const newIndex=beats.findIndex(row=>!oldKeys.has(beatKey(row)));
-  if(newIndex<0)return;
-  for(let i=0;i<newIndex;i++)beats[i]?.remove();
-  if(Array.from(text.children).filter(isBeat).length)clearChoiceTransition();
+  // Partial old-only redraw: keep it hidden briefly and wait for the response.
+  if(matched>0&&matched===keys.length&&keys.length<old.length){rows.forEach(hide);return}
+
+  // The renderer produced content that is not the old transcript prefix. Treat it as
+  // fresh content instead of deleting it. This is the important no-loss fallback.
+  clearChoiceTransition();
 }
 
 function paginate(host,text){
   if(!host||!text)return;
-  removePlayerEchoes(text);
-  prunePreChoiceTranscript(text);
-  const beats=Array.from(text.children).filter(isBeat);
+  // Tagged authoring text is normalized by dialogue-token-renderer first. Waiting here
+  // avoids racing against a DOM replacement and accidentally classifying a split beat
+  // as old dialogue.
+  if(hasRawTokens(text)){setTimeout(schedule,0);return}
+  suppressSelectedEcho(text,host);
+  prunePreChoiceTranscript(text,host);
+  const beats=activeBeats(text);
   const sig=signature(beats,host);
   if(host.dataset.singleBeatSig!==sig){host.dataset.singleBeatSig=sig;host.dataset.singleBeatIndex='0';host.dataset.singleBeatPhase='beat'}
   if(!beats.length){
@@ -92,12 +127,15 @@ function clearChosenScreen(target){
   const chosen=target?.closest?.('.character-room .dialogue-box [data-choice],.character-room .dialogue-box [data-gc]');if(!chosen)return false;
   const host=chosen.closest('.dialogue-page[data-vn-page],.dialogue-box');if(!host)return false;
   const text=$('.dialogue-page-text',host)||$('.dialogue-lines',host);
-  const previous=Array.from(text?.children||[]).filter(isBeat).filter(el=>!isPlayer(el));
+  const previous=activeBeats(text);
   const keys=previous.map(beatKey);
-  pendingChoice={keys,keySet:new Set(keys),lastKey:keys.at(-1)||'',at:performance.now()};
+  pendingChoice={keys,at:performance.now()};
+  recentPrefix={keys:[...keys],until:performance.now()+6000};
+  const echo=lookupChoiceEcho(chosen);
+  if(echo){host.dataset.hvSuppressPlayerEcho=echo;host.dataset.hvSuppressPlayerEchoUntil=String(performance.now()+6000)}
   document.body.classList.add('hv-choice-transition');
-  clearTimeout(choiceFallback);choiceFallback=setTimeout(()=>{if(pendingChoice)clearChoiceTransition()},4600);
-  if(text)Array.from(text.children).filter(isBeat).forEach(hide);
+  clearTimeout(choiceFallback);choiceFallback=setTimeout(()=>{if(pendingChoice)clearChoiceTransition()},6100);
+  if(text)previous.forEach(hide);
   hideChoices(host);hide($('[data-single-beat-next]',host));hideCoreProgress(host);
   host.dataset.singleBeatSig='';host.dataset.singleBeatIndex='0';host.dataset.singleBeatPhase='beat';host.dataset.singleBeatAutoAdvanced='0';host.dataset.hvChoiceCommitted='1';
   queueMicrotask(schedule);setTimeout(schedule,0);setTimeout(schedule,30);setTimeout(schedule,90);setTimeout(schedule,180);
@@ -107,7 +145,7 @@ function externalLogRoot(){let root=$('#hvDialogueLogRoot');if(!root){root=docum
 function externalizeLog(){const source=$$('.dialogue-log-backdrop').find(el=>!el.closest('#hvDialogueLogRoot'));if(!source)return false;externalLogRoot().replaceChildren(source);return true}
 function scheduleExternalizeLog(){if(logMoveQueued)return;logMoveQueued=true;queueMicrotask(()=>{logMoveQueued=false;externalizeLog()});requestAnimationFrame(externalizeLog);setTimeout(externalizeLog,40)}
 function removeExternalLog(){const root=$('#hvDialogueLogRoot');if(root)root.remove()}
-function run(){if(!$('.character-room')){clearChoiceTransition();removeExternalLog()}else externalizeLog();for(const page of $$('.character-room .dialogue-page[data-vn-page]'))enhanceNew(page);for(const box of $$('.character-room .dialogue-box'))if(!$('.dialogue-page[data-vn-page]',box))enhanceLegacy(box)}
+function run(){if(!$('.character-room')){clearChoiceTransition();recentPrefix=null;removeExternalLog()}else externalizeLog();for(const page of $$('.character-room .dialogue-page[data-vn-page]'))enhanceNew(page);for(const box of $$('.character-room .dialogue-box'))if(!$('.dialogue-page[data-vn-page]',box))enhanceLegacy(box)}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>requestAnimationFrame(()=>{queued=false;run()}))}
 
 window.addEventListener('click',e=>{if(bridge)return;const t=e.target instanceof Element?e.target:null;if(!t)return;clearChosenScreen(t);if(t.closest('[data-vn-log]')){scheduleExternalizeLog();return}if(t.closest('[data-vn-log-close]')){setTimeout(removeExternalLog,0);return}},true);

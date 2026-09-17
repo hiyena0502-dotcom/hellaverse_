@@ -1,9 +1,7 @@
-/* Keep every real forward/continue control at the far right edge of the dialogue panel. */
+/* Keep the one user-facing forward/continue control at the far right edge. */
 .character-room .dialogue-box .dialogue-next,
 .character-room .dialogue-box [data-single-beat-next],
-.character-room .dialogue-box [data-vn-next],
-.character-room .dialogue-box [data-vn-finish],
-.character-room .dialogue-box [data-finish] {
+.character-room .dialogue-box [data-vn-next] {
   align-self:flex-end!important;
   justify-self:end!important;
   width:max-content!important;
@@ -18,36 +16,26 @@
 
 .character-room .dialogue-page>.dialogue-next,
 .character-room .dialogue-page>[data-single-beat-next],
-.character-room .dialogue-page>[data-vn-next],
-.character-room .dialogue-page>[data-vn-finish],
-.character-room .dialogue-page>[data-finish]{
+.character-room .dialogue-page>[data-vn-next]{
   align-self:flex-end!important;
   justify-self:end!important;
   margin-left:auto!important;
   margin-right:0!important;
 }
 
-/* Raw END/RETURN buttons are never user-facing. single-beat provides the NEXT control. */
+/* Raw core FINISH / END / RETURN buttons are never player-facing. */
 .character-room .dialogue-box [data-end],
+.character-room .dialogue-box [data-finish],
+.character-room .dialogue-box [data-vn-finish],
 .character-room .dialogue-box .choice-option[data-end],
-.character-room .dialogue-box [data-runtime-return]{display:none!important;}
-
-/* Legacy choice-option finish buttons should not inherit a centered/full-row layout. */
-.character-room .dialogue-box .choice-option[data-finish]{
-  display:flex!important;
-  grid-template-columns:none!important;
-  width:auto!important;
-  min-width:92px;
-  justify-content:flex-end!important;
-  justify-self:end!important;
-  margin-left:auto!important;
-  padding-left:18px!important;
+.character-room .dialogue-box .choice-option[data-finish],
+.character-room .dialogue-box [data-runtime-return],
+.character-room .dialogue-box .dialogue-return{
+  display:none!important;
 }
 
 @media(max-width:800px){
   .character-room .dialogue-box .dialogue-next,
   .character-room .dialogue-box [data-single-beat-next],
-  .character-room .dialogue-box [data-vn-next],
-  .character-room .dialogue-box [data-vn-finish],
-  .character-room .dialogue-box [data-finish]{min-width:84px;}
+  .character-room .dialogue-box [data-vn-next]{min-width:84px;}
 }

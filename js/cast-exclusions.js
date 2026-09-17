@@ -8,10 +8,11 @@ const PROGRESS_KEY='hellaverse_conversation_progress_v1';
 const REMOVED_IDS=new Set([
   'lilith-morningstar','speaker-of-god',
   'michael','gabriel','azrael',
-  'saint-peter','st-peter','peter'
+  'saint-peter','st-peter','peter',
+  'eve'
 ]);
 const REMOVED_NAMES=new Set([
-  'LILITH MORNINGSTAR','MICHAEL','GABRIEL','AZRAEL','SAINT PETER','ST. PETER'
+  'LILITH MORNINGSTAR','MICHAEL','GABRIEL','AZRAEL','SAINT PETER','ST. PETER','EVE'
 ]);
 const norm=v=>String(v||'').trim().toLowerCase().replace(/[_\s.]+/g,'-');
 

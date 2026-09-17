@@ -1,16 +1,12 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V11__)return;
-window.__HELLAVERSE_FINAL_UX_CLEANUP_V11__=1;
+if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V12__)return;
+window.__HELLAVERSE_FINAL_UX_CLEANUP_V12__=1;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 let queued=false,observer=null;
 const NAV_KEY='hellaverse_current_main_nav_v1';
-const STATE_KEY='hellaverse_dialogue_state_v1';
-const PLAYER_ORIGINS={HELLBORN:'HELL',SINNER:'HELL',ANGEL:'HEAVEN',WINNER:'HEAVEN'};
 const txt=el=>String(el?.textContent||'').replace(/\s+/g,' ').trim();
-const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const readState=()=>{try{return JSON.parse(localStorage.getItem(STATE_KEY)||'{}')||{}}catch{return{}}};
 
 function ensureDialogueStyle(){
   if($('#hvDialogueContinuityStyle'))return;
@@ -68,22 +64,6 @@ function cleanRoomPreview(){
   for(const q of $$('.room-caption blockquote'))q.remove();
   for(const el of $$('.quote-line,.room-caption p,.room-caption strong'))if(/\[\[(?:CHARACTER|NARRATION)\]\]/.test(el.textContent||''))el.textContent=String(el.textContent||'').replace(/\[\[(?:CHARACTER|NARRATION)\]\]\s*/g,'');
 }
-function playerSettingsMarkup(){
-  const s=readState(),origin=String(s.player?.origin||'').toUpperCase(),name=s.player?.name||'';
-  return `<details open data-player-settings-restored><summary>PLAYER</summary><div class="hvg-settings-fields hv-player-restored" id="playerSettingsPanel" data-origin="${esc(origin)}"><label>Name<input id="playerSettingsName" maxlength="30" value="${esc(name)}"></label><div class="hv-player-settings-origins">${Object.entries(PLAYER_ORIGINS).map(([key,realm])=>`<button type="button" class="${origin===key?'active':''}" data-player-settings-origin="${key}"><strong>${key}</strong><small>${realm}</small></button>`).join('')}</div><p class="muted">ROLE · EXTRA / LOW PROFILE</p><button class="gold-button" data-save-player-settings>SAVE PLAYER</button></div></details>`;
-}
-function ensurePlayerSettings(accordion){if(accordion&&!$('#playerSettingsPanel',accordion))accordion.insertAdjacentHTML('afterbegin',playerSettingsMarkup())}
-function cleanSettings(){
-  const grid=$('.site-shell.page-settings .settings-grid')||$('.page-settings .settings-grid');if(!grid)return;
-  grid.classList.add('ux-settings-clean');
-  for(const details of $$('details',grid)){const summary=$(':scope > summary',details);if(summary&&txt(summary).toUpperCase()==='GACHA SETTINGS')details.remove()}
-  const accordion=$('.hvg-settings-accordion',grid);if(accordion)ensurePlayerSettings(accordion);
-  const page=grid.closest('.page-settings')||grid.closest('.page')||$('#app'),diag=$('[data-hv-diagnostics]',page||document);
-  if(diag&&accordion&&diag.parentElement!==accordion){
-    const dataPanel=$$('details',accordion).find(el=>{const summary=$(':scope > summary',el),t=txt(summary).toUpperCase();return t==='DATA / BACKUP'||t==='DATA BACKUP'});
-    dataPanel?accordion.insertBefore(diag,dataPanel):accordion.appendChild(diag);
-  }
-}
 function ensureGachaGlobalNav(){
   const root=$('#hellaverseGachaRoot'),backdrop=root&&$('.hvg-backdrop',root);if(!root||!backdrop||$('.hvg-global-hud',root))return;
   const source=$('#app .game-hud');if(!source)return;
@@ -100,7 +80,7 @@ function cleanGiftResult(){
     for(const b of $$('blockquote',result)){const t=txt(b);if(/가\s*[「“\"]?.+[」”\"]?을\s*받아\s*든다[.!]?/i.test(t)||/전용 반응 없음|특수 반응 없음/i.test(t))b.remove()}
   }
 }
-function run(){ensureDialogueStyle();cleanRedundantSpeakers();cleanNav();cleanRoomHud();cleanRoomPreview();cleanSettings();ensureGachaGlobalNav();cleanInventory();cleanGiftResult()}
+function run(){ensureDialogueStyle();cleanRedundantSpeakers();cleanNav();cleanRoomHud();cleanRoomPreview();ensureGachaGlobalNav();cleanInventory();cleanGiftResult()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 function boot(){const app=$('#app');if(app&&!observer){observer=new MutationObserver(schedule);observer.observe(app,{childList:true,subtree:true})}schedule()}
 window.addEventListener('click',e=>{

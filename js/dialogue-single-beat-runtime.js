@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V19__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V19__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V20__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V20__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -35,19 +35,35 @@ function clearChoiceTransition(){pendingChoice=null;clearTimeout(choiceFallback)
 
 function prunePreChoiceTranscript(text){
   if(!pendingChoice||!text)return;
-  if(performance.now()-pendingChoice.at>3500){clearChoiceTransition();return}
+  if(performance.now()-pendingChoice.at>4500){clearChoiceTransition();return}
   removePlayerEchoes(text);
   let beats=Array.from(text.children).filter(isBeat);
   if(!beats.length)return;
-  let matched=0;
-  while(matched<pendingChoice.keys.length&&matched<beats.length&&beatKey(beats[matched])===pendingChoice.keys[matched])matched++;
-  if(matched>0){
-    for(let i=0;i<matched;i++)beats[i]?.remove();
+
+  // Legacy hv-stable can rebuild the WHOLE transcript after a choice. The old code
+  // only compared from index 0, so an earlier opening line looked "new" and was
+  // shown again. Use the last visible pre-choice beat as an anchor instead: remove
+  // everything through its last occurrence, regardless of how much old history was
+  // prepended by the legacy renderer.
+  const keys=beats.map(beatKey);
+  let anchor=-1;
+  for(let i=keys.length-1;i>=0;i--){if(keys[i]===pendingChoice.lastKey){anchor=i;break}}
+  if(anchor>=0){
+    for(let i=0;i<=anchor;i++)beats[i]?.remove();
     beats=Array.from(text.children).filter(isBeat);
+    if(!beats.length)return;
+    clearChoiceTransition();
+    return;
   }
-  // The legacy renderer may briefly rebuild only the old transcript. Keep it invisible until post-choice content exists.
-  if(!beats.length)return;
-  clearChoiceTransition();
+
+  // If we only have beats that existed before the choice, keep the transition hidden
+  // and wait for genuinely new response content. This prevents flashes of opening /
+  // previous character lines on every character, not just Lucifer.
+  const oldKeys=pendingChoice.keySet;
+  const newIndex=beats.findIndex(row=>!oldKeys.has(beatKey(row)));
+  if(newIndex<0)return;
+  for(let i=0;i<newIndex;i++)beats[i]?.remove();
+  if(Array.from(text.children).filter(isBeat).length)clearChoiceTransition();
 }
 
 function paginate(host,text){
@@ -63,7 +79,7 @@ function paginate(host,text){
     if(hasChoiceOptions(host)&&!pendingChoice)showChoices(host);
     return;
   }
-  if(pendingChoice)return;
+  if(pendingChoice){beats.forEach(hide);hideChoices(host);hideCoreProgress(host);return}
   host.dataset.hvChoiceCommitted='0';host.dataset.singleBeatAutoAdvanced='0';
   let index=Math.max(0,Math.min(Number(host.dataset.singleBeatIndex||0),beats.length-1));host.dataset.singleBeatIndex=String(index);
   beats.forEach((row,i)=>i===index?show(row):hide(row));
@@ -77,13 +93,14 @@ function clearChosenScreen(target){
   const host=chosen.closest('.dialogue-page[data-vn-page],.dialogue-box');if(!host)return false;
   const text=$('.dialogue-page-text',host)||$('.dialogue-lines',host);
   const previous=Array.from(text?.children||[]).filter(isBeat).filter(el=>!isPlayer(el));
-  pendingChoice={keys:previous.map(beatKey),at:performance.now()};
+  const keys=previous.map(beatKey);
+  pendingChoice={keys,keySet:new Set(keys),lastKey:keys.at(-1)||'',at:performance.now()};
   document.body.classList.add('hv-choice-transition');
-  clearTimeout(choiceFallback);choiceFallback=setTimeout(()=>{if(pendingChoice)clearChoiceTransition()},3600);
+  clearTimeout(choiceFallback);choiceFallback=setTimeout(()=>{if(pendingChoice)clearChoiceTransition()},4600);
   if(text)Array.from(text.children).filter(isBeat).forEach(hide);
   hideChoices(host);hide($('[data-single-beat-next]',host));hideCoreProgress(host);
   host.dataset.singleBeatSig='';host.dataset.singleBeatIndex='0';host.dataset.singleBeatPhase='beat';host.dataset.singleBeatAutoAdvanced='0';host.dataset.hvChoiceCommitted='1';
-  queueMicrotask(schedule);setTimeout(schedule,0);setTimeout(schedule,30);setTimeout(schedule,90);
+  queueMicrotask(schedule);setTimeout(schedule,0);setTimeout(schedule,30);setTimeout(schedule,90);setTimeout(schedule,180);
   return true;
 }
 function externalLogRoot(){let root=$('#hvDialogueLogRoot');if(!root){root=document.createElement('div');root.id='hvDialogueLogRoot';document.body.appendChild(root)}return root}

@@ -14,7 +14,7 @@
 
 - `js/base-dialogues.js`
 - `js/character-dialogues.js`
-- `js/hellaverse-cast-dialogues.js`
+- `js/hellaverse-cast-dialogues.js` — 캐릭터/대화 seed만 담당하며 삭제 정책은 소유하지 않음.
 - `js/lucifer-content.js`
 - `js/lucifer-s12-addon.js`
 - `js/lucifer-room-entry-exit.js`
@@ -47,14 +47,12 @@
 
 ## Editor UX
 
-- `js/editor-ux-suite.js` — Gift/Event Editor UX와 legacy core Editor 보정의 단일 후처리 소유자.
-  - 단순 캐릭터 프로필 ABOUT 표시와 `description` 저장
-  - 사용하지 않는 옛 Profile 필드 숨김
-  - 사용하지 않는 수동 Memory Editor 진입 차단/정리
-  - 옛 health-check DOM 잔여 정리
-- `css/editor-ux-suite.css` — 위 Editor 보정과 UX 스타일.
+- `js/hv-stable.js` — 캐릭터 Profile/Editor 원본 소유자. Profile은 `description` 기반 ABOUT 한 섹션만 렌더하고, 수동 Memory Editor 탭/markup/handler는 원본에서 제거했습니다.
+- `js/editor-ux-suite.js` — Gift/Event Editor의 표시 구조만 보조합니다. 캐릭터 Profile이나 Memory Editor를 뒤에서 다시 고치지 않습니다.
+- `css/app.css` — 단순 Profile ABOUT 표시 스타일을 포함합니다.
+- `css/editor-ux-suite.css` — Gift/Event Editor UX 스타일만 담당합니다.
 
-과거 `js/simple-character-profile.js`와 `js/memory-editor-removal.js`는 각각 별도 MutationObserver로 같은 Editor DOM을 후처리해 중복 렌더와 state overwrite 위험이 있어 `editor-ux-suite.js`로 통합 후 삭제했습니다.
+과거 `js/simple-character-profile.js`, `js/memory-editor-removal.js`, 그리고 이후 `editor-ux-suite.js`에 임시 통합했던 Profile/Memory 보정 로직은 모두 원본 `hv-stable.js`로 흡수했습니다.
 
 ## Item / Gift / Inventory
 
@@ -151,12 +149,13 @@ Thought nav는 기존 `.main-nav`를 교체하지 않고 THOUGHTS 버튼만 증�
 - Thought nav 전체 교체 제거
 - 대화 utility/submenu 중복 소유 축소
 - Collection Item legacy gift launcher 제거
-- Dialogue safety와 Editor suite가 중복으로 health-check DOM을 지우던 코드 제거
-- Character description 저장을 Editor suite에 통합하고 저장 후 core state가 오래된 값으로 되덮는 경로를 차단
+- Character Profile ABOUT/description 렌더·저장을 `hv-stable.js` 원본으로 흡수
+- 수동 Memory Editor tab/markup/save handler를 `hv-stable.js` 원본에서 제거
+- 삭제 대상 캐릭터를 `hv-stable.js` 기본 seed에서 제거하고 기존 저장 데이터 정리는 `cast-exclusions.js`만 담당
+- `hellaverse-cast-dialogues.js`의 중복 `cleanRemoved()` 삭제
+- Editor suite의 옛 health-check/Profile/Memory DOM cleanup 삭제
 
 ## 현재 남은 구조 정리 우선순위
 
-1. **Core defaults** — `hv-stable.js`의 `DEF`에는 아직 `cast-exclusions.js`가 즉시 제거하는 과거 기본 캐릭터가 일부 남아 있습니다. 런타임 오류는 막혀 있지만 최종적으로 seed 자체에서 제거하는 것이 맞습니다.
-2. **Cast pack duplicate cleanup** — `hellaverse-cast-dialogues.js`의 과거 `cleanRemoved()`는 중앙 `cast-exclusions.js`와 삭제 정책이 겹칩니다. 대형 content pack을 수정할 때 중앙 정책만 남기도록 정리합니다.
-3. **Core Editor cleanup** — 현재 `editor-ux-suite.js`가 옛 Profile/Memory UI를 한 곳에서만 보정합니다. 다음 단계에서는 `hv-stable.js` 원본 Editor에서 사용하지 않는 markup/handler 자체를 제거하면 이 보정도 더 줄일 수 있습니다.
-4. **Dialogue compatibility reduction** — `dialogue-runtime-cleanup.js`, `dialogue-single-beat-runtime.js`의 남은 역할을 코어에 흡수할 수 있는지 기능별로 계속 검증합니다.
+1. **Dialogue compatibility reduction** — `dialogue-runtime-cleanup.js`, `dialogue-single-beat-runtime.js`의 남은 역할 중 실제 코어 상태 머신으로 옮길 수 있는 부분을 기능별로 검증합니다.
+2. **Collection repair retirement** — `collection-runtime-repair.js`가 복구하는 누락 원인을 원본 seed/load 순서에서 완전히 없앤 뒤 repair 파일 제거 가능 여부를 검증합니다.

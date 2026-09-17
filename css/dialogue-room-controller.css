@@ -64,7 +64,6 @@ body.hv-choice-transition .character-room .dialogue-lines{visibility:hidden!impo
 .character-room .dialogue-box [data-vn-finish],
 .character-room .dialogue-box [data-finish],
 .character-room .dialogue-box .hv-next-control{
-  display:block!important;
   width:max-content!important;
   min-width:92px;
   margin-left:auto!important;
@@ -75,6 +74,9 @@ body.hv-choice-transition .character-room .dialogue-lines{visibility:hidden!impo
   justify-self:end!important;
   text-align:right!important;
 }
+.character-room .dialogue-box [hidden],
+.character-room .dialogue-box .hv-next-control[hidden],
+.character-room .dialogue-box [data-single-beat-next][hidden]{display:none!important;}
 @media(max-width:800px){
   .hv-room-action-bar{gap:8px;}
   .hv-room-action-bar button{font-size:10px;}

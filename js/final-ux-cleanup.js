@@ -1,26 +1,13 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V12__)return;
-window.__HELLAVERSE_FINAL_UX_CLEANUP_V12__=1;
+if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V13__)return;
+window.__HELLAVERSE_FINAL_UX_CLEANUP_V13__=1;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 let queued=false,observer=null;
 const NAV_KEY='hellaverse_current_main_nav_v1';
 const txt=el=>String(el?.textContent||'').replace(/\s+/g,' ').trim();
 
-function ensureDialogueStyle(){
-  if($('#hvDialogueContinuityStyle'))return;
-  const style=document.createElement('style');
-  style.id='hvDialogueContinuityStyle';
-  style.textContent=`
-    .character-room .dialogue-page{animation:none!important}
-    .character-room .dialogue-page.is-leaving{opacity:1!important;transition:none!important}
-    .character-room .dialogue-line,.character-room .dialogue-narration{animation:none!important}
-    .character-room .dialogue-stage .room-character img{animation:none!important;opacity:1!important;transform:none!important}
-    .character-room .dialogue-box:has(.dialogue-lines)>.speaker{display:none!important}
-  `;
-  document.head.appendChild(style);
-}
 function cleanRedundantSpeakers(){
   for(const box of $$('.character-room .dialogue-box')){
     const speaker=$(':scope > .speaker',box);
@@ -80,7 +67,7 @@ function cleanGiftResult(){
     for(const b of $$('blockquote',result)){const t=txt(b);if(/가\s*[「“\"]?.+[」”\"]?을\s*받아\s*든다[.!]?/i.test(t)||/전용 반응 없음|특수 반응 없음/i.test(t))b.remove()}
   }
 }
-function run(){ensureDialogueStyle();cleanRedundantSpeakers();cleanNav();cleanRoomHud();cleanRoomPreview();ensureGachaGlobalNav();cleanInventory();cleanGiftResult()}
+function run(){cleanRedundantSpeakers();cleanNav();cleanRoomHud();cleanRoomPreview();ensureGachaGlobalNav();cleanInventory();cleanGiftResult()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 function boot(){const app=$('#app');if(app&&!observer){observer=new MutationObserver(schedule);observer.observe(app,{childList:true,subtree:true})}schedule()}
 window.addEventListener('click',e=>{

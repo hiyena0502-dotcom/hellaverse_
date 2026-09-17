@@ -3,8 +3,6 @@ if(ready&&typeof ready.then==='function'){
   try{await ready}catch(error){console.warn('Default content readiness failed safely.',error)}
 }
 
-// dialogue-ui reads its authoring metadata from a dedicated render-meta key.
-// Keep that view synchronized with canonical state before any dialogue renderer starts.
 try{
   const stateKey='hellaverse_dialogue_state_v1';
   const metaKey='hellaverse_dialogue_render_meta_v1';
@@ -14,13 +12,7 @@ try{
   for(const [id,value] of Object.entries(canonical)){
     if(!value||typeof value!=='object'||Array.isArray(value))continue;
     const old=local[id]&&typeof local[id]==='object'&&!Array.isArray(local[id])?local[id]:{};
-    local[id]={
-      ...old,
-      ...value,
-      nodes:{...(old.nodes||{}),...(value.nodes||{})},
-      choiceTopics:{...(old.choiceTopics||{}),...(value.choiceTopics||{})},
-      choiceMeta:{...(old.choiceMeta||{}),...(value.choiceMeta||{})}
-    };
+    local[id]={...old,...value,nodes:{...(old.nodes||{}),...(value.nodes||{})},choiceTopics:{...(old.choiceTopics||{}),...(value.choiceTopics||{})},choiceMeta:{...(old.choiceMeta||{}),...(value.choiceMeta||{})}};
   }
   localStorage.setItem(metaKey,JSON.stringify(local));
 }catch(error){console.warn('Dialogue metadata sync skipped safely.',error)}
@@ -28,8 +20,9 @@ try{
 const scripts=[
   ['classic','js/dialogue-episode-upgrade-all.js?v=4'],
 
-  // dialogue-ui owns state transitions. single-beat below only controls visual pacing.
+  // State owner first; continuity intercepts TALK before the base room runtime can open a topic list.
   ['module','js/dialogue-ui.js?v=55'],
+  ['classic','js/dialogue-continuity-controller.js?v=1'],
   ['module','js/hv-stable.js?v=56'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],
@@ -52,12 +45,12 @@ const scripts=[
   ['classic','js/dialogue-file-editor.js?v=2'],
   ['classic','js/dialogue-episode-flow.js?v=2'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
-  ['classic','js/dialogue-single-beat-runtime.js?v=15'],
+  ['classic','js/dialogue-single-beat-runtime.js?v=16'],
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/dialogue-foundation-safety.js?v=4'],
 
   ['classic','js/thought-render-bridge.js?v=1'],
-  ['classic','js/dialogue-action-control.js?v=2'],
+  ['classic','js/dialogue-action-control.js?v=3'],
   ['classic','js/collection-gacha-editor.js?v=4'],
   ['classic','js/collection-reveal-line-bridge.js?v=1'],
 
@@ -67,24 +60,7 @@ const scripts=[
 ];
 
 function absolute(src){return new URL(src,document.baseURI).href}
-async function loadModule(src){
-  try{await import(absolute(src))}
-  catch(error){console.error(`Failed to load module: ${src}`,error)}
-}
-function loadClassic(src){
-  return new Promise(resolve=>{
-    const script=document.createElement('script');
-    script.src=src;
-    script.async=false;
-    script.onload=()=>resolve(true);
-    script.onerror=()=>{console.error(`Failed to load script: ${src}`);resolve(false)};
-    document.head.appendChild(script);
-  });
-}
-
-for(const [type,src] of scripts){
-  if(type==='module')await loadModule(src);
-  else await loadClassic(src);
-}
-
+async function loadModule(src){try{await import(absolute(src))}catch(error){console.error(`Failed to load module: ${src}`,error)}}
+function loadClassic(src){return new Promise(resolve=>{const script=document.createElement('script');script.src=src;script.async=false;script.onload=()=>resolve(true);script.onerror=()=>{console.error(`Failed to load script: ${src}`);resolve(false)};document.head.appendChild(script)})}
+for(const [type,src] of scripts){if(type==='module')await loadModule(src);else await loadClassic(src)}
 window.dispatchEvent(new CustomEvent('hellaverse:runtime-ready'));

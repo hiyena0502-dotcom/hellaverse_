@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_EPISODE_UPGRADE_ALL_V2__)return;
-window.__HELLAVERSE_DIALOGUE_EPISODE_UPGRADE_ALL_V2__=1;
+if(window.__HELLAVERSE_DIALOGUE_EPISODE_UPGRADE_ALL_V3__)return;
+window.__HELLAVERSE_DIALOGUE_EPISODE_UPGRADE_ALL_V3__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const COMMON_FIRST='episode-common-after-choice';
@@ -92,6 +92,10 @@ function upgradeScene(sc,state){
  const file=state.dialogueFileMap?.[sc.id]&&FILES.has(up(state.dialogueFileMap[sc.id]))?up(state.dialogueFileMap[sc.id]):fileFor(sc);
  state.dialogueFileMap=state.dialogueFileMap&&typeof state.dialogueFileMap==='object'?state.dialogueFileMap:{};
  if(state.dialogueFileMap[sc.id]!==file){state.dialogueFileMap[sc.id]=file;changed=true}
+ const wantedRole=file==='QUESTION'?'ASK':file;
+ const wantedKind=file==='QUESTION'?'ASK':['ENTRY','EXIT','IDLE','HOME'].includes(file)?file:'TALK';
+ if(up(sc.sceneRole)!==wantedRole){sc.sceneRole=wantedRole;changed=true}
+ if(up(sc.kind)!==wantedKind){sc.kind=wantedKind;changed=true}
  const first=sc.nodes.find(n=>String(n?.id||'')===String(sc.openingNodeId||''))||sc.nodes[0]||null;
  const oldOpening=String(sc.opening||'');let opening=encode(parseMarked(oldOpening,openingKind(sc,file)));
  if(first&&clean(first.text)){
@@ -117,9 +121,9 @@ function upgrade(){
  const s=read();if(!Array.isArray(s.dialogues)||!s.dialogues.length)return;let changed=false,count=0,chars=new Set();
  s.dialogueFileMap=s.dialogueFileMap&&typeof s.dialogueFileMap==='object'?s.dialogueFileMap:{};
  for(const sc of s.dialogues){if(upgradeScene(sc,s)){changed=true;count++}if(sc?.characterId)chars.add(sc.characterId)}
- if(!s.dialogueEpisodeSystem||s.dialogueEpisodeSystem.version!==2){s.dialogueEpisodeSystem={version:2,mode:'BEATS_FIRST',files:['CONVERSATION','QUESTION','ACTION','ENTRY','EXIT','IDLE','HOME']};changed=true}
+ if(!s.dialogueEpisodeSystem||s.dialogueEpisodeSystem.version!==3){s.dialogueEpisodeSystem={version:3,mode:'BEATS_FIRST',files:['CONVERSATION','QUESTION','ACTION','ENTRY','EXIT','IDLE','HOME'],canonicalSceneRoles:true};changed=true}
  if(changed)write(s);
- try{localStorage.setItem('hellaverse_dialogue_episode_upgrade_summary_v2',JSON.stringify({scenes:s.dialogues.length,characters:chars.size,changed:count}))}catch{}
+ try{localStorage.setItem('hellaverse_dialogue_episode_upgrade_summary_v3',JSON.stringify({scenes:s.dialogues.length,characters:chars.size,changed:count}))}catch{}
 }
 
 upgrade();

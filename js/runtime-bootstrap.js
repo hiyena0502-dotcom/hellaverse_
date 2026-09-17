@@ -30,6 +30,7 @@ const scripts=[
 
   // One owner advances dialogue state. Other dialogue files below are editor/presentation helpers only.
   ['module','js/dialogue-ui.js?v=55'],
+  ['classic','js/room-entry-ui-guard.js?v=1'],
   ['module','js/hv-stable.js?v=56'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],

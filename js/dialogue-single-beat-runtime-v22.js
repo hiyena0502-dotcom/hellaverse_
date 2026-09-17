@@ -6,8 +6,8 @@ window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V22__=1;
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const STATE_KEY='hellaverse_dialogue_state_v1';
-let queued=false,bridge=false;
-let flow={sceneId:'',start:0,index:0,pending:null,pendingFinish:null};
+let queued=false,bridge=false,retryTimer=null;
+let flow={sceneId:'',start:0,index:0,pending:null,pendingFinish:null,suppressBeats:false};
 
 const isBeat=el=>el instanceof Element&&(el.matches('article.dialogue-line')||el.matches('p.narration')||el.matches('p.dialogue-current'));
 const isPlayer=el=>el instanceof Element&&(el.matches('.dialogue-line.you')||String($('strong',el)?.textContent||'').trim().toUpperCase()==='YOU');
@@ -29,7 +29,8 @@ function hideChoices(host){hide(choiceList(host))}
 function showChoices(host){const list=choiceList(host);if(list)show(list);choiceButtons(host).forEach(show);hideCore(host)}
 function ensureNext(host){let b=$('[data-single-beat-next]',host);if(!b){b=document.createElement('button');b.type='button';b.className='dialogue-next single-beat-next hv-next-control';b.dataset.singleBeatNext='1';host.appendChild(b)}return b}
 function setNext(b,mode){b.dataset.singleBeatMode=mode;b.innerHTML='NEXT <span>›</span>';show(b)}
-function reset(sceneId=''){flow={sceneId:String(sceneId||''),start:0,index:0,pending:null,pendingFinish:null}}
+function reset(sceneId=''){clearTimeout(retryTimer);retryTimer=null;flow={sceneId:String(sceneId||''),start:0,index:0,pending:null,pendingFinish:null,suppressBeats:false}}
+function retry(ms=40){clearTimeout(retryTimer);retryTimer=setTimeout(()=>{retryTimer=null;schedule()},ms)}
 function lookupChoice(id){
   if(!id)return null;const s=readState();
   for(const scene of s.dialogues||[])for(const node of scene?.nodes||[]){const c=(node?.choices||[]).find(x=>String(x?.id||'')===String(id));if(c)return c}
@@ -45,59 +46,60 @@ function removeSpeechEcho(host,pending){
 function applyPending(host){
   if(flow.pending){
     removeSpeechEcho(host,flow.pending);
-    const total=allBeats(host).length;
-    if(total<flow.pending.oldCount)return false;
-    if(total===flow.pending.oldCount){
-      if(performance.now()-flow.pending.at<1600)return false;
-      flow.pending=null;
+    const total=allBeats(host).length,old=flow.pending.oldCount;
+    if(total<old){retry();return false}
+    if(total===old){
+      const hasForward=choiceButtons(host).length||rawNext(host)||rawFinish(host)||rawEnd(host);
+      if(hasForward){flow.pending=null;flow.suppressBeats=true}
+      else if(performance.now()-flow.pending.at<1600){retry();return false}
+      else{flow.pending=null;flow.suppressBeats=false}
     }else{
-      flow.start=Math.min(flow.pending.oldCount,total-1);flow.index=flow.start;flow.pending=null;
+      flow.start=Math.min(old,total-1);flow.index=flow.start;flow.pending=null;flow.suppressBeats=false
     }
   }
   if(flow.pendingFinish){
     const total=allBeats(host).length,old=flow.pendingFinish.oldCount;
-    if(total>old){flow.start=old;flow.index=old;flow.pendingFinish=null}
+    if(total>old){flow.start=old;flow.index=old;flow.pendingFinish=null;flow.suppressBeats=false}
     else if(rawEnd(host)){
-      const end=rawEnd(host);flow.pendingFinish=null;requestAnimationFrame(()=>clickHidden(end));return false;
-    }else if(performance.now()-flow.pendingFinish.at>1200)flow.pendingFinish=null;
+      const end=rawEnd(host);flow.pendingFinish=null;requestAnimationFrame(()=>clickHidden(end));return false
+    }else if(performance.now()-flow.pendingFinish.at<1200){retry();return false}
+    else flow.pendingFinish=null
   }
-  return true;
+  return true
 }
 function render(host){
   if(!host)return;
-  if(hasRawTokens(host)){setTimeout(schedule,0);return}
+  if(hasRawTokens(host)){retry(16);return}
   if(!applyPending(host))return;
-  const beats=allBeats(host),total=beats.length;
-  const local=ensureNext(host);
+  const beats=allBeats(host),total=beats.length,local=ensureNext(host);
   hideChoices(host);hideCore(host);
+  if(flow.suppressBeats){beats.forEach(hide);if(choiceButtons(host).length){hide(local);showChoices(host);return}if(rawNext(host)){setNext(local,'core-next');return}if(rawFinish(host)){setNext(local,'finish');return}if(rawEnd(host)){setNext(local,'end');return}hide(local);return}
   if(!total){hide(local);return}
-  flow.start=Math.max(0,Math.min(flow.start,total-1));
-  flow.index=Math.max(flow.start,Math.min(flow.index,total-1));
+  flow.start=Math.max(0,Math.min(flow.start,total-1));flow.index=Math.max(flow.start,Math.min(flow.index,total-1));
   beats.forEach((b,i)=>i===flow.index?show(b):hide(b));
   if(flow.index<total-1){setNext(local,'beat');return}
   if(choiceButtons(host).length){hide(local);showChoices(host);return}
   if(rawNext(host)){setNext(local,'core-next');return}
   if(rawFinish(host)){setNext(local,'finish');return}
   if(rawEnd(host)){setNext(local,'end');return}
-  hide(local);
+  hide(local)
 }
 function currentHost(){return $('.character-room .dialogue-box')}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>requestAnimationFrame(()=>{queued=false;render(currentHost())}))}
 function clickHidden(target){if(!target||bridge)return false;bridge=true;const h=target.hidden,d=target.style.display;target.hidden=false;target.style.removeProperty('display');try{target.click()}finally{target.hidden=h;target.style.display=d;bridge=false}return true}
 function commitChoice(target){
   const host=target.closest('.dialogue-box');if(!host)return;
-  const oldCount=allBeats(host).length;
-  const choice=target.matches('[data-choice]')?lookupChoice(target.dataset.choice||''):null;
+  const oldCount=allBeats(host).length,choice=target.matches('[data-choice]')?lookupChoice(target.dataset.choice||''):null;
   const echo=clean(choice?.playerLine||choice?.text||target.querySelector('span')?.textContent||'');
-  flow.pending={oldCount,echo,suppressEcho:!!choice&&choice.type!=='action',at:performance.now()};
-  hideChoices(host);allBeats(host).forEach(hide);hide($('[data-single-beat-next]',host));hideCore(host);
+  flow.pending={oldCount,echo,suppressEcho:!!choice&&choice.type!=='action',at:performance.now()};flow.suppressBeats=false;
+  hideChoices(host);allBeats(host).forEach(hide);hide($('[data-single-beat-next]',host));hideCore(host);retry(16)
 }
 
 window.addEventListener('click',e=>{
   if(bridge)return;const t=e.target instanceof Element?e.target:null;if(!t)return;
   const scene=t.closest('[data-scene]');if(scene){reset(scene.dataset.scene||'');return}
   const choice=t.closest('.character-room .dialogue-box [data-choice],.character-room .dialogue-box [data-gc]');if(choice){commitChoice(choice);return}
-  if(t.closest('[data-page="characters"],[data-vn-leave],[data-runtime-leave]'))reset('');
+  if(t.closest('[data-page="characters"],[data-vn-leave],[data-runtime-leave]'))reset('')
 },true);
 
 document.addEventListener('click',e=>{
@@ -105,11 +107,9 @@ document.addEventListener('click',e=>{
   e.preventDefault();e.stopImmediatePropagation();const host=b.closest('.dialogue-box');if(!host)return;
   const mode=b.dataset.singleBeatMode||'beat';
   if(mode==='beat'){flow.index++;render(host);return}
-  if(mode==='core-next'){clickHidden(rawNext(host));setTimeout(schedule,0);return}
-  if(mode==='finish'){
-    flow.pendingFinish={oldCount:allBeats(host).length,at:performance.now()};clickHidden(rawFinish(host));setTimeout(schedule,0);return;
-  }
-  if(mode==='end'){clickHidden(rawEnd(host));setTimeout(schedule,0)}
+  if(mode==='core-next'){flow.suppressBeats=false;clickHidden(rawNext(host));retry(16);return}
+  if(mode==='finish'){flow.pendingFinish={oldCount:allBeats(host).length,at:performance.now()};flow.suppressBeats=false;clickHidden(rawFinish(host));retry(16);return}
+  if(mode==='end'){flow.suppressBeats=false;clickHidden(rawEnd(host));retry(16)}
 },true);
 
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,characterData:true});

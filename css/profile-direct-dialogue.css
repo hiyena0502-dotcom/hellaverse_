@@ -1,0 +1,6 @@
+/* The legacy room hub must never flash between the character profile and the dialogue view. */
+body.hv-direct-dialogue-entry .character-room .room-stage {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

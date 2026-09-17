@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V3__)return;
-window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V3__=1;
+if(window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V4__)return;
+window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V4__=1;
 
 const KEY='hellaverse_dialogue_state_v1';
 const $=(s,r=document)=>r.querySelector(s);
@@ -56,9 +56,9 @@ function syncSpeaker(box){
   const header=Array.from(box.children).find(el=>el.matches?.('.speaker'))||null;
   if(!header)return;
   const charName=upper(activeCharacterName()),headerName=upper(header.textContent);
-  const hasInlineSpeaker=!!box.querySelector('.dialogue-lines article.dialogue-line > strong,.dialogue-page-text article.dialogue-line > strong');
   const isCharacterHeader=headerName===charName||headerName==='YOU';
-  header.classList.toggle('is-redundant-speaker',hasInlineSpeaker&&isCharacterHeader);
+  const isScenePlayback=!!box.querySelector(':scope > .dialogue-lines');
+  header.classList.toggle('is-redundant-speaker',isScenePlayback&&isCharacterHeader);
 }
 function normalizeContainer(container){
   if(!(container instanceof Element))return;

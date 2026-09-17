@@ -20,7 +20,8 @@ try{
 const scripts=[
   ['classic','js/dialogue-episode-upgrade-all.js?v=4'],
 
-  // Dialogue ownership: continuity picks TALK scenes, exit transition owns leaving, dialogue-ui owns state, single-beat owns pacing.
+  // Dialogue ownership: continuity owns TALK chaining, exit transition owns leaving,
+  // dialogue-ui owns scene state, single-beat owns pacing, room-controller owns room actions.
   ['classic','js/dialogue-continuity-controller.js?v=4'],
   ['classic','js/room-exit-transition.js?v=2'],
   ['module','js/dialogue-ui.js?v=55'],
@@ -46,20 +47,18 @@ const scripts=[
   ['classic','js/dialogue-file-editor.js?v=2'],
   ['classic','js/dialogue-episode-flow.js?v=2'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
-  ['classic','js/dialogue-single-beat-runtime.js?v=18'],
+  ['classic','js/dialogue-single-beat-runtime.js?v=19'],
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/dialogue-foundation-safety.js?v=4'],
 
   ['classic','js/thought-render-bridge.js?v=2'],
-  ['classic','js/dialogue-action-control.js?v=3'],
   ['classic','js/collection-gacha-editor.js?v=4'],
   ['classic','js/collection-reveal-line-bridge.js?v=1'],
 
   ['classic','js/collection-emoji-corrections.js?v=2'],
   ['classic','js/ux/runtime-diagnostics.js?v=6'],
   ['classic','js/final-ux-cleanup.js?v=14'],
-  ['classic','js/dialogue-utility-controls.js?v=1'],
-  ['classic','js/profile-direct-dialogue.js?v=1']
+  ['classic','js/dialogue-room-controller.js?v=1']
 ];
 
 function absolute(src){return new URL(src,document.baseURI).href}

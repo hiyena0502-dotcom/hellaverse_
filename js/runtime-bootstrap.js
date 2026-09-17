@@ -87,7 +87,7 @@ await loadClassic('js/affection-balance-v3.js?v=1');
 await loadClassic('js/relationship-friction-dialogues.js?v=1');
 await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 
-await loadClassic('js/dialogue-content-normalize-once-v1.js?v=1');
+await loadClassic('js/dialogue-content-normalize-once-v1.js?v=2');
 await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=5');
 
 await loadClassic('js/dialogue-continuity-controller-v6.js?v=2');
@@ -97,7 +97,7 @@ await loadStableCore();
 try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}catch{}
 
 const scripts=[
-  ['classic','js/dialogue-token-renderer.js?v=3'],
+  ['classic','js/dialogue-token-renderer.js?v=4'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],
   ['module','js/relationship-editor.js?v=51'],

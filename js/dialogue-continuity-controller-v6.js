@@ -55,9 +55,7 @@ function pickConversation(){
   const previous=(s.dialogues||[]).find(sc=>String(sc?.id||'')===lastStarted)||null;
   if(previous){
     const explicit=new Set(followIds(previous,m)),forced=rows.filter(sc=>explicit.has(String(sc.id||'')));if(forced.length)rows=forced;
-    else{
-      const wanted=new Set(followTopics(previous,m));if(wanted.size){const topical=rows.filter(sc=>topics(sc,m).some(t=>wanted.has(t)));if(topical.length)rows=topical}
-    }
+    else{const wanted=new Set(followTopics(previous,m));if(wanted.size){const topical=rows.filter(sc=>topics(sc,m).some(t=>wanted.has(t)));if(topical.length)rows=topical}}
   }
   const unseen=rows.filter(sc=>!seen.has(String(sc.id||''))&&!sc.used);if(unseen.length)rows=unseen;else{const fresh=rows.filter(sc=>!recent.has(String(sc.id||'')));if(fresh.length)rows=fresh}
   let total=0;const weighted=rows.map(sc=>{let w=Math.max(.1,Number(sc.probability==null?100:sc.probability)/100)*Math.max(.25,1+Number(sc.priority||0));if(!seen.has(String(sc.id||'')))w*=3;total+=w;return{sc,w}});
@@ -74,9 +72,18 @@ function stopChain(clear=true){document.body.classList.remove(CHAIN);starting=fa
 function syntheticEnd(){const host=$('.character-room')||$('#app');if(!host)return;const b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.end='';b.dataset.hvContinuityBridge='6';host.appendChild(b);bridge=true;try{b.click()}finally{bridge=false;if(b.isConnected)b.remove()}}
 function exhaust(){stopChain();setTimeout(syntheticEnd,0)}
 function finishAndContinue(button){
-  if(continuing)return;continuing=true;setTimeout(()=>{
+  if(continuing)return;continuing=true;const startedAt=performance.now();
+  setTimeout(()=>{
     if(button?.isConnected){bridge=true;try{button.click()}finally{bridge=false}}
-    const wait=()=>{if(!$('.character-room')){stopChain();return}if($('.character-room .dialogue-box')){setTimeout(wait,20);return}continuing=false;if(!startConversation())exhaust()};setTimeout(wait,16);
+    const wait=()=>{
+      if(!$('.character-room')){stopChain();return}
+      if($('.character-room .dialogue-box')){
+        if(performance.now()-startedAt>1800){continuing=false;stopChain(false);return}
+        setTimeout(wait,20);return
+      }
+      continuing=false;if(!startConversation())exhaust()
+    };
+    setTimeout(wait,16);
   },0);
 }
 function normalizeEnds(){if(!document.body.classList.contains(CHAIN))return;for(const b of document.querySelectorAll('.character-room .dialogue-box [data-end]')){b.dataset.hvContinuityEnd='6';if(String(b.textContent||'').trim().toUpperCase()==='RETURN')b.textContent='NEXT'}}
@@ -85,10 +92,17 @@ function schedule(){requestAnimationFrame(normalizeEnds)}
 window.addEventListener('click',e=>{const t=e.target instanceof Element?e.target:null;if(!t)return;if(t.closest('[data-vn-leave],[data-runtime-leave],[data-page="characters"],.room-back,[data-room]'))stopChain()},true);
 document.addEventListener('click',e=>{
   if(bridge)return;const t=e.target instanceof Element?e.target:null;if(!t)return;
-  const scene=t.closest('[data-scene]');if(scene){const id=String(scene.dataset.scene||''),r=roleForId(id),sc=sceneById(id);if(r==='CONVERSATION'){
-    const chain=document.body.classList.contains(CHAIN);if(chain&&already(sc)){e.preventDefault();e.stopImmediatePropagation();setTimeout(()=>{if(!startConversation())exhaust()},0);return}
-    if(!chain){resetSession(String(state().active||''));document.body.classList.add(CHAIN)}remember(sc);
-  }else if(r==='EXIT')stopChain()}
+  const sceneButton=t.closest('[data-scene]');
+  if(sceneButton){
+    const id=String(sceneButton.dataset.scene||''),sceneRole=roleForId(id),sc=sceneById(id);
+    if(sceneRole==='EXIT'){stopChain();return}
+    if(sceneRole==='CONVERSATION'){
+      const chain=document.body.classList.contains(CHAIN);
+      if(chain&&already(sc)){e.preventDefault();e.stopImmediatePropagation();setTimeout(()=>{if(!startConversation())exhaust()},0);return}
+      if(!chain){resetSession(String(state().active||''));document.body.classList.add(CHAIN)}
+      remember(sc)
+    }
+  }
   const talk=t.closest('.character-room [data-action="TALK"]');if(talk){e.preventDefault();e.stopImmediatePropagation();if(!startConversation({fresh:true}))stopChain();return}
   const end=t.closest('.character-room .dialogue-box [data-end]');if(end&&document.body.classList.contains(CHAIN)){e.preventDefault();e.stopImmediatePropagation();finishAndContinue(end)}
 },true);

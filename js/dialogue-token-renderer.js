@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V1__)return;
-window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V1__=1;
+if(window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V2__)return;
+window.__HELLAVERSE_DIALOGUE_TOKEN_RENDERER_V2__=1;
 
 const KEY='hellaverse_dialogue_state_v1';
 const $=(s,r=document)=>r.querySelector(s);
@@ -34,9 +34,9 @@ function parseTagged(text,initialKind){
 }
 function makeBeat(segment,charName){
   if(segment.kind==='NARRATION'){
-    const p=document.createElement('p');p.className='narration dialogue-narration';p.textContent=segment.text;return p;
+    const p=document.createElement('p');p.className='narration dialogue-narration';p.dataset.hvTokenNormalized='1';p.textContent=segment.text;return p;
   }
-  const article=document.createElement('article');article.className=`dialogue-line ${segment.kind==='PLAYER'?'you':'character'}`;
+  const article=document.createElement('article');article.className=`dialogue-line ${segment.kind==='PLAYER'?'you':'character'}`;article.dataset.hvTokenNormalized='1';
   const strong=document.createElement('strong');strong.textContent=segment.kind==='PLAYER'?'YOU':charName;
   const p=document.createElement('p');p.textContent=segment.text;
   article.append(strong,p);return article;
@@ -50,34 +50,14 @@ function normalizeBeat(el){
   for(const part of parts){if(clean(part.text))frag.appendChild(makeBeat(part,name))}
   el.replaceWith(frag);return true;
 }
-function beatKey(el){
-  if(!(el instanceof Element))return'';
-  const kind=el.matches('p.narration,.dialogue-narration')?'N':el.matches('.dialogue-line.you')?'P':'C';
-  const speaker=kind==='N'?'':clean($('strong',el)?.textContent||'');
-  const text=el.matches('article.dialogue-line')?clean($('p',el)?.textContent||''):clean(el.textContent||'');
-  return`${kind}|${speaker}|${text}`;
-}
-function dedupe(container){
-  const rows=Array.from(container.children).filter(el=>el.matches?.('article.dialogue-line,p.narration,p.dialogue-current'));
-  let previous='';
-  for(const row of rows){
-    const key=beatKey(row);
-    if(key&&key===previous){row.remove();continue}
-    if(key)previous=key;
-  }
-}
 function normalizeContainer(container){
   if(!(container instanceof Element))return;
-  let changed=false;
-  for(const el of Array.from(container.children))if(el.matches?.('article.dialogue-line,p.narration,p.dialogue-current'))changed=normalizeBeat(el)||changed;
-  // A tagged element can expand into several beats, so normalize once more only for
-  // untouched children and remove accidental consecutive duplicate responses.
-  if(changed){for(const el of Array.from(container.children))if(el.matches?.('article.dialogue-line,p.narration,p.dialogue-current'))normalizeBeat(el)}
-  dedupe(container);
+  for(const el of Array.from(container.children))if(el.matches?.('article.dialogue-line,p.narration,p.dialogue-current'))normalizeBeat(el);
+  // Do not dedupe by text here. Repeated lines can be intentional and DOM-level
+  // deletion caused legitimate dialogue to disappear. Duplicate prevention belongs
+  // to scene/state logic, not the renderer.
 }
-function run(){
-  for(const container of $$('.character-room .dialogue-page-text,.character-room .dialogue-lines'))normalizeContainer(container);
-}
+function run(){for(const container of $$('.character-room .dialogue-page-text,.character-room .dialogue-lines'))normalizeContainer(container)}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
 window.addEventListener('hellaverse:runtime-ready',schedule);

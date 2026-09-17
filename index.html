@@ -99,49 +99,15 @@
   <!-- Normalize all dialogue only after every content pack has loaded and exclusions are applied. -->
   <script src="js/dialogue-episode-upgrade-all.js?v=3"></script>
 
-  <!-- MAIN APP / FEATURE RUNTIMES -->
-  <script type="module" src="js/dialogue-ui.js?v=55"></script>
-  <script type="module" src="js/hv-stable.js?v=56"></script>
-  <script type="module" src="js/event-manager.js?v=50"></script>
-  <script type="module" src="js/thought-archive.js?v=51"></script>
-  <script type="module" src="js/relationship-editor.js?v=50"></script>
-
-  <!-- UNIFIED ITEM SYSTEM: Collection + Basic Inventory + Gift routes. -->
-  <script defer src="js/item-inventory-migration.js?v=1"></script>
-  <script defer src="js/item-catalog-rebalance.js?v=2"></script>
-  <script defer src="js/satan-paperweight-delivery.js?v=1"></script>
-  <script defer src="js/item-system-v2.js?v=1"></script>
-  <script defer src="js/item-manager-v2.js?v=2"></script>
-  <script defer src="js/item-event-bridge-v2.js?v=1"></script>
-
-  <script type="module" src="js/site-runtime.js?v=67"></script>
-  <script type="module" src="js/gacha-collection-addon.js?v=64"></script>
-  <script defer src="js/character-gacha-profiles.js?v=2"></script>
-  <script defer src="js/gacha-item-copy-pack.js?v=1"></script>
-  <script defer src="js/player-game-loop.js?v=5"></script>
-
-  <!-- SETTINGS: core Settings + one management hub. -->
-  <script defer src="js/settings-management-hub.js?v=3"></script>
-
-  <!-- DIALOGUE / EDITOR: core Editor markup lives in hv-stable; suite only enhances Gift/Event presentation. -->
-  <script defer src="js/dialogue-file-editor.js?v=2"></script>
-  <script defer src="js/dialogue-runtime-cleanup.js?v=13"></script>
-  <script defer src="js/dialogue-episode-flow.js?v=2"></script>
-  <script defer src="js/dialogue-episode-editor-v2.js?v=1"></script>
-  <script defer src="js/dialogue-single-beat-runtime.js?v=13"></script>
-  <script defer src="js/editor-ux-suite.js?v=5"></script>
-  <script defer src="js/dialogue-foundation-safety.js?v=4"></script>
-
-  <!-- COMPATIBILITY / REPAIR -->
+  <!-- COMPATIBILITY / REPAIR THAT MUST RUN BEFORE DEFAULT IMPORT -->
   <script src="js/dialogue-mood-indicator.js?v=1"></script>
   <script src="js/collection-runtime-repair.js?v=4"></script>
-  <script defer src="js/collection-emoji-corrections.js?v=2"></script>
 
-  <!-- SETTINGS DIAGNOSTICS: stays in the same Settings stack as Appearance/Data/Danger. -->
-  <script defer src="js/ux/runtime-diagnostics.js?v=6"></script>
+  <!-- CANONICAL DEFAULTS: merge shared authoring content while preserving personal progress. -->
+  <script src="js/default-content-loader.js?v=1"></script>
 
-  <!-- LAST PASS: player-facing cleanup only. -->
-  <script defer src="js/final-ux-cleanup.js?v=14"></script>
+  <!-- MAIN RUNTIME: waits for canonical defaults before loading app modules and deferred features. -->
+  <script type="module" src="js/runtime-bootstrap.js?v=1"></script>
 </head>
 <body>
   <div id="app"></div>

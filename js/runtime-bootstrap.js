@@ -33,14 +33,14 @@ const scripts=[
 
   // Dialogue ownership: continuity owns TALK chaining, exit transition owns leaving,
   // dialogue-ui owns scene state, multi-node controller owns node-to-node choices,
-  // token renderer normalizes authoring markers, single-beat owns visual pacing,
-  // interaction-engine owns ASK/ACTION, room-controller owns persistent room controls.
+  // token renderer normalizes authoring markers without deleting valid dialogue,
+  // single-beat owns visual pacing and exact choice-echo suppression only.
   ['classic','js/dialogue-continuity-controller.js?v=5'],
   ['classic','js/room-exit-transition.js?v=2'],
   ['module','js/dialogue-ui.js?v=55'],
   ['module','js/hv-stable.js?v=56'],
   ['classic','js/dialogue-multinode-controller.js?v=1'],
-  ['classic','js/dialogue-token-renderer.js?v=1'],
+  ['classic','js/dialogue-token-renderer.js?v=2'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],
   ['module','js/relationship-editor.js?v=51'],
@@ -62,7 +62,7 @@ const scripts=[
   ['classic','js/dialogue-file-editor.js?v=2'],
   ['classic','js/dialogue-episode-flow.js?v=2'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
-  ['classic','js/dialogue-single-beat-runtime.js?v=20'],
+  ['classic','js/dialogue-single-beat-runtime.js?v=21'],
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/dialogue-foundation-safety.js?v=4'],
 

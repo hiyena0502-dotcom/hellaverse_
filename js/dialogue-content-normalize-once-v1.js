@@ -1,11 +1,10 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_NORMALIZE_ONCE_V1__)return;
-window.__HELLAVERSE_DIALOGUE_NORMALIZE_ONCE_V1__=1;
+if(window.__HELLAVERSE_DIALOGUE_NORMALIZE_ONCE_V2__)return;
+window.__HELLAVERSE_DIALOGUE_NORMALIZE_ONCE_V2__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const ROLES=new Set(['CONVERSATION','QUESTION','ACTION','ENTRY','EXIT']);
-const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
 const up=v=>String(v??'').trim().toUpperCase();
 const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};
 const write=s=>{try{localStorage.setItem(K,JSON.stringify(s))}catch(e){console.warn('Dialogue one-shot normalize save failed',e)}};
@@ -40,10 +39,7 @@ function encode(beats){
   const out=[];
   for(const beat of beats||[]){
     const text=String(beat?.text||'').trim();if(!text)continue;
-    const kind=markerKind(beat?.kind,'CHARACTER');
-    const prev=out.at(-1);
-    if(prev&&prev.kind===kind&&clean(prev.text)===clean(text))continue;
-    out.push({kind,text});
+    out.push({kind:markerKind(beat?.kind,'CHARACTER'),text});
   }
   return out.map(b=>`[[${b.kind}]] ${b.text}`).join('\n');
 }
@@ -107,7 +103,7 @@ for(const sc of s.dialogues){
   }
   if(touched)changed++;
 }
-s.dialogueEpisodeSystem={version:5,mode:'ONE_SHOT_BEATS',files:[...ROLES],runtimeMutation:false,updatedAt:new Date().toISOString()};
+s.dialogueEpisodeSystem={version:6,mode:'ONE_SHOT_BEATS',files:[...ROLES],runtimeMutation:false,textDedupe:false,updatedAt:new Date().toISOString()};
 write(s);
-try{localStorage.setItem('hellaverse_dialogue_normalize_once_v1',JSON.stringify({changed,scenes:s.dialogues.length,at:new Date().toISOString()}))}catch{}
+try{localStorage.setItem('hellaverse_dialogue_normalize_once_v2',JSON.stringify({changed,scenes:s.dialogues.length,at:new Date().toISOString()}))}catch{}
 })();

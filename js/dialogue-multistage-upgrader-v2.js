@@ -1,13 +1,8 @@
-(async()=>{
+(()=>{
 'use strict';
 if(window.__HELLAVERSE_MULTISTAGE_UPGRADER_V2__)return;
 window.__HELLAVERSE_MULTISTAGE_UPGRADER_V2__=1;
 window.__HELLAVERSE_MULTISTAGE_UPGRADER_V1__=1;
-
-const ready=window.__HV_DEFAULT_CONTENT_READY__;
-if(ready&&typeof ready.then==='function'){
-  try{await ready}catch(error){console.warn('Default content readiness failed before multistage repair.',error)}
-}
 
 const K='hellaverse_dialogue_state_v1',MAX=5;
 const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};

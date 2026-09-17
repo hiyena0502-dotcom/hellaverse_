@@ -57,7 +57,8 @@ const scripts=[
 
   ['classic','js/thought-render-bridge.js?v=1'],
   ['classic','js/dialogue-action-control.js?v=1'],
-  ['classic','js/collection-gacha-editor.js?v=3'],
+  ['classic','js/collection-gacha-editor.js?v=4'],
+  ['classic','js/collection-reveal-line-bridge.js?v=1'],
 
   ['classic','js/collection-emoji-corrections.js?v=2'],
   ['classic','js/ux/runtime-diagnostics.js?v=6'],

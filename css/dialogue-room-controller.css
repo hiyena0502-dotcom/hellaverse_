@@ -1,25 +1,38 @@
 /* Unified room controls: stable across SPA rerenders. */
-.character-room .dialogue-box{position:relative;}
+.character-room .dialogue-stage{position:relative;}
+.character-room .dialogue-box{
+  position:absolute;
+  min-height:clamp(320px,34vh,430px);
+  max-height:76vh;
+  padding-top:clamp(26px,3.4vw,42px);
+  padding-bottom:clamp(28px,3.6vw,44px);
+}
 .hv-room-action-bar{
+  position:absolute;
+  right:clamp(18px,6vw,84px);
+  bottom:calc(var(--hv-dialogue-box-height, 360px) + 10px);
+  z-index:12;
   display:flex;
   justify-content:flex-end;
   align-items:center;
   flex-wrap:wrap;
-  gap:10px;
-  width:100%;
-  margin:0 0 18px auto;
-  padding:0 0 12px;
-  border-bottom:1px solid rgba(201,166,107,.18);
+  gap:14px;
+  width:max-content;
+  max-width:calc(100% - 36px);
+  margin:0;
+  padding:7px 0;
+  background:linear-gradient(90deg,transparent,rgba(11,8,10,.56) 18%,rgba(11,8,10,.76));
+  text-shadow:0 2px 12px rgba(0,0,0,.9);
 }
 .hv-room-action-bar button{
   appearance:none;
   border:0;
   background:transparent;
-  color:rgba(255,255,255,.74);
+  color:rgba(255,255,255,.76);
   font:inherit;
   font-size:11px;
   letter-spacing:.12em;
-  padding:6px 2px;
+  padding:5px 1px;
   cursor:pointer;
   transition:color .15s ease,opacity .15s ease;
 }
@@ -67,16 +80,17 @@ body.hv-direct-dialogue-entry .character-room .room-stage{visibility:hidden;poin
 body.hv-choice-transition .character-room .dialogue-page-text,
 body.hv-choice-transition .character-room .dialogue-lines{visibility:hidden!important;}
 
-/* Raw legacy RETURN controls are implementation details. Only the unified NEXT is visible. */
+/* Core finish/end/return controls are implementation details. The pager exposes NEXT instead. */
 .character-room .dialogue-box [data-end],
-.character-room .dialogue-box [data-runtime-return]{display:none!important;}
+.character-room .dialogue-box [data-finish],
+.character-room .dialogue-box [data-vn-finish],
+.character-room .dialogue-box [data-runtime-return],
+.character-room .dialogue-box .dialogue-return{display:none!important;}
 
-/* Make every forward control land on the far right, regardless of parent layout. */
+/* Make every user-facing forward control land on the far right. */
 .character-room .dialogue-box .dialogue-next,
 .character-room .dialogue-box [data-single-beat-next],
 .character-room .dialogue-box [data-vn-next],
-.character-room .dialogue-box [data-vn-finish],
-.character-room .dialogue-box [data-finish],
 .character-room .dialogue-box .hv-next-control{
   width:max-content!important;
   min-width:92px;
@@ -96,7 +110,8 @@ body.hv-choice-transition .character-room .dialogue-lines{visibility:hidden!impo
   .hv-action-list{grid-template-columns:1fr;}
 }
 @media(max-width:800px){
-  .hv-room-action-bar{gap:8px;}
+  .character-room .dialogue-box{min-height:300px;max-height:62vh;padding:22px 16px 28px;}
+  .hv-room-action-bar{right:16px;bottom:calc(var(--hv-dialogue-box-height, 300px) + 7px);gap:9px;max-width:calc(100% - 32px);}
   .hv-room-action-bar button{font-size:10px;}
   .hv-ask-panel,.hv-action-panel{padding:16px;}
 }

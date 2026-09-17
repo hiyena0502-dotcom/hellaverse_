@@ -19,15 +19,16 @@ try{
 
 const scripts=[
   ['classic','js/dialogue-episode-upgrade-all.js?v=4'],
-  ['classic','js/dialogue-content-repairs.js?v=1'],
 
   // Dialogue ownership: continuity owns TALK chaining, exit transition owns leaving,
-  // dialogue-ui owns scene state, single-beat owns pacing, interaction-engine owns ASK/ACTION,
+  // dialogue-ui owns scene state, multi-node controller owns node-to-node choices,
+  // single-beat owns pacing, interaction-engine owns ASK/ACTION,
   // room-controller owns stable room controls and direct ENTER ROOM flow.
   ['classic','js/dialogue-continuity-controller.js?v=5'],
   ['classic','js/room-exit-transition.js?v=2'],
   ['module','js/dialogue-ui.js?v=55'],
   ['module','js/hv-stable.js?v=56'],
+  ['classic','js/dialogue-multinode-controller.js?v=1'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],
   ['module','js/relationship-editor.js?v=51'],

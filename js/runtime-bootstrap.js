@@ -19,6 +19,9 @@ async function loadStableCore(){
     const oldStart="function startScene(sid){let s=S.dialogues.find(x=>x.id===sid),c=C(s.characterId)";
     const newStart="function startScene(sid){let s=S.dialogues.find(x=>x.id===sid);if(!s)return;let c=C(s.characterId)";
     if(source.includes(oldStart))source=source.replace(oldStart,newStart);
+    const oldEntry="let e=S.dialogues.filter(s=>s.characterId===cid&&s.kind==='ENTRY'&&okScene(s,cid).ok).sort((a,b)=>b.priority-a.priority)[0];";
+    const newEntry="let entries=S.dialogues.filter(s=>s.characterId===cid&&s.kind==='ENTRY'&&okScene(s,cid).ok),maxEntry=entries.length?Math.max(...entries.map(x=>Number(x.priority||0))):-Infinity,entryPool=entries.filter(x=>Number(x.priority||0)>=maxEntry-1),e=entryPool[Math.floor(Math.random()*entryPool.length)]||entries[0];";
+    if(source.includes(oldEntry))source=source.replace(oldEntry,newEntry);
     const blob=new Blob([source],{type:'text/javascript'}),url=URL.createObjectURL(blob);
     try{await import(url)}finally{URL.revokeObjectURL(url)}
     return true;
@@ -46,6 +49,13 @@ try{
   }
   localStorage.setItem(metaKey,JSON.stringify(local));
 }catch(error){console.warn('Dialogue metadata sync skipped safely.',error)}
+
+// Keep the authoring taxonomy to the five active play roles and then add the
+// shared Hazbin expansion after canonical defaults have finished merging.
+await loadClassic('js/dialogue-five-role-cleanup.js?v=1');
+await loadClassic('js/hazbin-major-dialogue-expansion-a.js?v=1');
+await loadClassic('js/hazbin-major-dialogue-expansion-b.js?v=1');
+await loadClassic('js/hazbin-major-dialogue-expansion-c.js?v=1');
 
 await loadClassic('js/dialogue-episode-upgrade-all.js?v=4');
 await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');

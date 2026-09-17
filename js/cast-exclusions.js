@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_CAST_EXCLUSIONS_V1__)return;
-window.__HELLAVERSE_CAST_EXCLUSIONS_V1__=1;
+if(window.__HELLAVERSE_CAST_EXCLUSIONS_V2__)return;
+window.__HELLAVERSE_CAST_EXCLUSIONS_V2__=1;
 
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const PROGRESS_KEY='hellaverse_conversation_progress_v1';
@@ -47,6 +47,16 @@ function clean(){
   for(const key of ['affection','moods','visits','collectionProfiles','gachaProfiles']){
     if(s[key]&&typeof s[key]==='object')for(const id of ids)delete s[key][id];
   }
+
+  // Profile maps are character-scoped. Remove stale entries left behind by characters
+  // deleted by other content packs (for example Michael/Gabriel), so diagnostics
+  // never keep reporting orphan character profiles after the character is gone.
+  const validCharacterIds=new Set(s.characters.map(c=>String(c?.id||'')).filter(Boolean));
+  for(const key of ['collectionProfiles','gachaProfiles']){
+    if(!s[key]||typeof s[key]!=='object')continue;
+    for(const id of Object.keys(s[key]))if(!validCharacterIds.has(String(id)))delete s[key][id];
+  }
+
   if(s.dialogueFileMap&&typeof s.dialogueFileMap==='object')for(const id of dialogueIds)delete s.dialogueFileMap[id];
   if(Array.isArray(s.events))s.events=s.events.filter(e=>!ids.has(String(e?.characterId||'')));
 
@@ -57,6 +67,7 @@ function clean(){
   const p=read(PROGRESS_KEY,{version:2,characters:{}});
   if(p?.characters&&typeof p.characters==='object'){
     for(const id of ids)delete p.characters[id];
+    for(const id of Object.keys(p.characters))if(!validCharacterIds.has(String(id)))delete p.characters[id];
     write(PROGRESS_KEY,p);
   }
 

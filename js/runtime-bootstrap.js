@@ -56,6 +56,7 @@ await loadClassic('js/dialogue-five-role-cleanup.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-a.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-b.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-c.js?v=1');
+await loadClassic('js/charlie-mega-content-pack.js?v=1');
 
 // Relationship progression should be earned: compress routine positive gains,
 // amplify negative choices, then add explicit character-boundary conversations.

@@ -1,14 +1,13 @@
 .settings-management-hub{grid-column:1/-1;order:0}.settings-management-hub h2{margin:4px 0 2px;font-family:Georgia,serif}.settings-management-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.settings-management-grid>button,.settings-management-grid>.settings-restore{display:grid;grid-template-columns:auto 1fr;grid-template-areas:'icon title' 'icon desc';column-gap:10px;align-items:center;border:1px solid var(--line);background:rgba(255,255,255,.02);border-radius:12px;padding:14px;text-align:left;color:var(--text);cursor:pointer}.settings-management-grid>button:hover,.settings-management-grid>.settings-restore:hover{border-color:rgba(201,166,107,.5);background:rgba(201,166,107,.06)}.settings-management-grid span{grid-area:icon;font-size:1.35rem;color:var(--gold)}.settings-management-grid strong{grid-area:title;font-size:.78rem;letter-spacing:.07em}.settings-management-grid small{grid-area:desc;color:var(--muted);margin-top:3px}.settings-restore{position:relative;overflow:hidden}.settings-restore input{position:absolute;inset:0;opacity:0;cursor:pointer}.hud-tools:empty{display:none}
 
-/* Stable Settings layout: do not depend on MutationObserver insertion order. */
+/* Settings layout: full-width top sections, then two independent vertical stacks. */
 .site-shell.page-settings .settings-grid{align-items:start}
-.site-shell.page-settings .settings-grid>.settings-panel{order:30}
-.site-shell.page-settings .settings-grid>.settings-management-hub{grid-column:1/-1;order:0}
-.site-shell.page-settings .settings-grid>#playerSettingsPanel{grid-column:1/-1;order:10}
-.site-shell.page-settings .settings-grid>.settings-panel:has(#setGold){grid-column:1;order:20;align-self:start}
-.site-shell.page-settings .settings-grid>.thought-settings-card{grid-column:2;order:21;align-self:start}
-.site-shell.page-settings .settings-grid>.danger-zone{order:32}
-.site-shell.page-settings .settings-grid>[data-hv-diagnostics]{grid-column:1/-1;order:40}
+.site-shell.page-settings .settings-grid>.settings-management-hub{grid-column:1/-1}
+.site-shell.page-settings .settings-grid>#playerSettingsPanel{grid-column:1/-1}
+.site-shell.page-settings .settings-columns{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;min-width:0}
+.site-shell.page-settings .settings-column{display:grid;gap:16px;align-content:start;min-width:0}
+.site-shell.page-settings .settings-column>.settings-panel{width:100%;max-width:none;min-width:0;margin:0}
+.site-shell.page-settings .settings-column>[data-hv-diagnostics]{width:100%;max-width:none;min-width:0;margin:0}
 
-@media(max-width:900px){.site-shell.page-settings .settings-grid>.settings-panel:has(#setGold),.site-shell.page-settings .settings-grid>.thought-settings-card{grid-column:1/-1}.settings-management-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.site-shell.page-settings .settings-columns{grid-template-columns:1fr}.settings-management-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:460px){.settings-management-grid{grid-template-columns:1fr}}

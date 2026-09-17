@@ -1,12 +1,11 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V11__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V11__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V12__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V12__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-const RKEY='hellaverse_dialogue_runtime_file_v1';
-let queued=false,ambientResumeLocked=false,logMoveQueued=false;
+let queued=false,logMoveQueued=false;
 
 const isPlayer=el=>el instanceof Element&&(el.matches('.dialogue-line.you')||String($('strong',el)?.textContent||'').trim().toUpperCase()==='YOU');
 const isBeat=el=>el instanceof Element&&(el.matches('article.dialogue-line')||el.matches('p.narration')||el.matches('p.dialogue-current'));
@@ -36,7 +35,6 @@ function showChoices(host){
  }
  hideCoreProgress(host);
 }
-
 function ensureLocalNext(host){
  let b=$('[data-single-beat-next]',host);if(b)return b;
  b=document.createElement('button');b.type='button';b.className='dialogue-next single-beat-next';b.dataset.singleBeatNext='1';
@@ -119,40 +117,6 @@ function clearChosenScreen(target){
  host.dataset.hvChoiceCommitted='1';
  return true;
 }
-
-function isQuietFallback(box){
- if(!box?.classList?.contains('synthetic-dialogue'))return false;
- return /잠시\s*조용한\s*시간이\s*흐른다/i.test(String(box.textContent||''));
-}
-function conversationTrigger(){
- const direct=$('[data-dialogue-file-runtime="CONVERSATION"]');
- if(direct&&!direct.closest('.editor-main,.modal-backdrop,#hellaverseGachaRoot'))return direct;
- return $$('button,a').find(el=>{
-  if(el.closest('.editor-main,.modal-backdrop,#hellaverseGachaRoot,.dialogue-box'))return false;
-  const label=String(el.textContent||'').replace(/^\s*\d+\s*/,'').trim().toUpperCase();
-  return label==='CONVERSATION';
- })||null;
-}
-function resumeFromQuietFallback(){
- const box=$('.character-room .dialogue-box.synthetic-dialogue');
- if(!isQuietFallback(box))return false;
- hide(box);
- if(ambientResumeLocked)return true;
- ambientResumeLocked=true;
- try{sessionStorage.setItem(RKEY,'CONVERSATION')}catch{}
- requestAnimationFrame(()=>{
-  const trigger=conversationTrigger();
-  if(trigger&&trigger.isConnected){
-   trigger.click();
-  }else{
-   const talk=$$('[data-action="TALK"]').find(el=>!el.closest('.dialogue-box,.editor-main,.modal-backdrop,#hellaverseGachaRoot'));
-   if(talk?.isConnected)talk.click();
-  }
-  setTimeout(()=>{ambientResumeLocked=false;schedule()},120);
- });
- return true;
-}
-
 function externalLogRoot(){
  let root=$('#hvDialogueLogRoot');
  if(!root){root=document.createElement('div');root.id='hvDialogueLogRoot';document.body.appendChild(root)}
@@ -170,11 +134,9 @@ function scheduleExternalizeLog(){
  setTimeout(()=>externalizeLog(),40);
 }
 function removeExternalLog(){const root=$('#hvDialogueLogRoot');if(root)root.remove()}
-
 function run(){
  stripPlayerEcho();
  if(!$('.character-room'))removeExternalLog();else externalizeLog();
- if(resumeFromQuietFallback())return;
  for(const page of $$('.character-room .dialogue-page[data-vn-page]'))enhanceNew(page);
  for(const box of $$('.character-room .dialogue-box'))if(!$('.dialogue-page[data-vn-page]',box))enhanceLegacy(box);
 }

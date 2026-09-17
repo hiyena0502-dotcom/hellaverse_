@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V7__)return;
-window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V7__=1;
+if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V8__)return;
+window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V8__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const META_KEY='hellaverse_dialogue_render_meta_v1';
@@ -9,7 +9,8 @@ const RKEY='hellaverse_dialogue_runtime_file_v1';
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const up=v=>String(v||'').trim().toUpperCase();
-let queued=false,pendingMode='';
+const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+let queued=false,pendingMode='',leaving=false,leaveSceneStarted=false,navigationBridge=false;
 
 function read(){try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}}
 function readMeta(){try{return JSON.parse(localStorage.getItem(META_KEY)||'{}')||{}}catch{return{}}}
@@ -122,8 +123,74 @@ function autoStart(){
   requestAnimationFrame(()=>{if(target.isConnected)target.click()});
  }else emptyState(box,mode,'지금 시작할 수 있는 에피소드가 없습니다.');
 }
-function run(){unwrapMore();syncDialogueRoles();const box=$('.character-room .dialogue-box');if(box)ensureRoomUtility(box);autoStart()}
+
+function stripEpisodeMarkers(value){
+ return String(value||'').replace(/\[\[(?:CHARACTER|NARRATION)\]\]\s*/g,'').replace(/\s+/g,' ').trim();
+}
+function pickExitScene(){
+ const state=read(),cid=String(state.active||'');
+ return (state.dialogues||[]).find(sc=>String(sc?.characterId||'')===cid&&fileOf(sc,state)==='EXIT'&&!(sc.repeatable===false&&sc.used))||null;
+}
+function fallbackFarewellText(){
+ const state=read(),cid=String(state.active||''),character=(state.characters||[]).find(c=>String(c?.id||'')===cid);
+ const line=(state.dialogues||[]).filter(sc=>String(sc?.characterId||'')===cid).map(sc=>stripEpisodeMarkers(sc?.exitLine||'')).find(Boolean);
+ return line||`당신은 ${character?.name||'상대'}에게 작별 인사를 건네고 방을 나선다.`;
+}
+function showFarewellFallback(){
+ $('#hvLeaveFallback')?.remove();
+ const state=read(),cid=String(state.active||''),character=(state.characters||[]).find(c=>String(c?.id||'')===cid);
+ const root=document.createElement('div');root.id='hvLeaveFallback';
+ root.style.cssText='position:fixed;inset:0;z-index:2400000;display:grid;place-items:end center;padding:28px;background:linear-gradient(180deg,rgba(5,4,5,.1),rgba(5,4,5,.78));pointer-events:auto';
+ root.innerHTML=`<section style="width:min(980px,94vw);padding:22px 26px;border:1px solid rgba(201,166,107,.28);background:rgba(12,9,11,.97);box-shadow:0 24px 80px rgba(0,0,0,.5)"><small style="display:block;margin-bottom:8px;color:var(--gold);letter-spacing:.16em">LEAVING · ${esc(character?.name||'CHARACTER')}</small><p style="margin:0 0 18px;font-family:Georgia,'Times New Roman',serif;font-size:clamp(1.05rem,2vw,1.35rem);line-height:1.65">${esc(fallbackFarewellText())}</p><button type="button" data-hv-leave-finish style="float:right;border:0;background:transparent;color:var(--gold);letter-spacing:.14em;padding:8px 0">CHARACTERS ›</button></section>`;
+ document.body.appendChild(root);
+}
+function syntheticScene(sceneId){
+ const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.scene=sceneId;host.appendChild(b);
+ try{b.click()}finally{b.remove()}
+}
+function navigateCharacters(){
+ leaving=false;leaveSceneStarted=false;$('#hvLeaveFallback')?.remove();sessionStorage.removeItem(RKEY);pendingMode='';
+ const host=$('#app')||document.body,b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.page='characters';host.appendChild(b);navigationBridge=true;
+ try{b.click()}finally{navigationBridge=false;b.remove()}
+}
+function finishFallbackLeave(){
+ const leave=$('[data-vn-leave]');
+ if(leave){navigationBridge=true;try{leave.click()}finally{navigationBridge=false}}
+ setTimeout(navigateCharacters,180);
+}
+function beginLeaveFlow(){
+ if(leaving)return;
+ leaving=true;leaveSceneStarted=false;pendingMode='';sessionStorage.removeItem(RKEY);$('#hvLeaveFallback')?.remove();
+ const exit=pickExitScene();
+ if(exit){leaveSceneStarted=true;syntheticScene(String(exit.id));setTimeout(schedule,0);return}
+ showFarewellFallback();
+}
+function monitorLeave(box){
+ if(!leaving||!leaveSceneStarted)return;
+ if(box)return;
+ navigateCharacters();
+}
+
+function run(){
+ unwrapMore();syncDialogueRoles();
+ const box=$('.character-room .dialogue-box');
+ if(box)ensureRoomUtility(box);
+ autoStart();
+ monitorLeave(box);
+}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
+
+window.addEventListener('click',e=>{
+ if(navigationBridge)return;
+ const t=e.target instanceof Element?e.target:null;if(!t)return;
+ if(t.closest('[data-vn-leave]')||t.closest('.room-hud [data-page="characters"]')){
+  if(!$('.character-room'))return;
+  e.preventDefault();e.stopImmediatePropagation();beginLeaveFlow();return;
+ }
+ if(t.closest('[data-hv-leave-finish]')){
+  e.preventDefault();e.stopImmediatePropagation();finishFallbackLeave();return;
+ }
+},true);
 
 document.addEventListener('click',e=>{
  const t=e.target instanceof Element?e.target:null;if(!t)return;

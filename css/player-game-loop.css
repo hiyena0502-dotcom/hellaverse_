@@ -28,8 +28,9 @@
 .room-hud .hv-room-mission{border:0;border-bottom:1px solid rgba(201,166,107,.35);background:transparent;color:var(--muted);padding:5px 0;font-size:.66rem;letter-spacing:.1em}
 .room-hud .hv-room-mission:hover{color:var(--gold);border-color:var(--gold)}
 
-.hv-mission-backdrop{position:fixed;inset:0;z-index:1460;display:grid;place-items:center;padding:22px;background:rgba(5,4,5,.88);backdrop-filter:blur(8px)}
-.hv-mission-panel{width:min(720px,96vw);max-height:min(88vh,900px);overflow:auto;border:1px solid rgba(201,166,107,.3);background:linear-gradient(180deg,rgba(22,16,20,.99),rgba(9,7,8,.99));box-shadow:0 32px 100px rgba(0,0,0,.68);padding:clamp(24px,4vw,42px)}
+/* Mission UI is appended to body, so keep it above every room/background/dialogue layer. */
+.hv-mission-backdrop{position:fixed;inset:0;z-index:3000000!important;display:grid;place-items:center;padding:22px;background:rgba(5,4,5,.88);backdrop-filter:blur(8px);isolation:isolate}
+.hv-mission-panel{position:relative;z-index:1;width:min(720px,96vw);max-height:min(88vh,900px);overflow:auto;border:1px solid rgba(201,166,107,.3);background:linear-gradient(180deg,rgba(22,16,20,.99),rgba(9,7,8,.99));box-shadow:0 32px 100px rgba(0,0,0,.68);padding:clamp(24px,4vw,42px)}
 .hv-mission-panel>header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid var(--line)}
 .hv-mission-panel>header p{margin:0 0 5px;color:var(--gold);font-size:.66rem;letter-spacing:.2em}
 .hv-mission-panel>header h2{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.2rem,6vw,4.2rem);font-weight:500;letter-spacing:.08em}

@@ -3,6 +3,28 @@ if(ready&&typeof ready.then==='function'){
   try{await ready}catch(error){console.warn('Default content readiness failed safely.',error)}
 }
 
+// dialogue-ui reads its authoring metadata from a dedicated render-meta key.
+// Keep that view synchronized with canonical state before any dialogue renderer starts.
+try{
+  const stateKey='hellaverse_dialogue_state_v1';
+  const metaKey='hellaverse_dialogue_render_meta_v1';
+  const state=JSON.parse(localStorage.getItem(stateKey)||'{}')||{};
+  const canonical=state.dialogueMeta&&typeof state.dialogueMeta==='object'&&!Array.isArray(state.dialogueMeta)?state.dialogueMeta:{};
+  const local=JSON.parse(localStorage.getItem(metaKey)||'{}')||{};
+  for(const [id,value] of Object.entries(canonical)){
+    if(!value||typeof value!=='object'||Array.isArray(value))continue;
+    const old=local[id]&&typeof local[id]==='object'&&!Array.isArray(local[id])?local[id]:{};
+    local[id]={
+      ...old,
+      ...value,
+      nodes:{...(old.nodes||{}),...(value.nodes||{})},
+      choiceTopics:{...(old.choiceTopics||{}),...(value.choiceTopics||{})},
+      choiceMeta:{...(old.choiceMeta||{}),...(value.choiceMeta||{})}
+    };
+  }
+  localStorage.setItem(metaKey,JSON.stringify(local));
+}catch(error){console.warn('Dialogue metadata sync skipped safely.',error)}
+
 const scripts=[
   // Canonical dialogue data must be normalized after the default-content merge, before any renderer reads it.
   ['classic','js/dialogue-episode-upgrade-all.js?v=4'],

@@ -20,9 +20,10 @@ try{
 const scripts=[
   ['classic','js/dialogue-episode-upgrade-all.js?v=4'],
 
-  // State owner first; continuity intercepts TALK before the base room runtime can open a topic list.
+  // Capture TALK / repeated-scene / room-exit transitions before older dialogue listeners.
+  ['classic','js/dialogue-continuity-controller.js?v=4'],
+  ['classic','js/room-exit-transition.js?v=1'],
   ['module','js/dialogue-ui.js?v=55'],
-  ['classic','js/dialogue-continuity-controller.js?v=3'],
   ['module','js/hv-stable.js?v=56'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],
@@ -49,7 +50,7 @@ const scripts=[
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/dialogue-foundation-safety.js?v=4'],
 
-  ['classic','js/thought-render-bridge.js?v=1'],
+  ['classic','js/thought-render-bridge.js?v=2'],
   ['classic','js/dialogue-action-control.js?v=3'],
   ['classic','js/collection-gacha-editor.js?v=4'],
   ['classic','js/collection-reveal-line-bridge.js?v=1'],

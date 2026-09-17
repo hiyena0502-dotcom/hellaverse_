@@ -30,6 +30,12 @@ async function loadStableCore(){
     const newChoose="function chooseOpt(chid){if(!sess||sess.done)return;let s=S.dialogues.find(x=>x.id===sess.sceneId);if(!s)return;let c=C(sess.cid),n=s.nodes.find(x=>x.id===sess.nodeId);if(!n)return;let ch=n.choices.find(x=>x.id===chid);if(!ch)return;";
     if(!source.includes(oldChoose))throw new Error('hv-stable chooseOpt() signature changed');
     source=source.replace(oldChoose,newChoose);
+
+    const oldPlayerEcho="if(ch.playerLine||ch.text)sess.messages.push({speaker:ch.type==='action'?'':'YOU',text:ch.playerLine||ch.text,type:ch.type==='action'?'narration':'speech'});";
+    const newPlayerEcho="if(ch.type==='action'&&(ch.playerLine||ch.text))sess.messages.push({speaker:'',text:ch.playerLine||ch.text,type:'narration'});";
+    if(!source.includes(oldPlayerEcho))throw new Error('hv-stable player-choice signature changed');
+    source=source.replace(oldPlayerEcho,newPlayerEcho);
+
     const oldNext="let next=ch.nextNodeId?s.nodes.find(x=>x.id===ch.nextNodeId):null;if(next){sess.nodeId=next.id;if(next.text)sess.messages.push({speaker:c.name.toUpperCase(),text:next.text,type:'speech'})}else finishScene(s,c);";
     const newNext="let next=ch.nextNodeId?s.nodes.find(x=>x.id===ch.nextNodeId):null,steps=Number(sess.steps||1),visited=Array.isArray(sess.visitedNodeIds)?sess.visitedNodeIds:[sess.nodeId].filter(Boolean);if(next&&steps<5&&!visited.includes(next.id)){sess.steps=steps+1;sess.nodeId=next.id;sess.visitedNodeIds=[...visited,next.id];if(next.text){let ns=String(next.speaker||'character').toLowerCase();sess.messages.push({speaker:ns==='player'?'YOU':ns==='narration'?'':c.name.toUpperCase(),text:next.text,type:ns==='narration'?'narration':'speech'})}}else finishScene(s,c);";
     if(!source.includes(oldNext))throw new Error('hv-stable next-node signature changed');
@@ -71,7 +77,6 @@ try{
   localStorage.setItem(metaKey,JSON.stringify(local));
 }catch(error){console.warn('Dialogue metadata sync skipped safely.',error)}
 
-// Load every authored/default content pack before touching dialogue graphs.
 await loadClassic('js/dialogue-five-role-cleanup.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-a.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-b.js?v=1');
@@ -82,16 +87,13 @@ await loadClassic('js/affection-balance-v3.js?v=1');
 await loadClassic('js/relationship-friction-dialogues.js?v=1');
 await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 
-// Migrations are one-shot only. No dialogue graph is mutated while a scene is playing.
 await loadClassic('js/dialogue-content-normalize-once-v1.js?v=1');
 await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=5');
 
-// One conversation selector, one exit controller, one state machine.
 await loadClassic('js/dialogue-continuity-controller-v6.js?v=2');
 await loadClassic('js/room-exit-transition.js?v=2');
 await loadStableCore();
 
-// Retire the old automatic editor migration. Authoring tools may write only on explicit editor actions.
 try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}catch{}
 
 const scripts=[
@@ -100,33 +102,28 @@ const scripts=[
   ['module','js/thought-archive.js?v=51'],
   ['module','js/relationship-editor.js?v=51'],
   ['classic','js/relationship-render-bridge.js?v=1'],
-
   ['classic','js/item-inventory-migration.js?v=1'],
   ['classic','js/item-catalog-rebalance.js?v=2'],
   ['classic','js/satan-paperweight-delivery.js?v=1'],
   ['classic','js/item-system-v2.js?v=1'],
   ['classic','js/item-manager-v2.js?v=2'],
   ['classic','js/item-event-bridge-v2.js?v=1'],
-
   ['module','js/site-runtime.js?v=67'],
   ['module','js/gacha-collection-addon.js?v=64'],
   ['classic','js/gacha-item-copy-pack.js?v=1'],
   ['classic','js/player-game-loop.js?v=5'],
   ['classic','js/settings-management-hub.js?v=3'],
-
   ['classic','js/dialogue-file-editor.js?v=2'],
   ['classic','js/dialogue-episode-authoring.js?v=1'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
   ['classic','js/dialogue-single-beat-runtime-v23.js?v=1'],
   ['classic','js/editor-ux-suite.js?v=5'],
-
   ['classic','js/thought-render-bridge.js?v=2'],
   ['classic','js/collection-gacha-editor.js?v=4'],
   ['classic','js/collection-reveal-line-bridge.js?v=1'],
   ['classic','js/collection-emoji-corrections.js?v=2'],
   ['classic','js/ux/runtime-diagnostics.js?v=6'],
   ['classic','js/final-ux-cleanup.js?v=15'],
-
   ['classic','js/dialogue-interaction-engine-v2.js?v=1'],
   ['classic','js/dialogue-room-controller-v3.js?v=3']
 ];

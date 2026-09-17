@@ -68,9 +68,7 @@
 - `js/collection-runtime-repair.js`
 - `js/collection-emoji-corrections.js`
 
-### 남은 구조 이슈
-
-`gacha-collection-addon.js`의 `renderSettings()`는 아직 `.settings-grid` 전체를 다시 그립니다. 현재 Settings 중복 소유의 가장 큰 원인이라 추후 원본에서 제거해야 합니다.
+`gacha-collection-addon.js`는 Gacha overlay / draw / history / Collection만 담당합니다. 2026-09-17에 legacy `settingsMarkup()` / `renderSettings()`와 Gacha Settings 전체 override를 제거했습니다. 따라서 Settings DOM은 더 이상 Gacha가 교체하지 않습니다.
 
 ## Thoughts
 
@@ -79,7 +77,7 @@
 
 ### 남은 구조 이슈
 
-`thought-archive.js`의 `patchNav()`는 아직 `.main-nav.innerHTML`을 통째로 교체합니다. GACHA/MISSIONS/SETTINGS와 충돌 가능성이 있어 원본 리팩터링 대상입니다.
+`thought-archive.js`의 legacy `patchNav()`는 아직 `.main-nav.innerHTML`을 통째로 교체합니다. GACHA/MISSIONS/SETTINGS와 충돌 가능성이 있어 원본 리팩터링 대상입니다. 이 문제가 남아 있는 동안 `final-ux-cleanup.js`의 Thought nav 복구 부분은 제거하지 않습니다.
 
 ## Missions / Player
 
@@ -89,11 +87,10 @@
 ## Settings / Management
 
 - `hv-stable.js` — Settings 원본 렌더.
-- `gacha-collection-addon.js` — 아직 legacy Settings override 존재.
 - `settings-rescue.js` — 실제 Settings가 없을 때만 fallback.
 - `settings-management-hub.js` — MANAGEMENT 단일 진입점.
 - `js/ux/runtime-diagnostics.js` — Runtime Diagnostics.
-- `final-ux-cleanup.js` — 표시 정리만 담당.
+- `final-ux-cleanup.js` — 표시 정리만 담당하며 Settings 복구/재삽입은 더 이상 하지 않습니다.
 
 ## Other active modules
 
@@ -122,6 +119,5 @@
 ## 현재 리팩터링 우선순위
 
 1. Dialogue — 상태 소유자를 `dialogue-ui.js` 중심으로 더 줄이기.
-2. Settings — Gacha의 Settings 전체 override 제거.
-3. Thoughts — `patchNav()`의 nav 전체 교체 제거.
-4. Core defaults — 삭제된 기본 캐릭터가 원본 seed에 다시 들어가지 않도록 정리.
+2. Thoughts — `patchNav()`의 nav 전체 교체 제거.
+3. Core defaults — 삭제된 기본 캐릭터가 원본 seed에 다시 들어가지 않도록 정리.

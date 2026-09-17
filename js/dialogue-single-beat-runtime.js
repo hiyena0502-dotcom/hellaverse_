@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V15__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V15__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V16__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V16__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -46,7 +46,7 @@ function finalCoreAction(host){
   if($('[data-vn-next]',host))return{mode:'vn-next',label:'NEXT'};
   if($('[data-vn-finish]',host))return{mode:'vn-finish',label:'NEXT'};
   if(rawFinish(host))return{mode:'finish',label:'NEXT'};
-  if(rawEnd(host))return{mode:'end',label:'RETURN'};
+  if(rawEnd(host))return{mode:'end',label:document.body.classList.contains('hv-conversation-chain')?'NEXT':'RETURN'};
   return null;
 }
 function clickHidden(target){

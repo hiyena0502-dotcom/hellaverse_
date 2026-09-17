@@ -8,7 +8,7 @@ const RKEY='hellaverse_dialogue_runtime_file_v1';
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const up=v=>String(v||'').trim().toUpperCase();
-const runtimeMode=()=>{try{return runtimeMode()}catch{return''}};
+const runtimeMode=()=>{try{return up(sessionStorage.getItem(RKEY)||'')}catch{return''}};
 const rememberMode=mode=>{try{sessionStorage.setItem(RKEY,up(mode))}catch{}};
 const forgetMode=()=>{try{sessionStorage.removeItem(RKEY)}catch{}};
 let queued=false,pendingMode='',navigationBridge=false,leaveFlow=null,specialTransition=false,coreReturnBridge=false;

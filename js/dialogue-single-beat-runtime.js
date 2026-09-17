@@ -1,12 +1,12 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V7__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V7__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V8__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V8__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const RKEY='hellaverse_dialogue_runtime_file_v1';
-let queued=false,ambientResumeLocked=false;
+let queued=false,ambientResumeLocked=false,coreReturnBridge=false,logMoveQueued=false;
 
 const isPlayer=el=>el instanceof Element&&(el.matches('.dialogue-line.you')||String($('strong',el)?.textContent||'').trim().toUpperCase()==='YOU');
 const isBeat=el=>el instanceof Element&&(el.matches('article.dialogue-line')||el.matches('p.narration')||el.matches('p.dialogue-current'));
@@ -164,8 +164,33 @@ function resumeFromQuietFallback(){
  return true;
 }
 
+function externalLogRoot(){
+ let root=$('#hvDialogueLogRoot');
+ if(!root){root=document.createElement('div');root.id='hvDialogueLogRoot';document.body.appendChild(root)}
+ return root;
+}
+function externalizeLog(){
+ const source=$$('.dialogue-log-backdrop').find(el=>!el.closest('#hvDialogueLogRoot'));
+ if(!source)return false;
+ const root=externalLogRoot();root.replaceChildren(source);return true;
+}
+function scheduleExternalizeLog(){
+ if(logMoveQueued)return;logMoveQueued=true;
+ queueMicrotask(()=>{logMoveQueued=false;externalizeLog()});
+ requestAnimationFrame(()=>externalizeLog());
+ setTimeout(()=>externalizeLog(),40);
+}
+function removeExternalLog(){const root=$('#hvDialogueLogRoot');if(root)root.remove()}
+function coreReturn(){
+ const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
+ b.type='button';b.hidden=true;b.dataset.end='';host.appendChild(b);coreReturnBridge=true;
+ try{b.click()}finally{coreReturnBridge=false;b.remove()}
+ setTimeout(schedule,0);
+}
+
 function run(){
  stripPlayerEcho();
+ if(!$('.character-room'))removeExternalLog();else externalizeLog();
  if(resumeFromQuietFallback())return;
  for(const box of $$('.character-room .dialogue-box'))ensureUtility(box);
  for(const page of $$('.dialogue-page[data-vn-page]'))enhanceNew(page);
@@ -179,6 +204,16 @@ function clickHidden(target){
  try{target.click()}finally{target.hidden=oldHidden;target.style.display=oldDisplay}
  return true;
 }
+
+window.addEventListener('click',e=>{
+ if(coreReturnBridge)return;
+ const t=e.target instanceof Element?e.target:null;if(!t)return;
+ if(t.closest('[data-runtime-return]')){
+  e.preventDefault();e.stopImmediatePropagation();coreReturn();return;
+ }
+ if(t.closest('[data-vn-log]')){scheduleExternalizeLog();return}
+ if(t.closest('[data-vn-log-close]')){setTimeout(removeExternalLog,0);return}
+},true);
 
 document.addEventListener('click',e=>{
  const t=e.target instanceof Element?e.target:null;if(!t)return;

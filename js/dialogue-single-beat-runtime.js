@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V12__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V12__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V13__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V13__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -13,11 +13,12 @@ const hide=el=>{if(el){el.hidden=true;el.style.display='none'}};
 const show=el=>{if(el){el.hidden=false;el.style.removeProperty('display')}};
 
 function choiceList(host){return $('.choice-list',host)}
-function actualChoices(host){
+function choiceButtons(host){
  const list=choiceList(host);if(!list)return[];
- return $$('[data-choice],[data-gc]',list).filter(b=>!b.disabled&&!b.classList.contains('locked'));
+ return $$('[data-choice],[data-gc]',list);
 }
-function hasActualChoices(host){return actualChoices(host).length>0}
+function actualChoices(host){return choiceButtons(host).filter(b=>!b.disabled&&!b.classList.contains('locked'))}
+function hasChoiceOptions(host){return choiceButtons(host).length>0}
 function vnControls(host){return $$('[data-vn-next],[data-vn-finish]',host).filter(b=>!b.matches('[data-single-beat-next]'))}
 function rawFinish(host){return $('[data-finish]',host)}
 function rawEnd(host){return $('[data-end]',host)}
@@ -45,7 +46,7 @@ function setLocalMode(button,mode,label='NEXT'){
  button.innerHTML=`${label} <span>›</span>`;
 }
 function signature(beats,host){
- const choiceSig=actualChoices(host).map(b=>b.dataset.choice||b.dataset.gc||b.textContent).join(',');
+ const choiceSig=choiceButtons(host).map(b=>`${b.dataset.choice||b.dataset.gc||b.textContent}:${b.disabled?'locked':'open'}`).join(',');
  return beats.map(el=>`${el.tagName}:${el.className}:${el.textContent}`).join('|')+'::'+choiceSig;
 }
 function finalCoreAction(host){
@@ -59,7 +60,7 @@ function finalCoreAction(host){
 }
 function revealAfterLastBeat(host,local){
  const phase=host.dataset.singleBeatPhase||'beat';
- if(hasActualChoices(host)){
+ if(hasChoiceOptions(host)){
   if(phase==='choices'){
    hide(local);showChoices(host);
   }else{
@@ -85,7 +86,7 @@ function paginate(host,text){
  }
  if(!beats.length){
   const local=$('[data-single-beat-next]',host);if(local)hide(local);
-  if(hasActualChoices(host))showChoices(host);
+  if(hasChoiceOptions(host))showChoices(host);
   return;
  }
  let index=Math.max(0,Math.min(Number(host.dataset.singleBeatIndex||0),beats.length-1));

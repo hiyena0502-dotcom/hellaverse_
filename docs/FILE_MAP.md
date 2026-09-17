@@ -36,10 +36,10 @@
 
 - `js/dialogue-ui.js` — **방문/Scene/Choice/LOG/ENTRY/EXIT 상태의 코어 소유자**.
 - `js/dialogue-file-editor.js` — Dialogue File Editor.
-- `js/dialogue-runtime-cleanup.js` — QUESTION/ACTION 서브메뉴와 퇴실 navigation bridge 보조.
+- `js/dialogue-runtime-cleanup.js` — QUESTION/ACTION 서브메뉴와 퇴실 navigation bridge 보조. 코어가 의도적으로 숨긴 특수 액션은 다시 강제 생성하지 않습니다.
 - `js/dialogue-episode-flow.js` — beat/common continuation 데이터 + 표시 호환.
 - `js/dialogue-episode-editor-v2.js` — branch/continuation beat editor 보조.
-- `js/dialogue-single-beat-runtime.js` — beat/NEXT 표시, LOG 외부 레이어, 플레이어 선택문 echo 제거.
+- `js/dialogue-single-beat-runtime.js` — beat/NEXT 표시, LOG 외부 레이어, 플레이어 선택문 echo 제거. 잠금 선택지만 남아도 목록을 표시해 dead-end를 만들지 않습니다.
 - `js/dialogue-mood-indicator.js` — Mood 표시.
 - `js/dialogue-foundation-safety.js` — 대화 접근성 및 중복 클릭 방지. Editor cleanup은 담당하지 않음.
 - `css/dialogue-stability.css` — 대화 전환 깜빡임/애니메이션 안정화.

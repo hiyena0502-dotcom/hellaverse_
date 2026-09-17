@@ -1,13 +1,16 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V12__)return;
-window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V12__=1;
+if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V13__)return;
+window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V13__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const RKEY='hellaverse_dialogue_runtime_file_v1';
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const up=v=>String(v||'').trim().toUpperCase();
+const runtimeMode=()=>{try{return runtimeMode()}catch{return''}};
+const rememberMode=mode=>{try{sessionStorage.setItem(RKEY,up(mode))}catch{}};
+const forgetMode=()=>{try{sessionStorage.removeItem(RKEY)}catch{}};
 let queued=false,pendingMode='',navigationBridge=false,leaveFlow=null,specialTransition=false,coreReturnBridge=false;
 
 function read(){try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}}
@@ -46,29 +49,43 @@ function makeButton(label,attrs={}){
  return b;
 }
 function roomUtility(){
- return '<div class="dialogue-utility hv-stable-dialogue-utility" style="display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap" data-stable-utility="LOG|ASK|ACTION|INVENTORY|LEAVE ROOM"><button type="button" data-vn-log>LOG</button><button type="button" data-action="ASK" data-dialogue-file-runtime="QUESTION">ASK</button><button type="button" data-action="TALK" data-dialogue-file-runtime="ACTION">ACTION</button><button type="button" data-inventory-open>INVENTORY</button><button type="button" data-runtime-leave>LEAVE ROOM</button></div>';
+ return '<div class="dialogue-utility hv-stable-dialogue-utility" style="display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap" data-stable-utility="LOG|ASK|ACTION|INVENTORY|LEAVE ROOM" data-hv-runtime-actions-allowed="1" data-hv-runtime-leave-allowed="1"><button type="button" data-vn-log>LOG</button><button type="button" data-action="ASK" data-dialogue-file-runtime="QUESTION">ASK</button><button type="button" data-action="TALK" data-dialogue-file-runtime="ACTION">ACTION</button><button type="button" data-inventory-open>INVENTORY</button><button type="button" data-runtime-leave>LEAVE ROOM</button></div>';
 }
 function ensureRoomUtility(box){
  if(!box)return;
  let current=$('.dialogue-utility',box);
  if(!current){box.insertAdjacentHTML('afterbegin',roomUtility());return}
+ const selection=box.classList.contains('session-select')||!!$('[data-scene],[data-gift]',box);
+ const hadSpecial=selection||!!$('[data-vn-ask],[data-vn-gift],[data-dialogue-file-runtime]',current);
+ const hadLeave=!!$('[data-vn-leave],[data-runtime-leave]',current);
+ if(!current.hasAttribute('data-hv-runtime-actions-allowed'))current.dataset.hvRuntimeActionsAllowed=hadSpecial?'1':'0';
+ if(!current.hasAttribute('data-hv-runtime-leave-allowed'))current.dataset.hvRuntimeLeaveAllowed=hadLeave?'1':'0';
+ const allowSpecial=current.dataset.hvRuntimeActionsAllowed==='1';
+ const allowLeave=current.dataset.hvRuntimeLeaveAllowed==='1';
  current.classList.add('hv-stable-dialogue-utility');
- current.dataset.stableUtility='LOG|ASK|ACTION|INVENTORY|LEAVE ROOM';
  current.style.display='flex';current.style.gap='14px';current.style.alignItems='center';current.style.justifyContent='flex-end';current.style.flexWrap='wrap';
  for(const gift of $$('[data-vn-gift]',current))gift.remove();
  let log=$('[data-vn-log]',current);if(!log){log=makeButton('LOG',{'data-vn-log':''});current.appendChild(log)}
- let ask=$('[data-dialogue-file-runtime="QUESTION"]',current)||$('[data-vn-ask]',current);
- if(!ask){ask=makeButton('ASK',{'data-action':'ASK','data-dialogue-file-runtime':'QUESTION'});current.appendChild(ask)}
- ask.removeAttribute('data-vn-ask');ask.dataset.action='ASK';ask.dataset.dialogueFileRuntime='QUESTION';ask.textContent='ASK';
- let action=$('[data-dialogue-file-runtime="ACTION"]',current);
- if(!action){action=makeButton('ACTION',{'data-action':'TALK','data-dialogue-file-runtime':'ACTION'});current.appendChild(action)}
- action.dataset.action='TALK';action.dataset.dialogueFileRuntime='ACTION';action.textContent='ACTION';
- let inventory=$('[data-inventory-open]',current);if(!inventory){inventory=makeButton('INVENTORY',{'data-inventory-open':''});current.appendChild(inventory)}
- inventory.textContent='INVENTORY';
+ let ask=null,action=null,inventory=null;
+ if(allowSpecial){
+  ask=$('[data-dialogue-file-runtime="QUESTION"]',current)||$('[data-vn-ask]',current);
+  if(!ask){ask=makeButton('ASK',{'data-action':'ASK','data-dialogue-file-runtime':'QUESTION'});current.appendChild(ask)}
+  ask.removeAttribute('data-vn-ask');ask.dataset.action='ASK';ask.dataset.dialogueFileRuntime='QUESTION';ask.textContent='ASK';
+  action=$('[data-dialogue-file-runtime="ACTION"]',current);
+  if(!action){action=makeButton('ACTION',{'data-action':'TALK','data-dialogue-file-runtime':'ACTION'});current.appendChild(action)}
+  action.dataset.action='TALK';action.dataset.dialogueFileRuntime='ACTION';action.textContent='ACTION';
+  inventory=$('[data-inventory-open]',current);if(!inventory){inventory=makeButton('INVENTORY',{'data-inventory-open':''});current.appendChild(inventory)}
+  inventory.textContent='INVENTORY';
+ }else{
+  for(const extra of $$('[data-dialogue-file-runtime],[data-vn-ask],[data-inventory-open]',current))extra.remove();
+ }
  let leave=$('[data-runtime-leave]',current)||$('[data-vn-leave]',current);
- if(!leave){leave=makeButton('LEAVE ROOM',{'data-runtime-leave':''});current.appendChild(leave)}
- leave.removeAttribute('data-vn-leave');leave.dataset.runtimeLeave='1';leave.textContent='LEAVE ROOM';
- for(const b of [log,ask,action,inventory,leave])current.appendChild(b);
+ if(allowLeave){
+  if(!leave){leave=makeButton('LEAVE ROOM',{'data-runtime-leave':''});current.appendChild(leave)}
+  leave.removeAttribute('data-vn-leave');leave.dataset.runtimeLeave='1';leave.textContent='LEAVE ROOM';
+ }else if(leave){leave.remove();leave=null}
+ for(const b of [log,ask,action,inventory,leave])if(b)current.appendChild(b);
+ current.dataset.stableUtility=[log&&'LOG',ask&&'ASK',action&&'ACTION',inventory&&'INVENTORY',leave&&'LEAVE ROOM'].filter(Boolean).join('|');
 }
 function ensureRuntimeReturn(box){
  if(!box)return null;
@@ -82,7 +99,7 @@ function emptyState(box,mode,message){
  const utility=$('.dialogue-utility',box)?.outerHTML||roomUtility();
  box.innerHTML=`${utility}<p class="speaker">${mode}</p><p class="dialogue-current">${message}</p><button type="button" class="dialogue-return" data-runtime-return>RETURN</button>`;
  box.dataset.hvSpecialMenu=mode;
- pendingMode='';sessionStorage.removeItem(RKEY);
+ pendingMode='';forgetMode();
 }
 function sceneButtonsFor(box,mode){
  const state=read(),byId=new Map((state.dialogues||[]).map(sc=>[String(sc.id),sc]));
@@ -98,7 +115,7 @@ function showQuestionPicker(box){
  if(speaker){speaker.hidden=false;speaker.style.removeProperty('display')}
  if(list){list.hidden=false;list.style.removeProperty('display')}
  ensureRuntimeReturn(box);
- pendingMode='';sessionStorage.removeItem(RKEY);
+ pendingMode='';forgetMode();
  if(!questions.length)emptyState(box,'QUESTION','지금 물어볼 수 있는 질문이 없습니다.');
  return true;
 }
@@ -116,13 +133,13 @@ function chooseCandidate(box,mode){
 function autoStart(){
  const box=$('.character-room .dialogue-box');if(!box)return;
  ensureRoomUtility(box);
- const mode=pendingMode||up(sessionStorage.getItem(RKEY)||'');
+ const mode=pendingMode||runtimeMode();
  if(!['CONVERSATION','QUESTION','ACTION'].includes(mode))return;
  const sceneButtons=$$('[data-scene]',box);
  if(mode==='QUESTION'){showQuestionPicker(box);return}
  if(!sceneButtons.length){emptyState(box,mode,'지금 시작할 수 있는 에피소드가 없습니다.');return}
  const target=chooseCandidate(box,mode);
- if(target){pendingMode='';sessionStorage.removeItem(RKEY);requestAnimationFrame(()=>{if(target.isConnected)target.click()})}
+ if(target){pendingMode='';forgetMode();requestAnimationFrame(()=>{if(target.isConnected)target.click()})}
  else emptyState(box,mode,'지금 시작할 수 있는 에피소드가 없습니다.');
 }
 function specialBox(){return $('.character-room .dialogue-box[data-hv-special-menu],.character-room .dialogue-box[data-hv-question-picker="1"]')}
@@ -134,7 +151,7 @@ function coreReturn(){
 }
 function syntheticCoreAction(mode){
  const normalized=up(mode);if(!['QUESTION','ACTION'].includes(normalized))return;
- try{sessionStorage.setItem(RKEY,normalized)}catch{}
+ try{rememberMode(normalized)}catch{}
  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
  b.type='button';b.hidden=true;b.dataset.hvRuntimeBridge='1';b.dataset.action=normalized==='QUESTION'?'ASK':'TALK';b.dataset.dialogueFileRuntime=normalized;host.appendChild(b);
  try{b.click()}finally{b.remove()}
@@ -170,7 +187,7 @@ function beginLeaveNavigation(){
  requestCoreLeave();
 }
 function navigateCharacters(){
- leaveFlow=null;pendingMode='';sessionStorage.removeItem(RKEY);
+ leaveFlow=null;pendingMode='';forgetMode();
  const host=$('#app')||document.body,b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.page='characters';b.dataset.hvLeaveBridge='1';host.appendChild(b);navigationBridge=true;
  try{b.click()}finally{navigationBridge=false;b.remove()}
 }
@@ -216,7 +233,7 @@ document.addEventListener('click',e=>{
  if(btn){
   const mode=modeFromButton(btn);
   if(['CONVERSATION','QUESTION','ACTION'].includes(mode)){
-   pendingMode=mode;sessionStorage.setItem(RKEY,mode);
+   pendingMode=mode;rememberMode(mode);
    const box=$('.character-room .dialogue-box');if(box){box.removeAttribute('data-hv-episode-auto');box.removeAttribute('data-hv-question-picker');box.removeAttribute('data-hv-special-menu')}
   }
  }

@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V9__)return;
-window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V9__=1;
+if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V10__)return;
+window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V10__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const META_KEY='hellaverse_dialogue_render_meta_v1';
@@ -117,6 +117,10 @@ function autoStart(){
  else emptyState(box,mode,'지금 시작할 수 있는 에피소드가 없습니다.');
 }
 
+function newLeaveFlow(){
+ const flow={phase:'requested',startedAt:Date.now(),initialBox:$('.character-room .dialogue-box')||null};
+ setTimeout(schedule,220);setTimeout(schedule,1000);return flow;
+}
 function requestCoreLeave(){
  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
  b.type='button';b.hidden=true;b.dataset.vnLeave='';b.dataset.hvLeaveBridge='1';host.appendChild(b);
@@ -124,7 +128,7 @@ function requestCoreLeave(){
 }
 function beginLeaveNavigation(){
  if(leaveFlow)return;
- leaveFlow={phase:'requested',startedAt:Date.now()};
+ leaveFlow=newLeaveFlow();
  requestCoreLeave();
 }
 function navigateCharacters(){
@@ -137,10 +141,11 @@ function monitorLeave(){
  const room=$('.character-room'),box=room&&$('.dialogue-box',room);
  if(!room){leaveFlow=null;return}
  if(box){
-  if(leaveFlow.phase==='gap')leaveFlow.phase='exit';
+  if(leaveFlow.phase==='gap'||(leaveFlow.phase==='requested'&&box!==leaveFlow.initialBox))leaveFlow.phase='exit';
+  if(leaveFlow.phase==='requested'&&Date.now()-leaveFlow.startedAt>1300)leaveFlow=null;
   return;
  }
- if(leaveFlow.phase==='requested'){leaveFlow.phase='gap';return}
+ if(leaveFlow.phase==='requested'){leaveFlow.phase='gap';setTimeout(schedule,950);return}
  if(leaveFlow.phase==='exit'){navigateCharacters();return}
  if(leaveFlow.phase==='gap'&&Date.now()-leaveFlow.startedAt>900){navigateCharacters()}
 }
@@ -156,7 +161,7 @@ window.addEventListener('click',e=>{
  if(inRoom&&t.closest('[data-page="characters"]')&&!t.closest('#hellaverseGachaRoot')){
   e.preventDefault();e.stopImmediatePropagation();beginLeaveNavigation();return;
  }
- if(inRoom&&t.closest('[data-vn-leave]')&&!leaveFlow)leaveFlow={phase:'requested',startedAt:Date.now()};
+ if(inRoom&&t.closest('[data-vn-leave]')&&!leaveFlow)leaveFlow=newLeaveFlow();
 },true);
 
 document.addEventListener('click',e=>{

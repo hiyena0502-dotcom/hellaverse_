@@ -1,5 +1,5 @@
 (()=>{
-if(window.__HELLAVERSE_THOUGHT_ARCHIVE_V41__)return;window.__HELLAVERSE_THOUGHT_ARCHIVE_V41__=1;
+if(window.__HELLAVERSE_THOUGHT_ARCHIVE_V42__)return;window.__HELLAVERSE_THOUGHT_ARCHIVE_V42__=1;
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const MAIN_UI_KEY='hellaverse_ui_v5';
 const UI_KEY='hellaverse_reward_pages_ui_v4';
@@ -84,7 +84,7 @@ function itemTitle(i){return i?.name||i?.title||'Item'}
 function itemDesc(i){return i?.desc||i?.description||i?.memo||i?.body||''}
 function countCollection(s,cid){let all=s.collectionItems.filter(i=>i.characterId===cid),own=all.filter(i=>s.ownedItems.includes(i.id));return{all:all.length,owned:own.length,p:all.length?Math.round(own.length/all.length*100):0}}
 function countThoughts(s,cid){let all=s.thoughts.filter(t=>t.characterId===cid),seen=all.filter(t=>s.seenThoughtIds.includes(t.id));return{all:all.length,seen:seen.length,p:all.length?Math.round(seen.length/all.length*100):0}}
-function patchNav(){let s=readState(),u=readUI(),nav=$('.main-nav');if(nav){let active=u.page||s.page;nav.innerHTML=`${['home','characters','collection'].map(p=>`<button class="nav-button ${active===p?'active':''}" data-page="${p}">${p==='home'?'HOME':p==='characters'?'CHARACTERS':'COLLECTION'}</button>`).join('')}<button class="nav-button ${active==='thoughts'?'active':''}" data-open-thoughts>THOUGHTS</button><button class="nav-button ${active==='mystery'?'active':''}" data-open-mystery>MYSTERY BOX</button>`}$$('[data-open-box]').forEach(b=>{if(b.closest('.home-quickbar'))b.remove()})}
+function patchNav(){let s=readState(),u=readUI(),nav=$('.main-nav');if(nav){let active=u.page||s.page,thought=$('[data-open-thoughts]',nav);if(!thought){thought=document.createElement('button');thought.type='button';thought.className='nav-button';thought.dataset.openThoughts='';thought.textContent='THOUGHTS';let anchor=$('[data-hv-missions],[data-page="settings"],[data-hv-settings-rescue]',nav);if(anchor)nav.insertBefore(thought,anchor);else nav.appendChild(thought)}let copies=$$('[data-open-thoughts]',nav);copies.slice(1).forEach(x=>x.remove());thought.classList.toggle('active',active==='thoughts');if(active==='thoughts')$$('.nav-button',nav).forEach(b=>{if(b!==thought)b.classList.remove('active')});$$('[data-open-mystery]',nav).forEach(x=>x.remove())}$$('[data-open-box]').forEach(b=>{if(b.closest('.home-quickbar'))b.remove()})}
 function patchHome(){let s=readState(),quick=$('.home-quickbar');if(!quick)return;let cid=s.homeCharacter||s.active,cc=countCollection(s,cid),tc=countThoughts(s,cid),mc=(s.memories||[]).filter(m=>m.characterId===cid&&!m.hidden).length;quick.innerHTML=`<button data-page="collection">COLLECTION ${cc.owned}/${cc.all}</button><button data-open-thoughts>THOUGHTS ${tc.seen}/${tc.all}</button><button data-memories="${esc(cid)}">MEMORIES ${mc}</button>`}
 function progressBlock(p,small){return`<span class="progress-block"><i><b style="width:${p}%"></b></i><small>${esc(small)}</small></span>`}
 function renderExternalPage(){let u=readUI();if(u.page==='thoughts'&&!$('.thought-page'))return renderThoughtPage();if(u.page==='mystery'&&!$('.mystery-page'))return renderMysteryPage()}

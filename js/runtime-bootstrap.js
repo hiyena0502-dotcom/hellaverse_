@@ -4,6 +4,9 @@ if(ready&&typeof ready.then==='function'){
 }
 
 const scripts=[
+  // Canonical dialogue data must be normalized after the default-content merge, before any renderer reads it.
+  ['classic','js/dialogue-episode-upgrade-all.js?v=4'],
+
   ['module','js/dialogue-ui.js?v=55'],
   ['module','js/hv-stable.js?v=56'],
   ['module','js/event-manager.js?v=50'],

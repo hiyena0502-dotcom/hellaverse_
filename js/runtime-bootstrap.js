@@ -22,7 +22,7 @@ const scripts=[
 
   // State owner first; continuity intercepts TALK before the base room runtime can open a topic list.
   ['module','js/dialogue-ui.js?v=55'],
-  ['classic','js/dialogue-continuity-controller.js?v=1'],
+  ['classic','js/dialogue-continuity-controller.js?v=2'],
   ['module','js/hv-stable.js?v=56'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],

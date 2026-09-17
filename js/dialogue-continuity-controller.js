@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V1__)return;
-window.__HELLAVERSE_DIALOGUE_CONTINUITY_V1__=1;
+if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V2__)return;
+window.__HELLAVERSE_DIALOGUE_CONTINUITY_V2__=1;
 
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const META_KEY='hellaverse_dialogue_render_meta_v1';
@@ -34,9 +34,7 @@ function stageFor(s,cid){
   const names=['STRANGER','DISTANT','ACQUAINTANCE','FAMILIAR','COMFORTABLE','FRIENDLY','CLOSE','TRUSTED','BONDED','DEVOTED','SPECIAL'];
   return names[Math.min(10,Math.floor(heart/10))]||'STRANGER';
 }
-function memoryTags(s,cid){
-  return new Set((Array.isArray(s.memories)?s.memories:[]).filter(x=>x?.characterId===cid&&!x.hidden).flatMap(x=>list(x.tags)));
-}
+function memoryTags(s,cid){return new Set((Array.isArray(s.memories)?s.memories:[]).filter(x=>x?.characterId===cid&&!x.hidden).flatMap(x=>list(x.tags)))}
 function eligible(scene,s,m,cid){
   if(!scene||scene.characterId!==cid||sceneRole(scene,s,m)!=='CONVERSATION')return false;
   const heart=Math.max(0,Math.min(100,Number(s.affection?.[cid]?.value||0)));
@@ -61,25 +59,18 @@ function pickConversation(){
   const s=state(),m=meta(),cid=String(s.active||'');if(!cid)return null;
   let rows=(Array.isArray(s.dialogues)?s.dialogues:[]).filter(sc=>eligible(sc,s,m,cid));
   if(!rows.length)return null;
-  const p=progress().characters?.[cid]||{},recent=new Set(Array.isArray(p.recentSceneIds)?p.recentSceneIds:(s.visits?.[cid]?.recentSceneIds||[]));
-  const seen=new Set(Array.isArray(p.seenSceneIds)?p.seenSceneIds:[]);
+  const p=progress().characters?.[cid]||{},recent=new Set(Array.isArray(p.recentSceneIds)?p.recentSceneIds:(s.visits?.[cid]?.recentSceneIds||[])),seen=new Set(Array.isArray(p.seenSceneIds)?p.seenSceneIds:[]);
   const noImmediate=rows.filter(sc=>String(sc.id)!==String(lastStarted));if(noImmediate.length)rows=noImmediate;
-  const unseen=rows.filter(sc=>!seen.has(sc.id)&&!sc.used);if(unseen.length)rows=unseen;
-  else{const fresh=rows.filter(sc=>!recent.has(sc.id));if(fresh.length)rows=fresh}
+  const unseen=rows.filter(sc=>!seen.has(sc.id)&&!sc.used);if(unseen.length)rows=unseen;else{const fresh=rows.filter(sc=>!recent.has(sc.id));if(fresh.length)rows=fresh}
   let total=0;
-  const weighted=rows.map(scene=>{
-    let weight=Math.max(.1,Number(scene.probability==null?100:scene.probability)/100)*Math.max(.25,1+Number(scene.priority||0));
-    if(!seen.has(scene.id)&&!scene.used)weight*=6;
-    total+=weight;return{scene,weight};
-  });
-  let n=Math.random()*Math.max(total,.0001);
-  for(const row of weighted){n-=row.weight;if(n<=0)return row.scene}
-  return weighted.at(-1)?.scene||rows[0]||null;
+  const weighted=rows.map(scene=>{let weight=Math.max(.1,Number(scene.probability==null?100:scene.probability)/100)*Math.max(.25,1+Number(scene.priority||0));if(!seen.has(scene.id)&&!scene.used)weight*=6;total+=weight;return{scene,weight}});
+  let n=Math.random()*Math.max(total,.0001);for(const row of weighted){n-=row.weight;if(n<=0)return row.scene}return weighted.at(-1)?.scene||rows[0]||null;
 }
+function roleForSceneId(id){const s=state(),m=meta(),scene=(s.dialogues||[]).find(x=>String(x.id)===String(id));return scene?sceneRole(scene,s,m):''}
 function syntheticScene(scene){
   if(!scene||starting)return false;
-  const host=$('.character-room')||$('#app')||document.body;
-  const button=document.createElement('button');button.type='button';button.hidden=true;button.dataset.scene=String(scene.id);button.dataset.hvContinuityBridge='1';host.appendChild(button);
+  const host=$('.character-room')||$('#app')||document.body,button=document.createElement('button');
+  button.type='button';button.hidden=true;button.dataset.scene=String(scene.id);button.dataset.hvContinuityBridge='1';host.appendChild(button);
   starting=true;bridge=true;lastStarted=String(scene.id);document.body.classList.add(CHAIN_CLASS);
   try{button.click()}finally{bridge=false;button.remove();setTimeout(()=>{starting=false},180)}
   return true;
@@ -87,49 +78,52 @@ function syntheticScene(scene){
 function startConversation(){const scene=pickConversation();return scene?syntheticScene(scene):false}
 function stopChain(){document.body.classList.remove(CHAIN_CLASS);continuing=false;starting=false}
 function finishRawAndContinue(button){
-  if(continuing)return;
-  continuing=true;
+  if(continuing)return;continuing=true;
   const box=button.closest('.dialogue-box');if(box)box.dataset.hvContinuing='1';
-  bridge=true;
-  try{button.click()}finally{bridge=false}
+  bridge=true;try{button.click()}finally{bridge=false}
   const resume=()=>{
     if(!$('.character-room')){stopChain();return}
     if($('.character-room .dialogue-box')){setTimeout(resume,24);return}
-    continuing=false;
-    if(!startConversation())stopChain();
+    continuing=false;if(!startConversation())stopChain();
   };
   setTimeout(resume,16);
 }
 function normalizeEndButtons(){
   if(!document.body.classList.contains(CHAIN_CLASS))return;
   for(const button of document.querySelectorAll('.character-room .dialogue-box [data-end]')){
-    if(button.closest('[data-hv-exit],.exit-dialogue'))continue;
     button.dataset.hvContinuityEnd='1';
     if(String(button.textContent||'').trim().toUpperCase()==='RETURN')button.textContent='NEXT';
   }
 }
 function scheduleNormalize(){requestAnimationFrame(normalizeEndButtons)}
 
+window.addEventListener('click',event=>{
+  const target=event.target instanceof Element?event.target:null;if(!target)return;
+  if(target.closest('[data-vn-leave],[data-runtime-leave],[data-page="characters"],.room-back,[data-room]'))stopChain();
+},true);
+
 document.addEventListener('click',event=>{
   if(bridge)return;
   const target=event.target instanceof Element?event.target:null;if(!target)return;
+
+  const sceneButton=target.closest('[data-scene]');
+  if(sceneButton){
+    const role=roleForSceneId(sceneButton.dataset.scene||'');
+    if(role==='CONVERSATION')document.body.classList.add(CHAIN_CLASS);
+    else if(role==='EXIT')stopChain();
+  }
 
   const talk=target.closest('.character-room [data-action="TALK"]');
   if(talk&&!window.__HV_ACTION_PICKER_OPENING__&&!talk.closest('[data-hv-action]')&&upper(talk.dataset.dialogueFileRuntime)!=='ACTION'){
     event.preventDefault();event.stopImmediatePropagation();
     if(starting||continuing)return;
-    startConversation();
-    return;
+    startConversation();return;
   }
 
   const rawEnd=target.closest('.character-room .dialogue-box [data-end]');
   if(rawEnd&&document.body.classList.contains(CHAIN_CLASS)){
-    event.preventDefault();event.stopImmediatePropagation();
-    finishRawAndContinue(rawEnd);
-    return;
+    event.preventDefault();event.stopImmediatePropagation();finishRawAndContinue(rawEnd);return;
   }
-
-  if(target.closest('[data-vn-leave],[data-runtime-leave],[data-page="characters"],.room-back')){stopChain();return}
 },true);
 
 new MutationObserver(scheduleNormalize).observe(document.documentElement,{childList:true,subtree:true});

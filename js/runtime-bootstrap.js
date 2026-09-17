@@ -56,7 +56,7 @@ await loadClassic('js/room-exit-transition.js?v=2');
 await loadStableCore();
 
 const scripts=[
-  ['classic','js/dialogue-token-renderer.js?v=2'],
+  ['classic','js/dialogue-token-renderer.js?v=3'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],
   ['module','js/relationship-editor.js?v=51'],

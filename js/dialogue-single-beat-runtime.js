@@ -1,12 +1,12 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V9__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V9__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V10__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V10__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const RKEY='hellaverse_dialogue_runtime_file_v1';
-let queued=false,ambientResumeLocked=false,coreReturnBridge=false,logMoveQueued=false;
+let queued=false,ambientResumeLocked=false,coreReturnBridge=false,logMoveQueued=false,specialTransition=false;
 
 const isPlayer=el=>el instanceof Element&&(el.matches('.dialogue-line.you')||String($('strong',el)?.textContent||'').trim().toUpperCase()==='YOU');
 const isBeat=el=>el instanceof Element&&(el.matches('article.dialogue-line')||el.matches('p.narration')||el.matches('p.dialogue-current'));
@@ -198,9 +198,41 @@ function scheduleExternalizeLog(){
 function removeExternalLog(){const root=$('#hvDialogueLogRoot');if(root)root.remove()}
 function coreReturn(){
  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
- b.type='button';b.hidden=true;b.dataset.end='';host.appendChild(b);coreReturnBridge=true;
+ b.type='button';b.hidden=true;b.dataset.end='';b.dataset.hvRuntimeBridge='1';host.appendChild(b);coreReturnBridge=true;
  try{b.click()}finally{coreReturnBridge=false;b.remove()}
  setTimeout(schedule,0);
+}
+function specialBox(){return $('.character-room .dialogue-box[data-hv-special-menu],.character-room .dialogue-box[data-hv-question-picker="1"]')}
+function syntheticCoreAction(mode){
+ const normalized=String(mode||'').toUpperCase();
+ if(!['QUESTION','ACTION'].includes(normalized))return;
+ try{sessionStorage.setItem(RKEY,normalized)}catch{}
+ const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
+ b.type='button';b.hidden=true;b.dataset.hvRuntimeBridge='1';b.dataset.action=normalized==='QUESTION'?'ASK':'TALK';b.dataset.dialogueFileRuntime=normalized;host.appendChild(b);
+ try{b.click()}finally{b.remove()}
+ setTimeout(schedule,0);
+}
+function switchSpecialMode(mode){
+ if(specialTransition)return;
+ specialTransition=true;
+ const open=!!specialBox();
+ if(open)coreReturn();
+ setTimeout(()=>{
+  specialTransition=false;
+  syntheticCoreAction(mode);
+ },open?80:0);
+}
+function openInventoryFromSpecial(){
+ if(specialTransition)return;
+ specialTransition=true;
+ coreReturn();
+ setTimeout(()=>{
+  specialTransition=false;
+  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
+  b.type='button';b.hidden=true;b.dataset.hvRuntimeBridge='1';b.dataset.inventoryOpen='';host.appendChild(b);
+  try{b.click()}finally{b.remove()}
+  setTimeout(schedule,0);
+ },80);
 }
 
 function run(){
@@ -223,9 +255,21 @@ function clickHidden(target){
 window.addEventListener('click',e=>{
  if(coreReturnBridge)return;
  const t=e.target instanceof Element?e.target:null;if(!t)return;
+ if(t.closest('[data-hv-runtime-bridge]'))return;
  clearChosenScreen(t);
+ const specialSwitch=t.closest('.hv-stable-dialogue-utility [data-dialogue-file-runtime]');
+ if(specialSwitch){
+  const mode=String(specialSwitch.dataset.dialogueFileRuntime||'').toUpperCase();
+  if(mode==='QUESTION'||mode==='ACTION'){
+   e.preventDefault();e.stopImmediatePropagation();switchSpecialMode(mode);return;
+  }
+ }
  if(t.closest('[data-runtime-return]')){
-  e.preventDefault();e.stopImmediatePropagation();coreReturn();return;
+  e.preventDefault();e.stopImmediatePropagation();
+  specialTransition=false;coreReturn();return;
+ }
+ if(t.closest('.hv-stable-dialogue-utility [data-inventory-open]')&&specialBox()){
+  e.preventDefault();e.stopImmediatePropagation();openInventoryFromSpecial();return;
  }
  if(t.closest('[data-vn-log]')){scheduleExternalizeLog();return}
  if(t.closest('[data-vn-log-close]')){setTimeout(removeExternalLog,0);return}

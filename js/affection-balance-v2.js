@@ -1,0 +1,34 @@
+(()=>{
+'use strict';
+if(window.__HELLAVERSE_AFFECTION_BALANCE_V2__)return;
+window.__HELLAVERSE_AFFECTION_BALANCE_V2__=1;
+const K='hellaverse_dialogue_state_v1',VK='hellaverse_affection_balance_v2';
+let version=0;try{version=Number(localStorage.getItem(VK)||0)}catch{}if(version>=1)return;
+const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};
+const n=v=>Number(v||0);
+function dialogueDelta(v){
+ const d=n(v);if(!d)return 0;
+ if(d>0){if(d<=1)return 1;if(d<=3)return 1;if(d<=5)return 2;return 3}
+ if(d===-1)return-2;if(d===-2)return-4;if(d===-3)return-5;return Math.max(-8,Math.round(d*1.5));
+}
+function giftDelta(v){
+ const d=n(v);if(!d)return 0;
+ if(d>0){if(d<=2)return d;if(d<=4)return 3;return Math.min(4,Math.ceil(d*.65))}
+ if(d===-1)return-2;if(d===-2)return-3;return Math.max(-6,Math.round(d*1.35));
+}
+const s=read();let changedChoices=0,changedGifts=0;
+for(const sc of Array.isArray(s.dialogues)?s.dialogues:[]){
+ for(const node of Array.isArray(sc?.nodes)?sc.nodes:[]){
+  for(const ch of Array.isArray(node?.choices)?node.choices:[]){
+   const before=n(ch.affectionDelta),after=dialogueDelta(before);if(before!==after){ch.affectionDelta=after;changedChoices++}
+  }
+ }
+}
+for(const g of Array.isArray(s.gifts)?s.gifts:[]){
+ for(const key of ['affectionDelta','choiceADelta','choiceBDelta']){
+  const before=n(g?.[key]),after=giftDelta(before);if(before!==after){g[key]=after;changedGifts++}
+ }
+}
+s.relationshipBalance={version:2,mode:'slower-gain-stronger-loss',dialogue:{positive:'1-3→1, 4-5→2, 6+→3',negative:'-1→-2, -2→-4, -3→-5, lower capped at -8'},gift:{positive:'kept more generous',negative:'amplified up to -6'},appliedAt:new Date().toISOString(),changedChoices,changedGifts};
+try{localStorage.setItem(K,JSON.stringify(s));localStorage.setItem(VK,'1')}catch(e){console.warn('Affection balance v2 save failed',e)}
+})();

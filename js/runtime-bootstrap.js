@@ -33,7 +33,8 @@ const scripts=[
   ['module','js/hv-stable.js?v=56'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],
-  ['module','js/relationship-editor.js?v=50'],
+  ['module','js/relationship-editor.js?v=51'],
+  ['classic','js/relationship-render-bridge.js?v=1'],
 
   ['classic','js/item-inventory-migration.js?v=1'],
   ['classic','js/item-catalog-rebalance.js?v=2'],

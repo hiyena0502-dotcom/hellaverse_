@@ -28,7 +28,8 @@
 body.hv-room-exiting .hv-room-action-bar{display:none!important;}
 body.hv-direct-dialogue-entry .character-room .room-stage{visibility:hidden;pointer-events:none;}
 
-.hv-ask-panel{
+.hv-ask-panel,
+.hv-action-panel{
   position:absolute;
   inset:0;
   z-index:30;
@@ -40,22 +41,35 @@ body.hv-direct-dialogue-entry .character-room .room-stage{visibility:hidden;poin
   backdrop-filter:blur(10px);
   border:1px solid rgba(201,166,107,.18);
 }
-.hv-ask-panel header{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding-bottom:16px;border-bottom:1px solid rgba(201,166,107,.16);}
-.hv-ask-panel header small{color:var(--gold,#c9a66b);letter-spacing:.16em;}
-.hv-ask-panel header h2{margin:5px 0 6px;font-size:22px;font-weight:500;}
-.hv-ask-panel header p{margin:0;color:rgba(255,255,255,.52);font-size:12px;}
-.hv-ask-panel [data-hv-ask-close]{border:0;background:transparent;color:rgba(255,255,255,.6);font-size:24px;cursor:pointer;}
-.hv-ask-list{overflow:auto;display:grid;gap:0;max-height:min(55vh,620px);padding-top:4px;}
-.hv-ask-list>button{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:transparent;color:rgba(255,255,255,.88);padding:13px 8px;cursor:pointer;}
-.hv-ask-list>button:hover,.hv-ask-list>button:focus-visible{background:rgba(201,166,107,.055);outline:none;}
-.hv-ask-list>button>b{color:var(--gold,#c9a66b);font-weight:400;}
-.hv-ask-list>button span{display:flex;flex-direction:column;gap:4px;}
-.hv-ask-list>button strong{font-weight:500;}
-.hv-ask-list>button small{color:rgba(255,255,255,.42);font-size:10px;letter-spacing:.05em;}
+.hv-ask-panel header,
+.hv-action-panel header{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding-bottom:16px;border-bottom:1px solid rgba(201,166,107,.16);}
+.hv-ask-panel header small,
+.hv-action-panel header small{color:var(--gold,#c9a66b);letter-spacing:.16em;}
+.hv-ask-panel header h2,
+.hv-action-panel header h2{margin:5px 0 6px;font-size:22px;font-weight:500;}
+.hv-ask-panel header p,
+.hv-action-panel header p{margin:0;color:rgba(255,255,255,.52);font-size:12px;}
+.hv-ask-panel [data-hv-ask-close],
+.hv-action-panel [data-hv-action-close]{border:0;background:transparent;color:rgba(255,255,255,.6);font-size:24px;cursor:pointer;}
+.hv-ask-list,
+.hv-action-list{overflow:auto;display:grid;gap:0;max-height:min(55vh,620px);padding-top:4px;}
+.hv-action-list{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;}
+.hv-ask-list>button,
+.hv-action-list>button{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:transparent;color:rgba(255,255,255,.88);padding:13px 8px;cursor:pointer;}
+.hv-ask-list>button:hover,.hv-ask-list>button:focus-visible,
+.hv-action-list>button:hover,.hv-action-list>button:focus-visible{background:rgba(201,166,107,.055);outline:none;}
+.hv-ask-list>button>b,.hv-action-list>button>b{color:var(--gold,#c9a66b);font-weight:400;}
+.hv-ask-list>button span,.hv-action-list>button span{display:flex;flex-direction:column;gap:4px;}
+.hv-ask-list>button strong,.hv-action-list>button strong{font-weight:500;}
+.hv-ask-list>button small,.hv-action-list>button small{color:rgba(255,255,255,.42);font-size:10px;line-height:1.45;letter-spacing:.03em;}
 
 /* Never flash the old transcript after a choice is committed. */
 body.hv-choice-transition .character-room .dialogue-page-text,
 body.hv-choice-transition .character-room .dialogue-lines{visibility:hidden!important;}
+
+/* Raw legacy RETURN controls are implementation details. Only the unified NEXT is visible. */
+.character-room .dialogue-box [data-end],
+.character-room .dialogue-box [data-runtime-return]{display:none!important;}
 
 /* Make every forward control land on the far right, regardless of parent layout. */
 .character-room .dialogue-box .dialogue-next,
@@ -77,8 +91,12 @@ body.hv-choice-transition .character-room .dialogue-lines{visibility:hidden!impo
 .character-room .dialogue-box [hidden],
 .character-room .dialogue-box .hv-next-control[hidden],
 .character-room .dialogue-box [data-single-beat-next][hidden]{display:none!important;}
+
+@media(max-width:900px){
+  .hv-action-list{grid-template-columns:1fr;}
+}
 @media(max-width:800px){
   .hv-room-action-bar{gap:8px;}
   .hv-room-action-bar button{font-size:10px;}
-  .hv-ask-panel{padding:16px;}
+  .hv-ask-panel,.hv-action-panel{padding:16px;}
 }

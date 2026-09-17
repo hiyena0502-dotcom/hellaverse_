@@ -1,7 +1,14 @@
-(()=>{
+(async()=>{
 'use strict';
 if(window.__HELLAVERSE_MULTISTAGE_UPGRADER_V2__)return;
 window.__HELLAVERSE_MULTISTAGE_UPGRADER_V2__=1;
+// Block the retired blanket v1 expander before runtime-bootstrap can load it.
+window.__HELLAVERSE_MULTISTAGE_UPGRADER_V1__=1;
+
+const ready=window.__HV_DEFAULT_CONTENT_READY__;
+if(ready&&typeof ready.then==='function'){
+  try{await ready}catch(error){console.warn('Default content readiness failed before multistage repair.',error)}
+}
 
 const K='hellaverse_dialogue_state_v1',MAX=5;
 const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};
@@ -27,13 +34,13 @@ function restoreV1AutoStages(sc){
   const first=originalNodes.find(n=>String(n?.id||'')===String(sc.openingNodeId||''))||originalNodes[0];
   first.choices=Array.isArray(first.choices)?first.choices:[];
 
-  // V1 invented these choices only for scenes that originally had no choices.
+  // V1 invented these only when the original scene had no player choices.
   first.choices=first.choices.filter(ch=>{
     const id=String(ch?.id||'');
     return id!==`${sc.id}-open-a`&&id!==`${sc.id}-open-b`;
   });
 
-  // V1 overwrote every original first-node choice to point at its generic stage 2.
+  // V1 overwrote every original choice to jump to its generic stage 2.
   for(const ch of first.choices){
     const next=String(ch?.nextNodeId||'');
     if(next.startsWith(prefix)){

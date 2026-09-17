@@ -96,8 +96,6 @@
   <script src="js/hazbin-room-exits.js?v=1"></script>
   <!-- Canonical cast exclusions: removed/default-disabled characters are pruned in one place. -->
   <script src="js/cast-exclusions.js?v=3"></script>
-  <!-- Normalize all dialogue only after every content pack has loaded and exclusions are applied. -->
-  <script src="js/dialogue-episode-upgrade-all.js?v=3"></script>
 
   <!-- COMPATIBILITY / REPAIR THAT MUST RUN BEFORE DEFAULT IMPORT -->
   <script src="js/dialogue-mood-indicator.js?v=1"></script>
@@ -106,8 +104,8 @@
   <!-- CANONICAL DEFAULTS: merge shared authoring content while preserving personal progress. -->
   <script src="js/default-content-loader.js?v=2"></script>
 
-  <!-- MAIN RUNTIME: waits for canonical defaults before loading app modules and deferred features. -->
-  <script type="module" src="js/runtime-bootstrap.js?v=3"></script>
+  <!-- MAIN RUNTIME: waits for canonical defaults, then normalizes dialogue data before loading renderers. -->
+  <script type="module" src="js/runtime-bootstrap.js?v=4"></script>
 </head>
 <body>
   <div id="app"></div>

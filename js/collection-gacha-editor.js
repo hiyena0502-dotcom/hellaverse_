@@ -10,6 +10,7 @@ let queued=false,pendingSave=null;
 function read(){try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}}
 function write(state){
   const value=JSON.stringify(state);localStorage.setItem(K,value);
+  try{window.dispatchEvent(new StorageEvent('storage',{key:K,newValue:value}))}catch{}
   window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'collection-gacha-editor',clearDirty:false}}));
 }
 function currentItem(state){

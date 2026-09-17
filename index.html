@@ -48,15 +48,14 @@
   <link rel="stylesheet" href="css/item-manager-v2.css?v=2">
   <link rel="stylesheet" href="css/settings-management-hub.css?v=3">
   <link rel="stylesheet" href="css/gacha-collection-addon.css?v=61">
-  <link rel="stylesheet" href="css/character-gacha-profiles.css?v=2">
   <link rel="stylesheet" href="css/player-game-loop.css?v=4">
   <link rel="stylesheet" href="css/dialogue-file-editor.css?v=2">
-  <link rel="stylesheet" href="css/dialogue-runtime-cleanup.css?v=2">
   <link rel="stylesheet" href="css/dialogue-episode-flow.css?v=2">
   <link rel="stylesheet" href="css/editor-ux-suite.css?v=3">
   <link rel="stylesheet" href="css/dialogue-foundation.css?v=2">
   <link rel="stylesheet" href="css/ux/runtime-diagnostics.css?v=3">
   <link rel="stylesheet" href="css/final-ux-cleanup.css?v=3">
+  <link rel="stylesheet" href="css/unified-runtime-fixes.css?v=1">
 
   <style>
     .dialogue-page-text .dialogue-line.character + .dialogue-line.character strong,
@@ -104,8 +103,8 @@
   <!-- CANONICAL DEFAULTS: merge shared authoring content while preserving personal progress. -->
   <script src="js/default-content-loader.js?v=2"></script>
 
-  <!-- MAIN RUNTIME: waits for canonical defaults, then normalizes dialogue data before loading renderers. -->
-  <script type="module" src="js/runtime-bootstrap.js?v=5"></script>
+  <!-- MAIN RUNTIME: canonical merge first, then a single dialogue owner plus UI helpers. -->
+  <script type="module" src="js/runtime-bootstrap.js?v=6"></script>
 </head>
 <body>
   <div id="app"></div>

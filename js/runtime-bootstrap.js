@@ -48,12 +48,15 @@ try{
 }catch(error){console.warn('Dialogue metadata sync skipped safely.',error)}
 
 await loadClassic('js/dialogue-episode-upgrade-all.js?v=4');
+// Remove old temporary ASK/ACTION clones before the one state machine reads state.
+await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 
 await loadClassic('js/dialogue-continuity-controller-v6.js?v=1');
 await loadClassic('js/room-exit-transition.js?v=2');
 await loadStableCore();
 
 const scripts=[
+  // One runtime token parser only. Episode authoring below edits data but never rewrites play DOM.
   ['classic','js/dialogue-token-renderer.js?v=2'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],
@@ -74,7 +77,7 @@ const scripts=[
   ['classic','js/settings-management-hub.js?v=3'],
 
   ['classic','js/dialogue-file-editor.js?v=2'],
-  ['classic','js/dialogue-episode-flow.js?v=2'],
+  ['classic','js/dialogue-episode-authoring.js?v=1'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
   ['classic','js/dialogue-single-beat-runtime-v22.js?v=1'],
   ['classic','js/editor-ux-suite.js?v=5'],

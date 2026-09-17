@@ -1,10 +1,9 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V11__)return;
-window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V11__=1;
+if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V12__)return;
+window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V12__=1;
 
 const K='hellaverse_dialogue_state_v1';
-const META_KEY='hellaverse_dialogue_render_meta_v1';
 const RKEY='hellaverse_dialogue_runtime_file_v1';
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -12,7 +11,6 @@ const up=v=>String(v||'').trim().toUpperCase();
 let queued=false,pendingMode='',navigationBridge=false,leaveFlow=null,specialTransition=false,coreReturnBridge=false;
 
 function read(){try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}}
-function readMeta(){try{return JSON.parse(localStorage.getItem(META_KEY)||'{}')||{}}catch{return{}}}
 function choices(sc){return (sc?.nodes||[]).flatMap(n=>Array.isArray(n?.choices)?n.choices:[])}
 function fileOf(sc,s){
  const explicit=up(s?.dialogueFileMap?.[sc?.id]);
@@ -28,17 +26,6 @@ function fileOf(sc,s){
  }
  return'CONVERSATION';
 }
-function syncDialogueRoles(){
- const state=read(),meta=readMeta();let changed=false;
- for(const sc of state.dialogues||[]){
-  if(!sc?.id)continue;
-  const file=fileOf(sc,state),wanted=file==='ACTION'?'ACTION':file==='QUESTION'?'ASK':file==='CONVERSATION'?'CONVERSATION':file;
-  if(!wanted)continue;
-  const row=meta[sc.id]&&typeof meta[sc.id]==='object'?meta[sc.id]:{};
-  if(up(row.sceneRole)!==wanted){meta[sc.id]={...row,sceneRole:wanted};changed=true}
- }
- if(changed)try{localStorage.setItem(META_KEY,JSON.stringify(meta))}catch{}
-}
 function modeFromButton(btn){
  const explicit=up(btn?.dataset?.dialogueFileRuntime);if(explicit)return explicit;
  const label=up(btn?.querySelector('span')?.textContent||btn?.textContent||'');
@@ -51,15 +38,37 @@ function unwrapMore(){
  for(const d of $$('.room-more')){const links=$('.room-links',d);if(links)d.replaceWith(links);else d.remove()}
  for(const d of $$('.dialogue-more')){const parent=d.parentElement,box=$('.dialogue-more-menu',d);if(parent&&box){for(const b of Array.from(box.children))parent.insertBefore(b,d)}d.remove()}
 }
+function makeButton(label,attrs={}){
+ const b=document.createElement('button');b.type='button';b.textContent=label;
+ for(const [key,value] of Object.entries(attrs)){
+  if(value==='')b.setAttribute(key,'');else b.setAttribute(key,String(value));
+ }
+ return b;
+}
 function roomUtility(){
- return '<div class="dialogue-utility hv-stable-dialogue-utility" style="display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap" data-stable-utility="LOG|ASK|ACTION|INVENTORY|LEAVE ROOM"><button type="button" data-vn-log>LOG</button><button type="button" data-action="ASK" data-dialogue-file-runtime="QUESTION">ASK</button><button type="button" data-action="TALK" data-dialogue-file-runtime="ACTION">ACTION</button><button type="button" data-inventory-open>INVENTORY</button><button type="button" data-vn-leave>LEAVE ROOM</button></div>';
+ return '<div class="dialogue-utility hv-stable-dialogue-utility" style="display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap" data-stable-utility="LOG|ASK|ACTION|INVENTORY|LEAVE ROOM"><button type="button" data-vn-log>LOG</button><button type="button" data-action="ASK" data-dialogue-file-runtime="QUESTION">ASK</button><button type="button" data-action="TALK" data-dialogue-file-runtime="ACTION">ACTION</button><button type="button" data-inventory-open>INVENTORY</button><button type="button" data-runtime-leave>LEAVE ROOM</button></div>';
 }
 function ensureRoomUtility(box){
  if(!box)return;
- const current=$('.dialogue-utility',box);
+ let current=$('.dialogue-utility',box);
  if(!current){box.insertAdjacentHTML('afterbegin',roomUtility());return}
- const expected='LOG|ASK|ACTION|INVENTORY|LEAVE ROOM';
- if(current.dataset.stableUtility!==expected){const wrap=document.createElement('div');wrap.innerHTML=roomUtility();current.replaceWith(wrap.firstElementChild)}
+ current.classList.add('hv-stable-dialogue-utility');
+ current.dataset.stableUtility='LOG|ASK|ACTION|INVENTORY|LEAVE ROOM';
+ current.style.display='flex';current.style.gap='14px';current.style.alignItems='center';current.style.justifyContent='flex-end';current.style.flexWrap='wrap';
+ for(const gift of $$('[data-vn-gift]',current))gift.remove();
+ let log=$('[data-vn-log]',current);if(!log){log=makeButton('LOG',{'data-vn-log':''});current.appendChild(log)}
+ let ask=$('[data-dialogue-file-runtime="QUESTION"]',current)||$('[data-vn-ask]',current);
+ if(!ask){ask=makeButton('ASK',{'data-action':'ASK','data-dialogue-file-runtime':'QUESTION'});current.appendChild(ask)}
+ ask.removeAttribute('data-vn-ask');ask.dataset.action='ASK';ask.dataset.dialogueFileRuntime='QUESTION';ask.textContent='ASK';
+ let action=$('[data-dialogue-file-runtime="ACTION"]',current);
+ if(!action){action=makeButton('ACTION',{'data-action':'TALK','data-dialogue-file-runtime':'ACTION'});current.appendChild(action)}
+ action.dataset.action='TALK';action.dataset.dialogueFileRuntime='ACTION';action.textContent='ACTION';
+ let inventory=$('[data-inventory-open]',current);if(!inventory){inventory=makeButton('INVENTORY',{'data-inventory-open':''});current.appendChild(inventory)}
+ inventory.textContent='INVENTORY';
+ let leave=$('[data-runtime-leave]',current)||$('[data-vn-leave]',current);
+ if(!leave){leave=makeButton('LEAVE ROOM',{'data-runtime-leave':''});current.appendChild(leave)}
+ leave.removeAttribute('data-vn-leave');leave.dataset.runtimeLeave='1';leave.textContent='LEAVE ROOM';
+ for(const b of [log,ask,action,inventory,leave])current.appendChild(b);
 }
 function ensureRuntimeReturn(box){
  if(!box)return null;
@@ -116,7 +125,6 @@ function autoStart(){
  if(target){pendingMode='';sessionStorage.removeItem(RKEY);requestAnimationFrame(()=>{if(target.isConnected)target.click()})}
  else emptyState(box,mode,'지금 시작할 수 있는 에피소드가 없습니다.');
 }
-
 function specialBox(){return $('.character-room .dialogue-box[data-hv-special-menu],.character-room .dialogue-box[data-hv-question-picker="1"]')}
 function coreReturn(){
  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
@@ -147,7 +155,6 @@ function openInventoryFromSpecial(){
   setTimeout(schedule,0);
  },80);
 }
-
 function newLeaveFlow(){
  const flow={phase:'requested',startedAt:Date.now(),initialBox:$('.character-room .dialogue-box')||null};
  setTimeout(schedule,220);setTimeout(schedule,1000);return flow;
@@ -180,8 +187,7 @@ function monitorLeave(){
  if(leaveFlow.phase==='exit'){navigateCharacters();return}
  if(leaveFlow.phase==='gap'&&Date.now()-leaveFlow.startedAt>900){navigateCharacters()}
 }
-
-function run(){unwrapMore();syncDialogueRoles();const box=$('.character-room .dialogue-box');if(box)ensureRoomUtility(box);autoStart();monitorLeave()}
+function run(){unwrapMore();const box=$('.character-room .dialogue-box');if(box)ensureRoomUtility(box);autoStart();monitorLeave()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 
 window.addEventListener('click',e=>{
@@ -199,7 +205,9 @@ window.addEventListener('click',e=>{
  if(inRoom&&t.closest('[data-page="characters"]')&&!t.closest('#hellaverseGachaRoot')){
   e.preventDefault();e.stopImmediatePropagation();beginLeaveNavigation();return;
  }
- if(inRoom&&t.closest('[data-vn-leave]')&&!leaveFlow)leaveFlow=newLeaveFlow();
+ if(inRoom&&t.closest('[data-runtime-leave]')){
+  e.preventDefault();e.stopImmediatePropagation();beginLeaveNavigation();return;
+ }
 },true);
 
 document.addEventListener('click',e=>{

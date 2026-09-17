@@ -96,8 +96,8 @@
   <script src="js/hazbin-canon-dialogues.js?v=2"></script>
   <!-- HAZBIN ROOM EXITS: character-specific farewell scenes used by both LEAVE ROOM and CHARACTERS. -->
   <script src="js/hazbin-room-exits.js?v=1"></script>
-  <!-- Canonical cast exclusions: Lilith, Speaker of God, Saint Peter. -->
-  <script src="js/cast-exclusions.js?v=2"></script>
+  <!-- Canonical cast exclusions: removed/default-disabled characters are pruned in one place. -->
+  <script src="js/cast-exclusions.js?v=3"></script>
   <!-- Normalize all dialogue only after every content pack has loaded and exclusions are applied. -->
   <script src="js/dialogue-episode-upgrade-all.js?v=3"></script>
 
@@ -122,14 +122,13 @@
   <script defer src="js/gacha-item-copy-pack.js?v=1"></script>
   <script defer src="js/player-game-loop.js?v=5"></script>
 
-  <!-- SETTINGS: one management hub; no duplicate admin/editor shortcuts. -->
-  <script defer src="js/settings-rescue.js?v=3"></script>
+  <!-- SETTINGS: core Settings + one management hub. -->
   <script defer src="js/settings-management-hub.js?v=3"></script>
 
   <script defer src="js/simple-character-profile.js?v=1"></script>
   <!-- DIALOGUE: file cabinet editor + player episode auto-start. -->
   <script defer src="js/dialogue-file-editor.js?v=2"></script>
-  <script defer src="js/dialogue-runtime-cleanup.js?v=11"></script>
+  <script defer src="js/dialogue-runtime-cleanup.js?v=12"></script>
   <script defer src="js/dialogue-episode-flow.js?v=2"></script>
   <script defer src="js/dialogue-episode-editor-v2.js?v=1"></script>
   <script defer src="js/dialogue-single-beat-runtime.js?v=11"></script>
@@ -139,7 +138,7 @@
 
   <!-- COMPATIBILITY / REPAIR -->
   <script src="js/dialogue-mood-indicator.js?v=1"></script>
-  <script src="js/collection-runtime-repair.js?v=3"></script>
+  <script src="js/collection-runtime-repair.js?v=4"></script>
   <script defer src="js/collection-emoji-corrections.js?v=2"></script>
 
   <!-- SETTINGS DIAGNOSTICS: stays in the same Settings stack as Appearance/Data/Danger. -->

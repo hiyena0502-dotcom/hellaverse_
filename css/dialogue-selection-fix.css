@@ -1,0 +1,74 @@
+/* Dialogue selection menus should read as a deliberate side panel, not a full-screen overlay. */
+.dialogue-box.session-select{
+  left:auto!important;
+  right:clamp(18px,4vw,54px)!important;
+  bottom:clamp(18px,3.5vh,38px)!important;
+  width:min(620px,calc(100% - 36px))!important;
+  max-height:min(64vh,660px)!important;
+  min-height:0!important;
+  padding:52px 22px 18px!important;
+  border:1px solid rgba(201,166,107,.22)!important;
+  border-radius:16px!important;
+  background:linear-gradient(180deg,rgba(18,13,16,.94),rgba(10,8,10,.97))!important;
+  box-shadow:0 24px 80px rgba(0,0,0,.46)!important;
+  backdrop-filter:blur(14px)!important;
+  overflow:hidden!important;
+}
+.dialogue-box.session-select>.speaker{
+  display:block!important;
+  margin:0 0 12px!important;
+  padding-bottom:10px!important;
+  border-bottom:1px solid rgba(255,255,255,.07)!important;
+  color:var(--gold)!important;
+  font-size:.72rem!important;
+  letter-spacing:.15em!important;
+}
+.dialogue-box.session-select>.choice-list{
+  max-height:min(48vh,510px)!important;
+  margin-top:0!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  padding-right:6px!important;
+  scrollbar-width:thin;
+}
+.dialogue-box.session-select>.dialogue-utility{
+  top:15px!important;
+  right:20px!important;
+}
+.dialogue-box.session-select>.dialogue-return{
+  flex:0 0 auto!important;
+  margin-top:10px!important;
+}
+.dialogue-box.session-select .choice-option{
+  min-height:46px!important;
+  padding:10px 2px!important;
+}
+.dialogue-box.session-select .choice-option small{
+  max-width:190px;
+  white-space:normal;
+}
+
+@media(min-width:900px){
+  .dialogue-stage:has(.dialogue-box.session-select) .room-character{
+    place-items:end start!important;
+    padding-left:clamp(18px,5vw,74px)!important;
+    padding-right:min(650px,45vw)!important;
+  }
+  .dialogue-stage:has(.dialogue-box.session-select) .room-character img{
+    max-width:min(48vw,680px)!important;
+    max-height:76vh!important;
+  }
+}
+@media(max-width:899px){
+  .dialogue-box.session-select{
+    left:12px!important;
+    right:12px!important;
+    bottom:12px!important;
+    width:auto!important;
+    max-height:58vh!important;
+    padding:46px 15px 14px!important;
+  }
+  .dialogue-box.session-select>.choice-list{max-height:42vh!important}
+  .dialogue-box.session-select .choice-option{grid-template-columns:36px 1fr!important}
+  .dialogue-box.session-select .choice-option small{grid-column:2!important;text-align:left!important;max-width:none!important}
+}

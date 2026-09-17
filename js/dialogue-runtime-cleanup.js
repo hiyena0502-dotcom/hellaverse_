@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V13__)return;
-window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V13__=1;
+if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V14__)return;
+window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V14__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const RKEY='hellaverse_dialogue_runtime_file_v1';
@@ -37,6 +37,11 @@ function modeFromButton(btn){
  if(label.includes('CONVERSATION')||label==='TALK')return'CONVERSATION';
  return'';
 }
+function ownedByDialogueUI(box){
+ if(!box)return false;
+ if($('[data-vn-page]',box))return true;
+ return box.classList.contains('turn-mode')&&!box.classList.contains('session-select');
+}
 function unwrapMore(){
  for(const d of $$('.room-more')){const links=$('.room-links',d);if(links)d.replaceWith(links);else d.remove()}
  for(const d of $$('.dialogue-more')){const parent=d.parentElement,box=$('.dialogue-more-menu',d);if(parent&&box){for(const b of Array.from(box.children))parent.insertBefore(b,d)}d.remove()}
@@ -52,7 +57,7 @@ function roomUtility(){
  return '<div class="dialogue-utility hv-stable-dialogue-utility" style="display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap" data-stable-utility="LOG|ASK|ACTION|INVENTORY|LEAVE ROOM" data-hv-runtime-actions-allowed="1" data-hv-runtime-leave-allowed="1"><button type="button" data-vn-log>LOG</button><button type="button" data-action="ASK" data-dialogue-file-runtime="QUESTION">ASK</button><button type="button" data-action="TALK" data-dialogue-file-runtime="ACTION">ACTION</button><button type="button" data-inventory-open>INVENTORY</button><button type="button" data-runtime-leave>LEAVE ROOM</button></div>';
 }
 function ensureRoomUtility(box){
- if(!box)return;
+ if(!box||ownedByDialogueUI(box))return;
  let current=$('.dialogue-utility',box);
  if(!current){box.insertAdjacentHTML('afterbegin',roomUtility());return}
  const selection=box.classList.contains('session-select')||!!$('[data-scene],[data-gift]',box);
@@ -106,6 +111,7 @@ function sceneButtonsFor(box,mode){
  return $$('[data-scene]',box).filter(b=>{const sc=byId.get(String(b.dataset.scene||''));return sc&&fileOf(sc,state)===mode});
 }
 function showQuestionPicker(box){
+ if(ownedByDialogueUI(box))return false;
  ensureRoomUtility(box);
  const all=$$('[data-scene]',box),questions=sceneButtonsFor(box,'QUESTION');
  if(!all.length){emptyState(box,'QUESTION','지금 물어볼 수 있는 질문이 없습니다.');return true}
@@ -131,7 +137,7 @@ function chooseCandidate(box,mode){
  return pool[Math.floor(Math.random()*pool.length)]||pool[0]||null;
 }
 function autoStart(){
- const box=$('.character-room .dialogue-box');if(!box)return;
+ const box=$('.character-room .dialogue-box');if(!box||ownedByDialogueUI(box))return;
  ensureRoomUtility(box);
  const mode=pendingMode||runtimeMode();
  if(!['CONVERSATION','QUESTION','ACTION'].includes(mode))return;
@@ -204,7 +210,7 @@ function monitorLeave(){
  if(leaveFlow.phase==='exit'){navigateCharacters();return}
  if(leaveFlow.phase==='gap'&&Date.now()-leaveFlow.startedAt>900){navigateCharacters()}
 }
-function run(){unwrapMore();const box=$('.character-room .dialogue-box');if(box)ensureRoomUtility(box);autoStart();monitorLeave()}
+function run(){unwrapMore();const box=$('.character-room .dialogue-box');if(box&&!ownedByDialogueUI(box))ensureRoomUtility(box);autoStart();monitorLeave()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 
 window.addEventListener('click',e=>{
@@ -234,7 +240,7 @@ document.addEventListener('click',e=>{
   const mode=modeFromButton(btn);
   if(['CONVERSATION','QUESTION','ACTION'].includes(mode)){
    pendingMode=mode;rememberMode(mode);
-   const box=$('.character-room .dialogue-box');if(box){box.removeAttribute('data-hv-episode-auto');box.removeAttribute('data-hv-question-picker');box.removeAttribute('data-hv-special-menu')}
+   const box=$('.character-room .dialogue-box');if(box&&!ownedByDialogueUI(box)){box.removeAttribute('data-hv-episode-auto');box.removeAttribute('data-hv-question-picker');box.removeAttribute('data-hv-special-menu')}
   }
  }
 },true);

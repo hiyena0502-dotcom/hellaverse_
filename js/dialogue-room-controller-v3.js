@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V3__)return;
-window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V3__=1;
+if(window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V4__)return;
+window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V4__=1;
 
 const K='hellaverse_dialogue_state_v1',META='hellaverse_dialogue_render_meta_v1';
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -18,7 +18,7 @@ function role(sc,s,m){
   const k=up(sc?.kind||'TALK');return k==='ASK'?'ASK':k==='TALK'?'CONVERSATION':k;
 }
 function synthetic(attrs){
-  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.hvRoomBridge='3';
+  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.hvRoomBridge='4';
   for(const [name,value] of Object.entries(attrs))b.setAttribute(name,String(value??''));host.appendChild(b);bridge=true;try{b.click()}finally{bridge=false;if(b.isConnected)b.remove()}
 }
 function toast(text){let root=$('#toastRoot');if(!root){root=document.createElement('div');root.id='toastRoot';document.body.appendChild(root)}root.innerHTML=`<div class="toast">${esc(text)}</div>`;setTimeout(()=>{if(root)root.innerHTML=''},1700)}
@@ -38,12 +38,17 @@ function askHtml(){const rows=conceptualQuestions();return `<section class="hv-a
 function closeAsk(){$$('[data-hv-ask-panel]').forEach(x=>x.remove());$$('.dialogue-box.hv-ask-open').forEach(x=>x.classList.remove('hv-ask-open'))}
 function openAsk(){const box=$('.character-room .dialogue-box');if(!box){toast('대화가 시작된 뒤 질문할 수 있어요.');return}closeAsk();$$('[data-hv-action-panel]').forEach(x=>x.remove());box.classList.add('hv-ask-open');box.insertAdjacentHTML('beforeend',askHtml())}
 
-function makeBar(){const bar=document.createElement('div');bar.className='hv-room-action-bar';bar.dataset.hvRoomActionBar='3';bar.innerHTML='<button type="button" data-hv-room-command="ASK">ASK</button><button type="button" data-hv-room-command="ACTION">ACTION</button><button type="button" data-hv-room-command="INVENTORY">INVENTORY</button><button type="button" data-hv-room-command="LEAVE">LEAVE ROOM</button>';return bar}
+function makeBar(){const bar=document.createElement('div');bar.className='hv-room-action-bar';bar.dataset.hvRoomActionBar='4';bar.innerHTML='<button type="button" data-hv-room-command="ASK">ASK</button><button type="button" data-hv-room-command="ACTION">ACTION</button><button type="button" data-hv-room-command="INVENTORY">INVENTORY</button><button type="button" data-hv-room-command="LEAVE">LEAVE ROOM</button>';return bar}
 function cleanLegacy(box){for(const utility of $$('.dialogue-utility',box))$$('[data-vn-ask],[data-hv-action],[data-inventory-open],[data-vn-leave],[data-runtime-leave],[data-vn-gift]',utility).forEach(b=>b.remove())}
 function ensureBar(){
-  const box=$('.character-room .dialogue-box');
-  if(!box||document.body.classList.contains('hv-room-exiting')){$$('[data-hv-room-action-bar]').forEach(x=>x.remove());return}
-  cleanLegacy(box);if(!$('[data-hv-room-action-bar]',box))box.prepend(makeBar())
+  const box=$('.character-room .dialogue-box'),stage=box?.closest('.dialogue-stage');
+  if(!box||!stage||document.body.classList.contains('hv-room-exiting')){$$('[data-hv-room-action-bar]').forEach(x=>x.remove());return}
+  cleanLegacy(box);
+  let bar=$('[data-hv-room-action-bar]',stage);
+  if(!bar){bar=makeBar();stage.insertBefore(bar,box)}
+  else if(bar.parentElement!==stage)stage.insertBefore(bar,box);
+  const h=Math.max(0,Math.ceil(box.getBoundingClientRect().height));
+  stage.style.setProperty('--hv-dialogue-box-height',`${h}px`);
 }
 function labelNavigation(){for(const b of $$('.character-file [data-room]'))b.textContent='ENTER ROOM';for(const b of $$('.home-lobby [data-room]'))b.textContent='PROFILE'}
 
@@ -71,6 +76,7 @@ window.addEventListener('click',e=>{
 },true);
 
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('resize',schedule,{passive:true});
 window.addEventListener('hellaverse:state-updated',schedule);window.addEventListener('hellaverse:runtime-ready',schedule);
 document.addEventListener('DOMContentLoaded',schedule);window.addEventListener('load',schedule);if(document.readyState!=='loading')schedule();
 })();

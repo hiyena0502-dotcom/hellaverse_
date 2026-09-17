@@ -83,11 +83,8 @@ await loadClassic('js/relationship-friction-dialogues.js?v=1');
 await loadClassic('js/dialogue-episode-upgrade-all.js?v=4');
 await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 
-// Upgrade stable character interactions to 2–5 stages only after all content
-// migrations have finished, then validate every nextNodeId before the core loads.
 await loadClassic('js/dialogue-multistage-upgrader-v1.js?v=1');
 
-// One conversation selector, one exit controller, one state machine.
 await loadClassic('js/dialogue-continuity-controller-v6.js?v=2');
 await loadClassic('js/room-exit-transition.js?v=2');
 await loadStableCore();
@@ -126,7 +123,7 @@ const scripts=[
   ['classic','js/final-ux-cleanup.js?v=14'],
 
   ['classic','js/dialogue-interaction-engine-v2.js?v=1'],
-  ['classic','js/dialogue-room-controller-v3.js?v=1']
+  ['classic','js/dialogue-room-controller-v3.js?v=2']
 ];
 
 for(const [type,src] of scripts){if(type==='module')await loadModule(src);else await loadClassic(src)}

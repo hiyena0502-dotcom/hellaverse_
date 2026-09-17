@@ -19,6 +19,7 @@ try{
 
 const scripts=[
   ['classic','js/dialogue-episode-upgrade-all.js?v=4'],
+  ['classic','js/dialogue-content-repairs.js?v=1'],
 
   // Dialogue ownership: continuity owns TALK chaining, exit transition owns leaving,
   // dialogue-ui owns scene state, single-beat owns pacing, interaction-engine owns ASK/ACTION,

@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V8__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V8__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V9__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V9__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -103,8 +103,8 @@ function paginate(host,text){
  if(!host||!text)return;
  ensureUtility(host);
  const all=Array.from(text.children).filter(isBeat);
- for(const row of all)if(isPlayer(row))hide(row);
- const beats=all.filter(row=>!isPlayer(row));
+ for(const row of all)if(isPlayer(row))row.remove();
+ const beats=Array.from(text.children).filter(isBeat).filter(row=>!isPlayer(row));
  const sig=signature(beats,host);
  if(host.dataset.singleBeatSig!==sig){
   host.dataset.singleBeatSig=sig;
@@ -127,8 +127,23 @@ function paginate(host,text){
 function enhanceNew(page){const text=$('.dialogue-page-text',page);if(text)paginate(page,text)}
 function enhanceLegacy(box){const lines=$('.dialogue-lines',box);if(lines)paginate(box,lines)}
 function stripPlayerEcho(){
- for(const you of $$('.dialogue-line.you'))hide(you);
- for(const line of $$('article.dialogue-line'))if(String($('strong',line)?.textContent||'').trim().toUpperCase()==='YOU')hide(line);
+ for(const box of $$('.character-room .dialogue-box')){
+  for(const you of $$('.dialogue-line.you',box))you.remove();
+  for(const line of $$('article.dialogue-line',box)){
+   if(String($('strong',line)?.textContent||'').trim().toUpperCase()==='YOU')line.remove();
+  }
+ }
+}
+function clearChosenScreen(target){
+ const chosen=target?.closest?.('.character-room .dialogue-box [data-choice],.character-room .dialogue-box [data-gc]');
+ if(!chosen)return false;
+ const host=chosen.closest('.dialogue-page[data-vn-page],.dialogue-box');
+ if(!host)return false;
+ const list=choiceList(host);if(list)hide(list);
+ const local=$('[data-single-beat-next]',host);if(local)hide(local);
+ host.dataset.singleBeatPhase='beat';
+ host.dataset.hvChoiceCommitted='1';
+ return true;
 }
 
 function isQuietFallback(box){
@@ -193,8 +208,8 @@ function run(){
  if(!$('.character-room'))removeExternalLog();else externalizeLog();
  if(resumeFromQuietFallback())return;
  for(const box of $$('.character-room .dialogue-box'))ensureUtility(box);
- for(const page of $$('.dialogue-page[data-vn-page]'))enhanceNew(page);
- for(const box of $$('.dialogue-box'))if(!$('.dialogue-page[data-vn-page]',box))enhanceLegacy(box);
+ for(const page of $$('.character-room .dialogue-page[data-vn-page]'))enhanceNew(page);
+ for(const box of $$('.character-room .dialogue-box'))if(!$('.dialogue-page[data-vn-page]',box))enhanceLegacy(box);
 }
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>requestAnimationFrame(()=>{queued=false;run()}))}
 function clickHidden(target){
@@ -208,6 +223,7 @@ function clickHidden(target){
 window.addEventListener('click',e=>{
  if(coreReturnBridge)return;
  const t=e.target instanceof Element?e.target:null;if(!t)return;
+ clearChosenScreen(t);
  if(t.closest('[data-runtime-return]')){
   e.preventDefault();e.stopImmediatePropagation();coreReturn();return;
  }

@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V4__)return;
-window.__HELLAVERSE_DIALOGUE_CONTINUITY_V4__=1;
+if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V5__)return;
+window.__HELLAVERSE_DIALOGUE_CONTINUITY_V5__=1;
 
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const META_KEY='hellaverse_dialogue_render_meta_v1';
@@ -77,8 +77,7 @@ function alreadyPlayed(scene){return playedIds.has(String(scene?.id||''))||playe
 function pickConversation(){
   const s=state(),m=meta(),cid=String(s.active||'');if(!cid)return null;
   if(chainCid&&chainCid!==cid)resetSession(cid);
-  let rows=(Array.isArray(s.dialogues)?s.dialogues:[]).filter(sc=>eligible(sc,s,m,cid));
-  rows=rows.filter(sc=>!alreadyPlayed(sc));
+  let rows=(Array.isArray(s.dialogues)?s.dialogues:[]).filter(sc=>eligible(sc,s,m,cid)).filter(sc=>!alreadyPlayed(sc));
   if(!rows.length)return null;
   const p=progress().characters?.[cid]||{},recent=new Set(Array.isArray(p.recentSceneIds)?p.recentSceneIds:(s.visits?.[cid]?.recentSceneIds||[])),seen=new Set(Array.isArray(p.seenSceneIds)?p.seenSceneIds:[]);
   const unseen=rows.filter(sc=>!seen.has(sc.id)&&!sc.used);if(unseen.length)rows=unseen;else{const fresh=rows.filter(sc=>!recent.has(sc.id));if(fresh.length)rows=fresh}
@@ -97,6 +96,7 @@ function syntheticScene(scene){
   return true;
 }
 function startConversation({fresh=false}={}){
+  if(starting||continuing)return false;
   const cid=String(state().active||'');
   if(fresh||!chainCid)resetSession(cid);
   const scene=pickConversation();return scene?syntheticScene(scene):false;
@@ -139,39 +139,29 @@ window.addEventListener('click',event=>{
 document.addEventListener('click',event=>{
   if(bridge)return;
   const target=event.target instanceof Element?event.target:null;if(!target)return;
-
   const sceneButton=target.closest('[data-scene]');
   if(sceneButton){
     const id=String(sceneButton.dataset.scene||''),role=roleForSceneId(id),scene=sceneForId(id);
     if(role==='CONVERSATION'){
       const chain=document.body.classList.contains(CHAIN_CLASS);
-      // dialogue-ui used to auto-start a TALK after ENTRY. Do not allow that hidden transition.
-      if(!chain&&sceneButton.hidden&&!sceneButton.dataset.hvContinuityBridge){
-        event.preventDefault();event.stopImmediatePropagation();setTimeout(syntheticEndToRoom,0);return;
-      }
-      if(chain&&alreadyPlayed(scene)){
-        event.preventDefault();event.stopImmediatePropagation();
-        setTimeout(()=>{if(!startConversation())exhaustChain()},0);return;
-      }
+      if(!chain&&sceneButton.hidden&&!sceneButton.dataset.hvContinuityBridge){event.preventDefault();event.stopImmediatePropagation();setTimeout(syntheticEndToRoom,0);return}
+      if(chain&&alreadyPlayed(scene)){event.preventDefault();event.stopImmediatePropagation();setTimeout(()=>{if(!startConversation())exhaustChain()},0);return}
       if(!chain){resetSession(String(state().active||''));document.body.classList.add(CHAIN_CLASS)}
       remember(scene);
     }else if(role==='EXIT')stopChain();
   }
-
   const talk=target.closest('.character-room [data-action="TALK"]');
   if(talk&&!window.__HV_ACTION_PICKER_OPENING__&&!talk.closest('[data-hv-action]')&&upper(talk.dataset.dialogueFileRuntime)!=='ACTION'){
     event.preventDefault();event.stopImmediatePropagation();
-    if(starting||continuing)return;
     if(!startConversation({fresh:true}))stopChain();return;
   }
-
   const rawEnd=target.closest('.character-room .dialogue-box [data-end]');
-  if(rawEnd&&document.body.classList.contains(CHAIN_CLASS)){
-    event.preventDefault();event.stopImmediatePropagation();finishRawAndContinue(rawEnd);return;
-  }
+  if(rawEnd&&document.body.classList.contains(CHAIN_CLASS)){event.preventDefault();event.stopImmediatePropagation();finishRawAndContinue(rawEnd);return}
 },true);
 
+window.__HV_START_CONVERSATION__=(options={})=>startConversation({fresh:options?.fresh!==false});
 window.__HV_STOP_CONVERSATION_CHAIN__=()=>stopChain();
+window.__HV_CONVERSATION_CHAIN_ACTIVE__=()=>document.body.classList.contains(CHAIN_CLASS);
 new MutationObserver(scheduleNormalize).observe(document.documentElement,{childList:true,subtree:true});
 window.addEventListener('hellaverse:state-updated',scheduleNormalize);
 document.addEventListener('DOMContentLoaded',scheduleNormalize);

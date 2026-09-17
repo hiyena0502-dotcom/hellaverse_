@@ -3,6 +3,17 @@ if(ready&&typeof ready.then==='function'){
   try{await ready}catch(error){console.warn('Default content readiness failed safely.',error)}
 }
 
+function absolute(src){return new URL(src,document.baseURI).href}
+async function loadModule(src){try{await import(absolute(src))}catch(error){console.error(`Failed to load module: ${src}`,error)}}
+function loadClassic(src){return new Promise(resolve=>{const script=document.createElement('script');script.src=src;script.async=false;script.onload=()=>resolve(true);script.onerror=()=>{console.error(`Failed to load script: ${src}`);resolve(false)};document.head.appendChild(script)})}
+
+// Undo the temporary one-scene repair before any dialogue engine reads local state.
+await loadClassic('js/dialogue-repair-rollback.js?v=2');
+const repairReady=window.__HV_DIALOGUE_REPAIR_ROLLBACK_READY__;
+if(repairReady&&typeof repairReady.then==='function'){
+  try{await repairReady}catch(error){console.warn('Dialogue repair rollback readiness failed safely.',error)}
+}
+
 try{
   const stateKey='hellaverse_dialogue_state_v1';
   const metaKey='hellaverse_dialogue_render_meta_v1';
@@ -22,13 +33,14 @@ const scripts=[
 
   // Dialogue ownership: continuity owns TALK chaining, exit transition owns leaving,
   // dialogue-ui owns scene state, multi-node controller owns node-to-node choices,
-  // single-beat owns pacing, interaction-engine owns ASK/ACTION,
-  // room-controller owns stable room controls and direct ENTER ROOM flow.
+  // token renderer normalizes authoring markers, single-beat owns visual pacing,
+  // interaction-engine owns ASK/ACTION, room-controller owns persistent room controls.
   ['classic','js/dialogue-continuity-controller.js?v=5'],
   ['classic','js/room-exit-transition.js?v=2'],
   ['module','js/dialogue-ui.js?v=55'],
   ['module','js/hv-stable.js?v=56'],
   ['classic','js/dialogue-multinode-controller.js?v=1'],
+  ['classic','js/dialogue-token-renderer.js?v=1'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=51'],
   ['module','js/relationship-editor.js?v=51'],
@@ -50,7 +62,7 @@ const scripts=[
   ['classic','js/dialogue-file-editor.js?v=2'],
   ['classic','js/dialogue-episode-flow.js?v=2'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
-  ['classic','js/dialogue-single-beat-runtime.js?v=19'],
+  ['classic','js/dialogue-single-beat-runtime.js?v=20'],
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/dialogue-foundation-safety.js?v=4'],
 
@@ -65,8 +77,5 @@ const scripts=[
   ['classic','js/dialogue-room-controller.js?v=2']
 ];
 
-function absolute(src){return new URL(src,document.baseURI).href}
-async function loadModule(src){try{await import(absolute(src))}catch(error){console.error(`Failed to load module: ${src}`,error)}}
-function loadClassic(src){return new Promise(resolve=>{const script=document.createElement('script');script.src=src;script.async=false;script.onload=()=>resolve(true);script.onerror=()=>{console.error(`Failed to load script: ${src}`);resolve(false)};document.head.appendChild(script)})}
 for(const [type,src] of scripts){if(type==='module')await loadModule(src);else await loadClassic(src)}
 window.dispatchEvent(new CustomEvent('hellaverse:runtime-ready'));

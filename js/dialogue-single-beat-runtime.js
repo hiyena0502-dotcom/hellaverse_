@@ -1,11 +1,11 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V18__)return;
-window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V18__=1;
+if(window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V19__)return;
+window.__HELLAVERSE_SINGLE_BEAT_RUNTIME_V19__=1;
 
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-let queued=false,logMoveQueued=false,bridge=false,pendingChoice=null;
+let queued=false,logMoveQueued=false,bridge=false,pendingChoice=null,choiceFallback=null;
 
 const isBeat=el=>el instanceof Element&&(el.matches('article.dialogue-line')||el.matches('p.narration')||el.matches('p.dialogue-current'));
 const isPlayer=el=>el instanceof Element&&(el.matches('.dialogue-line.you')||String($('strong',el)?.textContent||'').trim().toUpperCase()==='YOU');
@@ -23,18 +23,19 @@ function rawEnd(host){return $('[data-end]',host)}
 function hideCoreProgress(host){vnControls(host).forEach(hide);hide(rawFinish(host));hide(rawEnd(host))}
 function hideChoices(host){hide(choiceList(host))}
 function showChoices(host){const list=choiceList(host);if(list)show(list);for(const b of choiceButtons(host))show(b);hideCoreProgress(host)}
-function ensureLocalNext(host){let b=$('[data-single-beat-next]',host);if(!b){b=document.createElement('button');b.type='button';b.className='dialogue-next single-beat-next';b.dataset.singleBeatNext='1';host.appendChild(b)}return b}
-function setLocalMode(button,mode,label='NEXT'){button.dataset.singleBeatMode=mode||'beat';button.innerHTML=`${label} <span>›</span>`}
+function ensureLocalNext(host){let b=$('[data-single-beat-next]',host);if(!b){b=document.createElement('button');b.type='button';b.className='dialogue-next single-beat-next hv-next-control';b.dataset.singleBeatNext='1';host.appendChild(b)}else b.classList.add('hv-next-control');return b}
+function setLocalMode(button,mode,label='NEXT'){button.dataset.singleBeatMode=mode||'beat';button.innerHTML=`${label} <span>›</span>`;button.classList.add('hv-next-control')}
 function signature(beats,host){const choiceSig=choiceButtons(host).map(b=>`${b.dataset.choice||b.dataset.gc||b.textContent}:${b.disabled?'locked':'open'}`).join(',');return beats.map(beatKey).join('|')+'::'+choiceSig}
-function finalCoreAction(host){if($('[data-vn-next]',host))return{mode:'vn-next',label:'NEXT'};if($('[data-vn-finish]',host))return{mode:'vn-finish',label:'NEXT'};if(rawFinish(host))return{mode:'finish',label:'NEXT'};if(rawEnd(host))return{mode:'end',label:document.body.classList.contains('hv-conversation-chain')?'NEXT':'RETURN'};return null}
+function finalCoreAction(host){if($('[data-vn-next]',host))return{mode:'vn-next',label:'NEXT'};if($('[data-vn-finish]',host))return{mode:'vn-finish',label:'NEXT'};if(rawFinish(host))return{mode:'finish',label:'NEXT'};if(rawEnd(host))return{mode:'end',label:'NEXT'};return null}
 function clickHidden(target){if(!target||bridge)return false;const oldHidden=target.hidden,oldDisplay=target.style.display;bridge=true;target.hidden=false;target.style.removeProperty('display');try{target.click()}finally{target.hidden=oldHidden;target.style.display=oldDisplay;bridge=false}return true}
 function revealAfterLastBeat(host,local){const phase=host.dataset.singleBeatPhase||'beat';if(hasChoiceOptions(host)){if(phase==='choices'){hide(local);showChoices(host)}else{hideChoices(host);hideCoreProgress(host);setLocalMode(local,'choices','NEXT');show(local)}return}hideChoices(host);const action=finalCoreAction(host);if(action){hideCoreProgress(host);setLocalMode(local,action.mode,action.label);show(local);return}hide(local)}
 function removePlayerEchoes(text){for(const row of Array.from(text?.children||[]).filter(isPlayer))row.remove()}
 function autoAdvanceEmptyChoice(host,text){if(host.dataset.hvChoiceCommitted!=='1'||host.dataset.singleBeatAutoAdvanced==='1')return false;const next=$('[data-vn-next]',host);if(!next)return false;host.dataset.singleBeatAutoAdvanced='1';requestAnimationFrame(()=>{if(!host.isConnected)return;clickHidden(next);setTimeout(schedule,0)});return true}
+function clearChoiceTransition(){pendingChoice=null;clearTimeout(choiceFallback);choiceFallback=null;document.body.classList.remove('hv-choice-transition')}
 
 function prunePreChoiceTranscript(text){
   if(!pendingChoice||!text)return;
-  if(performance.now()-pendingChoice.at>2500){pendingChoice=null;return}
+  if(performance.now()-pendingChoice.at>3500){clearChoiceTransition();return}
   removePlayerEchoes(text);
   let beats=Array.from(text.children).filter(isBeat);
   if(!beats.length)return;
@@ -44,11 +45,9 @@ function prunePreChoiceTranscript(text){
     for(let i=0;i<matched;i++)beats[i]?.remove();
     beats=Array.from(text.children).filter(isBeat);
   }
-  // Old renderer can briefly rebuild only the pre-choice transcript. Leave the area empty until a new response arrives.
+  // The legacy renderer may briefly rebuild only the old transcript. Keep it invisible until post-choice content exists.
   if(!beats.length)return;
-  // If no prefix matched, the renderer has replaced the transcript with the new response already.
-  // If a prefix matched, everything left is post-choice content. Either way the transition is complete.
-  pendingChoice=null;
+  clearChoiceTransition();
 }
 
 function paginate(host,text){
@@ -64,6 +63,7 @@ function paginate(host,text){
     if(hasChoiceOptions(host)&&!pendingChoice)showChoices(host);
     return;
   }
+  if(pendingChoice)return;
   host.dataset.hvChoiceCommitted='0';host.dataset.singleBeatAutoAdvanced='0';
   let index=Math.max(0,Math.min(Number(host.dataset.singleBeatIndex||0),beats.length-1));host.dataset.singleBeatIndex=String(index);
   beats.forEach((row,i)=>i===index?show(row):hide(row));
@@ -78,18 +78,19 @@ function clearChosenScreen(target){
   const text=$('.dialogue-page-text',host)||$('.dialogue-lines',host);
   const previous=Array.from(text?.children||[]).filter(isBeat).filter(el=>!isPlayer(el));
   pendingChoice={keys:previous.map(beatKey),at:performance.now()};
+  document.body.classList.add('hv-choice-transition');
+  clearTimeout(choiceFallback);choiceFallback=setTimeout(()=>{if(pendingChoice)clearChoiceTransition()},3600);
   if(text)Array.from(text.children).filter(isBeat).forEach(hide);
   hideChoices(host);hide($('[data-single-beat-next]',host));hideCoreProgress(host);
   host.dataset.singleBeatSig='';host.dataset.singleBeatIndex='0';host.dataset.singleBeatPhase='beat';host.dataset.singleBeatAutoAdvanced='0';host.dataset.hvChoiceCommitted='1';
-  // Run once after the click dispatch so the legacy renderer cannot leave the old transcript visible for a frame.
-  queueMicrotask(schedule);setTimeout(schedule,0);setTimeout(schedule,40);
+  queueMicrotask(schedule);setTimeout(schedule,0);setTimeout(schedule,30);setTimeout(schedule,90);
   return true;
 }
 function externalLogRoot(){let root=$('#hvDialogueLogRoot');if(!root){root=document.createElement('div');root.id='hvDialogueLogRoot';document.body.appendChild(root)}return root}
 function externalizeLog(){const source=$$('.dialogue-log-backdrop').find(el=>!el.closest('#hvDialogueLogRoot'));if(!source)return false;externalLogRoot().replaceChildren(source);return true}
 function scheduleExternalizeLog(){if(logMoveQueued)return;logMoveQueued=true;queueMicrotask(()=>{logMoveQueued=false;externalizeLog()});requestAnimationFrame(externalizeLog);setTimeout(externalizeLog,40)}
 function removeExternalLog(){const root=$('#hvDialogueLogRoot');if(root)root.remove()}
-function run(){if(!$('.character-room')){pendingChoice=null;removeExternalLog()}else externalizeLog();for(const page of $$('.character-room .dialogue-page[data-vn-page]'))enhanceNew(page);for(const box of $$('.character-room .dialogue-box'))if(!$('.dialogue-page[data-vn-page]',box))enhanceLegacy(box)}
+function run(){if(!$('.character-room')){clearChoiceTransition();removeExternalLog()}else externalizeLog();for(const page of $$('.character-room .dialogue-page[data-vn-page]'))enhanceNew(page);for(const box of $$('.character-room .dialogue-box'))if(!$('.dialogue-page[data-vn-page]',box))enhanceLegacy(box)}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>requestAnimationFrame(()=>{queued=false;run()}))}
 
 window.addEventListener('click',e=>{if(bridge)return;const t=e.target instanceof Element?e.target:null;if(!t)return;clearChosenScreen(t);if(t.closest('[data-vn-log]')){scheduleExternalizeLog();return}if(t.closest('[data-vn-log-close]')){setTimeout(removeExternalLog,0);return}},true);

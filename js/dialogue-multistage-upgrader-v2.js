@@ -2,7 +2,6 @@
 'use strict';
 if(window.__HELLAVERSE_MULTISTAGE_UPGRADER_V2__)return;
 window.__HELLAVERSE_MULTISTAGE_UPGRADER_V2__=1;
-// Block the retired blanket v1 expander before runtime-bootstrap can load it.
 window.__HELLAVERSE_MULTISTAGE_UPGRADER_V1__=1;
 
 const ready=window.__HV_DEFAULT_CONTENT_READY__;
@@ -13,6 +12,10 @@ if(ready&&typeof ready.then==='function'){
 const K='hellaverse_dialogue_state_v1',MAX=5;
 const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};
 const clean=v=>String(v??'').trim();
+const GENERIC_PROMPTS=new Set([
+  '조금 더 듣는다','다른 쪽으로 물어본다','마지막으로 한마디 더 듣는다','여기까지 듣는다',
+  '조금 더 물어본다','다른 각도에서 다시 묻는다','반응을 더 지켜본다','말을 건다'
+]);
 
 function roleOf(sc,map){
   let r=String(sc?.sceneRole||map?.[sc?.id]||'').toUpperCase();
@@ -25,22 +28,29 @@ function roleOf(sc,map){
   return r;
 }
 
+function looksLikeV1Auto(sc){
+  if(Number(sc?.multiStageVersion||0)===1)return true;
+  const prefix=`${sc.id}-stage-`;
+  const autoNodes=(Array.isArray(sc?.nodes)?sc.nodes:[]).filter(n=>String(n?.id||'').startsWith(prefix));
+  if(!autoNodes.length)return false;
+  return autoNodes.some(n=>(n.choices||[]).some(ch=>GENERIC_PROMPTS.has(clean(ch?.text||ch?.playerLine))));
+}
+
 function restoreV1AutoStages(sc){
-  if(Number(sc?.multiStageVersion||0)!==1)return false;
+  if(!looksLikeV1Auto(sc))return false;
   const prefix=`${sc.id}-stage-`;
   const originalNodes=(Array.isArray(sc.nodes)?sc.nodes:[]).filter(n=>!String(n?.id||'').startsWith(prefix));
   if(!originalNodes.length)return false;
 
   const first=originalNodes.find(n=>String(n?.id||'')===String(sc.openingNodeId||''))||originalNodes[0];
   first.choices=Array.isArray(first.choices)?first.choices:[];
-
-  // V1 invented these only when the original scene had no player choices.
   first.choices=first.choices.filter(ch=>{
     const id=String(ch?.id||'');
-    return id!==`${sc.id}-open-a`&&id!==`${sc.id}-open-b`;
+    const text=clean(ch?.text||ch?.playerLine);
+    const inventedId=id===`${sc.id}-open-a`||id===`${sc.id}-open-b`;
+    return !(inventedId&&GENERIC_PROMPTS.has(text));
   });
 
-  // V1 overwrote every original choice to jump to its generic stage 2.
   for(const ch of first.choices){
     const next=String(ch?.nextNodeId||'');
     if(next.startsWith(prefix)){

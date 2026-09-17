@@ -4,23 +4,46 @@
 .character-room .dialogue-box [data-vn-next],
 .character-room .dialogue-box [data-vn-finish],
 .character-room .dialogue-box [data-finish],
-.character-room.hv-conversation-chain .dialogue-box [data-end],
-body.hv-conversation-chain .character-room .dialogue-box [data-end],
-body.hv-room-exiting .character-room .dialogue-box [data-end] {
-  align-self: flex-end;
-  justify-self: end;
-  width: max-content;
+.character-room .dialogue-box [data-end],
+.character-room .dialogue-box .choice-list > [data-finish],
+.character-room .dialogue-box .choice-list > [data-end] {
+  align-self: flex-end !important;
+  justify-self: end !important;
+  width: max-content !important;
   min-width: 92px;
-  margin-left: auto;
-  margin-right: 0;
-  text-align: right;
+  max-width: 100%;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  text-align: right !important;
 }
 
-.character-room .dialogue-page [data-single-beat-next],
-.character-room .dialogue-page [data-vn-next],
-.character-room .dialogue-page [data-vn-finish] {
-  justify-self: end;
-  margin-left: auto;
+.character-room .dialogue-page {
+  width: 100%;
+}
+
+.character-room .dialogue-page > .dialogue-next,
+.character-room .dialogue-page > [data-single-beat-next],
+.character-room .dialogue-page > [data-vn-next],
+.character-room .dialogue-page > [data-vn-finish],
+.character-room .dialogue-page > [data-finish],
+.character-room .dialogue-page > [data-end] {
+  align-self: flex-end !important;
+  justify-self: end !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+/* Legacy choice-option buttons were width:100%; progress buttons must not inherit that centered/full-row layout. */
+.character-room .dialogue-box .choice-option[data-finish],
+.character-room .dialogue-box .choice-option[data-end] {
+  display: flex !important;
+  grid-template-columns: none !important;
+  width: auto !important;
+  min-width: 92px;
+  justify-content: flex-end !important;
+  justify-self: end !important;
+  margin-left: auto !important;
+  padding-left: 18px !important;
 }
 
 @media (max-width: 800px) {
@@ -29,8 +52,7 @@ body.hv-room-exiting .character-room .dialogue-box [data-end] {
   .character-room .dialogue-box [data-vn-next],
   .character-room .dialogue-box [data-vn-finish],
   .character-room .dialogue-box [data-finish],
-  body.hv-conversation-chain .character-room .dialogue-box [data-end],
-  body.hv-room-exiting .character-room .dialogue-box [data-end] {
+  .character-room .dialogue-box [data-end] {
     min-width: 84px;
   }
 }

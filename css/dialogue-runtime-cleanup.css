@@ -1,10 +1,11 @@
-/* Player dialogue is episode-driven: scene file indexes are editor-only. */
-.dialogue-box:has([data-scene]) > .speaker,
-.dialogue-box:has([data-scene]) > .choice-list,
-.dialogue-box:has([data-scene]) > .dialogue-return {
+/* Player dialogue is episode-driven: CONVERSATION/ACTION file indexes stay hidden,
+   while QUESTION intentionally remains a player-facing picker. */
+.dialogue-box:has([data-scene]):not([data-hv-question-picker="1"]) > .speaker,
+.dialogue-box:has([data-scene]):not([data-hv-question-picker="1"]) > .choice-list,
+.dialogue-box:has([data-scene]):not([data-hv-question-picker="1"]) > .dialogue-return {
   display:none!important;
 }
-.dialogue-box:has([data-scene]):not(.turn-mode)::after {
+.dialogue-box:has([data-scene]):not([data-hv-question-picker="1"]):not(.turn-mode)::after {
   content:'STARTING EPISODE…';
   display:block;
   padding:28px 18px;
@@ -13,6 +14,28 @@
   font-size:.7rem;
   letter-spacing:.16em;
 }
+
+/* ASK is deliberately manual: show its heading, selectable questions and return control. */
+.dialogue-box[data-hv-question-picker="1"] > .speaker,
+.dialogue-box[data-hv-question-picker="1"] > .choice-list,
+.dialogue-box[data-hv-question-picker="1"] > .dialogue-return {
+  display:revert!important;
+}
+.dialogue-box[data-hv-question-picker="1"]::after {
+  content:none!important;
+  display:none!important;
+}
+.dialogue-box[data-hv-question-picker="1"] > .choice-list {
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+.dialogue-box[data-hv-question-picker="1"] > .choice-list > [data-scene]:not([hidden]) {
+  display:flex!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+
 /* MORE was a redundant indirection. Utilities stay directly visible. */
 .dialogue-utility > button,
 .room-caption .room-links > button { display:inline-flex; }

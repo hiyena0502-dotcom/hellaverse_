@@ -1,10 +1,10 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V10__)return;
-window.__HELLAVERSE_FINAL_UX_CLEANUP_V10__=1;
+if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V11__)return;
+window.__HELLAVERSE_FINAL_UX_CLEANUP_V11__=1;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-let queued=false,observer=null,roomHold=null,roomHoldTimer=null,lastDialogueSnapshot=null,lastDialogueRect=null,roomHoldSawBridge=false,explicitRoomExitUntil=0,routeRepairing=false;
+let queued=false,observer=null;
 const NAV_KEY='hellaverse_current_main_nav_v1';
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const PLAYER_ORIGINS={HELLBORN:'HELL',SINNER:'HELL',ANGEL:'HEAVEN',WINNER:'HEAVEN'};
@@ -12,7 +12,7 @@ const txt=el=>String(el?.textContent||'').replace(/\s+/g,' ').trim();
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const readState=()=>{try{return JSON.parse(localStorage.getItem(STATE_KEY)||'{}')||{}}catch{return{}}};
 
-function ensureDialogueContinuityStyle(){
+function ensureDialogueStyle(){
   if($('#hvDialogueContinuityStyle'))return;
   const style=document.createElement('style');
   style.id='hvDialogueContinuityStyle';
@@ -22,7 +22,6 @@ function ensureDialogueContinuityStyle(){
     .character-room .dialogue-line,.character-room .dialogue-narration{animation:none!important}
     .character-room .dialogue-stage .room-character img{animation:none!important;opacity:1!important;transform:none!important}
     .character-room .dialogue-box:has(.dialogue-lines)>.speaker{display:none!important}
-    #hvRoomTransitionHold,#hvRoomTransitionHold *{animation:none!important;transition:none!important}
   `;
   document.head.appendChild(style);
 }
@@ -31,90 +30,6 @@ function cleanRedundantSpeakers(){
     const speaker=$(':scope > .speaker',box);
     if(speaker&&$('.dialogue-lines',box))speaker.style.setProperty('display','none','important');
   }
-}
-function releaseRoomHold(){
-  if(roomHold){roomHold.remove();roomHold=null}
-  if(roomHoldTimer){clearTimeout(roomHoldTimer);roomHoldTimer=null}
-  roomHoldSawBridge=false;
-}
-function markExplicitRoomExit(){
-  explicitRoomExitUntil=performance.now()+2500;
-  lastDialogueSnapshot=null;
-  lastDialogueRect=null;
-  releaseRoomHold();
-}
-function explicitExitActive(){return performance.now()<explicitRoomExitUntil}
-function cacheDialogueFrame(){
-  const room=$('#app .character-room'),box=room&&$('.dialogue-box',room);
-  if(!room||!box||room.id==='hvRoomTransitionHold')return;
-  const rect=room.getBoundingClientRect();
-  if(rect.width<1||rect.height<1)return;
-  lastDialogueSnapshot=room.cloneNode(true);
-  lastDialogueRect={left:rect.left,top:rect.top,width:rect.width,height:rect.height};
-}
-function mountCachedRoomHold(){
-  if(roomHold||!lastDialogueSnapshot||!lastDialogueRect)return;
-  const clone=lastDialogueSnapshot.cloneNode(true);
-  clone.id='hvRoomTransitionHold';
-  clone.setAttribute('aria-hidden','true');
-  $$('[id]',clone).forEach(el=>el.removeAttribute('id'));
-  $$('button,a,input,select,textarea',clone).forEach(el=>{el.tabIndex=-1});
-  const r=lastDialogueRect;
-  Object.assign(clone.style,{position:'fixed',left:`${r.left}px`,top:`${r.top}px`,width:`${r.width}px`,height:`${r.height}px`,margin:'0',zIndex:'2147483000',pointerEvents:'none',overflow:'hidden'});
-  document.body.appendChild(clone);
-  roomHold=clone;
-  roomHoldTimer=setTimeout(releaseRoomHold,3500);
-}
-function dispatchState(state){
-  const value=JSON.stringify(state);
-  try{localStorage.setItem(STATE_KEY,value)}catch{return false}
-  try{window.dispatchEvent(new StorageEvent('storage',{key:STATE_KEY,newValue:value}))}catch{}
-  try{window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'dialogue-route-guard'}}))}catch{}
-  return true;
-}
-function repairUnexpectedRoomRoute(){
-  if(routeRepairing||explicitExitActive()||!lastDialogueSnapshot)return false;
-  const app=$('#app'),room=app&&$('.character-room',app),box=room&&$('.dialogue-box',room);
-  if(room&&box)return false;
-  const s=readState();
-  if(!s?.active)return false;
-  if(s.page==='life'&&room)return false;
-  routeRepairing=true;
-  roomHoldSawBridge=true;
-  mountCachedRoomHold();
-  const next={...s,page:'life',profile:'',active:s.active};
-  dispatchState(next);
-  setTimeout(()=>{routeRepairing=false;schedule()},0);
-  return true;
-}
-function guardAutomaticRoomBridge(){
-  const room=$('#app .character-room');
-  if(!room){
-    if(!explicitExitActive()&&lastDialogueSnapshot){roomHoldSawBridge=true;mountCachedRoomHold();repairUnexpectedRoomRoute()}
-    return;
-  }
-  const box=$('.dialogue-box',room);
-  if(!box&&lastDialogueSnapshot&&!explicitExitActive()){
-    roomHoldSawBridge=true;
-    mountCachedRoomHold();
-    return;
-  }
-  if(box&&roomHold&&roomHoldSawBridge){
-    cleanRedundantSpeakers();
-    const enhanced=$('.dialogue-page[data-vn-page]',box);
-    const rawReady=$('.dialogue-lines',box)&&!$(':scope > .speaker:not([style*="display: none"])',box);
-    if(enhanced||rawReady)requestAnimationFrame(()=>requestAnimationFrame(releaseRoomHold));
-  }
-}
-function releaseRoomHoldWhenReady(){
-  if(!roomHold||roomHoldSawBridge)return;
-  const room=$('#app .character-room'),box=room&&$('.dialogue-box',room);
-  if(!box)return;
-  cleanRedundantSpeakers();
-  const enhanced=$('.dialogue-page[data-vn-page]',box);
-  const rawReady=$('.dialogue-lines',box)&&!$(':scope > .speaker:not([style*="display: none"])',box);
-  if(!enhanced&&!rawReady)return;
-  requestAnimationFrame(()=>requestAnimationFrame(releaseRoomHold));
 }
 function saveGoodNav(nav){
   if(!nav)return;
@@ -159,7 +74,7 @@ function playerSettingsMarkup(){
 }
 function ensurePlayerSettings(accordion){if(accordion&&!$('#playerSettingsPanel',accordion))accordion.insertAdjacentHTML('afterbegin',playerSettingsMarkup())}
 function cleanSettings(){
-  const grid=$('.site-shell.page-settings .settings-grid')||$('.page-settings .settings-grid')||$('.settings-grid');if(!grid)return;
+  const grid=$('.site-shell.page-settings .settings-grid')||$('.page-settings .settings-grid');if(!grid)return;
   grid.classList.add('ux-settings-clean');
   for(const details of $$('details',grid)){const summary=$(':scope > summary',details);if(summary&&txt(summary).toUpperCase()==='GACHA SETTINGS')details.remove()}
   const accordion=$('.hvg-settings-accordion',grid);if(accordion)ensurePlayerSettings(accordion);
@@ -185,12 +100,11 @@ function cleanGiftResult(){
     for(const b of $$('blockquote',result)){const t=txt(b);if(/가\s*[「“\"]?.+[」”\"]?을\s*받아\s*든다[.!]?/i.test(t)||/전용 반응 없음|특수 반응 없음/i.test(t))b.remove()}
   }
 }
-function run(){ensureDialogueContinuityStyle();cleanRedundantSpeakers();cleanNav();cleanRoomHud();cleanRoomPreview();cleanSettings();ensureGachaGlobalNav();cleanInventory();cleanGiftResult();repairUnexpectedRoomRoute();guardAutomaticRoomBridge();releaseRoomHoldWhenReady();cacheDialogueFrame()}
+function run(){ensureDialogueStyle();cleanRedundantSpeakers();cleanNav();cleanRoomHud();cleanRoomPreview();cleanSettings();ensureGachaGlobalNav();cleanInventory();cleanGiftResult()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
-function boot(){const app=$('#app');if(app&&!observer){observer=new MutationObserver(()=>{repairUnexpectedRoomRoute();guardAutomaticRoomBridge();schedule()});observer.observe(app,{childList:true,subtree:true})}schedule()}
+function boot(){const app=$('#app');if(app&&!observer){observer=new MutationObserver(schedule);observer.observe(app,{childList:true,subtree:true})}schedule()}
 window.addEventListener('click',e=>{
   const t=e.target instanceof Element?e.target:null;if(!t)return;
-  if(t.closest('[data-vn-leave],[data-stable-leave-room],.main-nav [data-page]'))markExplicitRoomExit();
   if(t.closest('[data-open-thoughts]')&&!t.closest('#hellaverseGachaRoot'))saveGoodNav($('.main-nav'));
   const gachaNav=t.closest('#hellaverseGachaRoot .hvg-global-hud');
   if(gachaNav){if(t.closest('[data-hvg-open]')){e.preventDefault();e.stopPropagation();return}document.body.classList.remove('hvg-open');$('#hellaverseGachaRoot')?.remove()}

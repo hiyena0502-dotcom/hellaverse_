@@ -1,11 +1,11 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V4__)return;
-window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V4__=1;
+if(window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V5__)return;
+window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V5__=1;
 
 const K='hellaverse_dialogue_state_v1',META='hellaverse_dialogue_render_meta_v1';
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
 const up=v=>String(v||'').trim().toUpperCase();
 let queued=false,bridge=false,direct=null;
 
@@ -18,7 +18,7 @@ function role(sc,s,m){
   const k=up(sc?.kind||'TALK');return k==='ASK'?'ASK':k==='TALK'?'CONVERSATION':k;
 }
 function synthetic(attrs){
-  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.hvRoomBridge='4';
+  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.hvRoomBridge='5';
   for(const [name,value] of Object.entries(attrs))b.setAttribute(name,String(value??''));host.appendChild(b);bridge=true;try{b.click()}finally{bridge=false;if(b.isConnected)b.remove()}
 }
 function toast(text){let root=$('#toastRoot');if(!root){root=document.createElement('div');root.id='toastRoot';document.body.appendChild(root)}root.innerHTML=`<div class="toast">${esc(text)}</div>`;setTimeout(()=>{if(root)root.innerHTML=''},1700)}
@@ -38,7 +38,7 @@ function askHtml(){const rows=conceptualQuestions();return `<section class="hv-a
 function closeAsk(){$$('[data-hv-ask-panel]').forEach(x=>x.remove());$$('.dialogue-box.hv-ask-open').forEach(x=>x.classList.remove('hv-ask-open'))}
 function openAsk(){const box=$('.character-room .dialogue-box');if(!box){toast('대화가 시작된 뒤 질문할 수 있어요.');return}closeAsk();$$('[data-hv-action-panel]').forEach(x=>x.remove());box.classList.add('hv-ask-open');box.insertAdjacentHTML('beforeend',askHtml())}
 
-function makeBar(){const bar=document.createElement('div');bar.className='hv-room-action-bar';bar.dataset.hvRoomActionBar='4';bar.innerHTML='<button type="button" data-hv-room-command="ASK">ASK</button><button type="button" data-hv-room-command="ACTION">ACTION</button><button type="button" data-hv-room-command="INVENTORY">INVENTORY</button><button type="button" data-hv-room-command="LEAVE">LEAVE ROOM</button>';return bar}
+function makeBar(){const bar=document.createElement('div');bar.className='hv-room-action-bar';bar.dataset.hvRoomActionBar='5';bar.innerHTML='<button type="button" data-hv-room-command="ASK">ASK</button><button type="button" data-hv-room-command="ACTION">ACTION</button><button type="button" data-hv-room-command="INVENTORY">INVENTORY</button><button type="button" data-hv-room-command="LEAVE">LEAVE ROOM</button>';return bar}
 function cleanLegacy(box){for(const utility of $$('.dialogue-utility',box))$$('[data-vn-ask],[data-hv-action],[data-inventory-open],[data-vn-leave],[data-runtime-leave],[data-vn-gift]',utility).forEach(b=>b.remove())}
 function ensureBar(){
   const box=$('.character-room .dialogue-box'),stage=box?.closest('.dialogue-stage');
@@ -55,10 +55,19 @@ function labelNavigation(){for(const b of $$('.character-file [data-room]'))b.te
 function beginDirect(cid){direct={cid:String(cid||''),started:false,attempts:0,deadline:performance.now()+3000};document.body.classList.add('hv-direct-dialogue-entry')}
 function clearDirect(){direct=null;document.body.classList.remove('hv-direct-dialogue-entry')}
 function directStart(){
-  if(!direct)return;if($('.character-room .dialogue-box')){clearDirect();return}if(!$('.character-room'))return;
+  if(!direct)return;
+  if($('.character-room .dialogue-box')){clearDirect();return}
   if(performance.now()>direct.deadline){clearDirect();toast('대화를 시작하지 못했습니다. ENTER ROOM을 다시 눌러주세요.');return}
-  if(!direct.started||direct.attempts<3){const fn=window.__HV_START_CONVERSATION__;if(typeof fn==='function'){direct.attempts++;direct.started=!!fn({fresh:direct.attempts===1})||direct.started}}
-  setTimeout(schedule,70);
+  if(!$('.character-room')){setTimeout(schedule,70);return}
+  if(!direct.started){
+    const fn=window.__HV_START_CONVERSATION__;
+    if(typeof fn==='function'){
+      direct.attempts++;
+      const ok=!!fn({fresh:direct.attempts===1});
+      if(ok)direct.started=true;
+    }
+  }
+  setTimeout(schedule,direct.started?90:70);
 }
 function run(){labelNavigation();ensureBar();directStart()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}

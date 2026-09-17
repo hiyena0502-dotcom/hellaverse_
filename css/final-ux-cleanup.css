@@ -3,16 +3,6 @@
 .hvg-nav-button::after{display:none!important;content:none!important}
 .main-nav{flex:1;min-width:0}.main-nav .ux-settings-last{margin-left:auto}
 
-/* SETTINGS: management stays prominent; redundant/technical panels are removed by JS. */
-.settings-grid.ux-settings-clean{grid-template-columns:minmax(0,1fr)!important;max-width:1120px;margin-right:auto}
-.settings-grid.ux-settings-clean>.settings-management-hub{grid-column:1/-1!important}
-.settings-grid.ux-settings-clean>.settings-panel:not(.settings-management-hub){max-width:760px}
-.hvg-settings-accordion>[data-player-settings-restored]{order:-10}
-.hv-player-restored{display:grid;gap:14px}
-.hv-player-restored>label{display:grid;gap:7px}
-.hv-player-restored>label input{width:100%;min-height:40px;border:1px solid rgba(255,255,255,.09);background:#0d090c;color:#f2ebe6;border-radius:10px;padding:8px 10px}
-.hv-player-restored .hv-player-settings-origins{margin:0}
-
 /* Gacha should sit close to the top edge and waste less vertical space. */
 .hvg-backdrop{padding:8px 16px!important}
 .hvg-shell{min-height:calc(100vh - 16px)!important;border-radius:16px!important}
@@ -51,6 +41,5 @@
  #hellaverseGachaRoot .hvg-global-hud{position:sticky;margin:0;border-radius:0;border-left:0;border-right:0}
  #hellaverseGachaRoot .hvg-global-hud+.hvg-shell{min-height:calc(100vh - 58px)!important}
  .hvg-gacha-layout{grid-template-columns:1fr!important}.hvg-machine{min-height:250px!important}.hvg-empty-result{min-height:260px!important}
- .settings-grid.ux-settings-clean>.settings-panel:not(.settings-management-hub){max-width:none}
  .iv2-choice-modal,.iv2-result{width:100%!important;padding:22px!important}
 }

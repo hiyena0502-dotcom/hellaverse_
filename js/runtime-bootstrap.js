@@ -57,7 +57,8 @@ const scripts=[
 
   ['classic','js/collection-emoji-corrections.js?v=2'],
   ['classic','js/ux/runtime-diagnostics.js?v=6'],
-  ['classic','js/final-ux-cleanup.js?v=14']
+  ['classic','js/final-ux-cleanup.js?v=14'],
+  ['classic','js/dialogue-utility-controls.js?v=1']
 ];
 
 function absolute(src){return new URL(src,document.baseURI).href}

@@ -29,6 +29,7 @@ const scripts=[
   // Canonical dialogue data must be normalized after the default-content merge, before any renderer reads it.
   ['classic','js/dialogue-episode-upgrade-all.js?v=4'],
 
+  // Dialogue ownership: dialogue-ui is the only runtime that advances conversation state.
   ['module','js/dialogue-ui.js?v=55'],
   ['module','js/hv-stable.js?v=56'],
   ['module','js/event-manager.js?v=50'],
@@ -44,20 +45,21 @@ const scripts=[
 
   ['module','js/site-runtime.js?v=67'],
   ['module','js/gacha-collection-addon.js?v=64'],
-  ['classic','js/character-gacha-profiles.js?v=2'],
   ['classic','js/gacha-item-copy-pack.js?v=1'],
   ['classic','js/player-game-loop.js?v=5'],
-
   ['classic','js/settings-management-hub.js?v=3'],
 
+  // Editor-only dialogue helpers. These do not own NEXT / END / room navigation.
   ['classic','js/dialogue-file-editor.js?v=2'],
-  ['classic','js/dialogue-runtime-cleanup.js?v=14'],
   ['classic','js/dialogue-episode-flow.js?v=2'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
-  ['classic','js/dialogue-single-beat-runtime.js?v=13'],
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/dialogue-foundation-safety.js?v=4'],
-  ['classic','js/runtime-integrity-fixes.js?v=1'],
+
+  // Stable SPA bridges and lightweight unified editors.
+  ['classic','js/thought-render-bridge.js?v=1'],
+  ['classic','js/dialogue-action-control.js?v=1'],
+  ['classic','js/collection-gacha-editor.js?v=1'],
 
   ['classic','js/collection-emoji-corrections.js?v=2'],
   ['classic','js/ux/runtime-diagnostics.js?v=6'],

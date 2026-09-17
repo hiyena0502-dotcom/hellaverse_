@@ -1,10 +1,10 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DEFAULT_CONTENT_LOADER_V3__)return;
-window.__HELLAVERSE_DEFAULT_CONTENT_LOADER_V3__=1;
+if(window.__HELLAVERSE_DEFAULT_CONTENT_LOADER_V4__)return;
+window.__HELLAVERSE_DEFAULT_CONTENT_LOADER_V4__=1;
 
 const STATE_KEY='hellaverse_dialogue_state_v1';
-const REVISION='canonical-default-content-v3';
+const REVISION='canonical-default-content-v4';
 const PART_COUNT=11;
 const BASE='js/default-content/default-content-v2.part';
 
@@ -101,7 +101,7 @@ async function fetchText(url){
   finally{clearTimeout(timer)}
 }
 async function loadCanonical(){
-  const parts=await Promise.all(Array.from({length:PART_COUNT},(_,i)=>fetchText(`${BASE}${i+1}.txt?v=3`)));
+  const parts=await Promise.all(Array.from({length:PART_COUNT},(_,i)=>fetchText(`${BASE}${i+1}.txt?v=4`)));
   const parsed=JSON.parse(await inflate(decodeBase64(parts.join(''))));
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('Canonical payload is not an object');
   return parsed;
@@ -148,7 +148,7 @@ window.__HV_DEFAULT_CONTENT_READY__=(async()=>{
     window.dispatchEvent(new CustomEvent('hellaverse:default-content-ready',{detail:{revision:REVISION,counts:merged.defaultContentCounts}}));
     return{ok:true,skipped:false,revision:REVISION,counts:merged.defaultContentCounts};
   }catch(error){
-    console.warn('Canonical default content v3 could not be applied; continuing with existing local data.',error);
+    console.warn('Canonical default content v4 could not be applied; continuing with existing local data.',error);
     return{ok:false,error:String(error?.message||error),revision:REVISION};
   }
 })();

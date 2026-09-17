@@ -16,12 +16,33 @@ async function loadStableCore(){
     const newPick="pick=v=>{let raw=String(v??'');if(/\\[\\[(?:CHARACTER|NARRATION|PLAYER)\\]\\]/i.test(raw))return raw.trim();let a=lines(v);return a.length?a[Math.floor(Math.random()*a.length)]:''}";
     if(!source.includes(oldPick))throw new Error('hv-stable pick() signature changed');
     source=source.replace(oldPick,newPick);
+
     const oldStart="function startScene(sid){let s=S.dialogues.find(x=>x.id===sid),c=C(s.characterId)";
     const newStart="function startScene(sid){let s=S.dialogues.find(x=>x.id===sid);if(!s)return;let c=C(s.characterId)";
-    if(source.includes(oldStart))source=source.replace(oldStart,newStart);
+    if(!source.includes(oldStart))throw new Error('hv-stable startScene() signature changed');
+    source=source.replace(oldStart,newStart);
+    const oldSession="sess={type:'scene',sceneId:s.id,cid:c.id,nodeId:n?.id||'',messages:[],delta:0,start:new Date().toISOString(),done:false};";
+    const newSession="sess={type:'scene',sceneId:s.id,cid:c.id,nodeId:n?.id||'',messages:[],delta:0,start:new Date().toISOString(),done:false,steps:1,visitedNodeIds:[n?.id||''].filter(Boolean)};";
+    if(!source.includes(oldSession))throw new Error('hv-stable scene session signature changed');
+    source=source.replace(oldSession,newSession);
+
+    const oldChoose="function chooseOpt(chid){let s=S.dialogues.find(x=>x.id===sess.sceneId),c=C(sess.cid),n=s.nodes.find(x=>x.id===sess.nodeId),ch=n.choices.find(x=>x.id===chid);if(!ch)return;";
+    const newChoose="function chooseOpt(chid){if(!sess||sess.done)return;let s=S.dialogues.find(x=>x.id===sess.sceneId);if(!s)return;let c=C(sess.cid),n=s.nodes.find(x=>x.id===sess.nodeId);if(!n)return;let ch=n.choices.find(x=>x.id===chid);if(!ch)return;";
+    if(!source.includes(oldChoose))throw new Error('hv-stable chooseOpt() signature changed');
+    source=source.replace(oldChoose,newChoose);
+    const oldNext="let next=ch.nextNodeId?s.nodes.find(x=>x.id===ch.nextNodeId):null;if(next){sess.nodeId=next.id;if(next.text)sess.messages.push({speaker:c.name.toUpperCase(),text:next.text,type:'speech'})}else finishScene(s,c);";
+    const newNext="let next=ch.nextNodeId?s.nodes.find(x=>x.id===ch.nextNodeId):null,steps=Number(sess.steps||1),visited=Array.isArray(sess.visitedNodeIds)?sess.visitedNodeIds:[sess.nodeId].filter(Boolean);if(next&&steps<5&&!visited.includes(next.id)){sess.steps=steps+1;sess.nodeId=next.id;sess.visitedNodeIds=[...visited,next.id];if(next.text){let ns=String(next.speaker||'character').toLowerCase();sess.messages.push({speaker:ns==='player'?'YOU':ns==='narration'?'':c.name.toUpperCase(),text:next.text,type:ns==='narration'?'narration':'speech'})}}else finishScene(s,c);";
+    if(!source.includes(oldNext))throw new Error('hv-stable next-node signature changed');
+    source=source.replace(oldNext,newNext);
+    const oldFinish="function finishScene(s,c){if(s.exitLine)";
+    const newFinish="function finishScene(s,c){if(!s||!c||!sess||sess.done)return;if(s.exitLine)";
+    if(!source.includes(oldFinish))throw new Error('hv-stable finishScene() signature changed');
+    source=source.replace(oldFinish,newFinish);
+
     const oldEntry="let e=S.dialogues.filter(s=>s.characterId===cid&&s.kind==='ENTRY'&&okScene(s,cid).ok).sort((a,b)=>b.priority-a.priority)[0];";
     const newEntry="let entries=S.dialogues.filter(s=>s.characterId===cid&&s.kind==='ENTRY'&&okScene(s,cid).ok),maxEntry=entries.length?Math.max(...entries.map(x=>Number(x.priority||0))):-Infinity,entryPool=entries.filter(x=>Number(x.priority||0)>=maxEntry-1),e=entryPool[Math.floor(Math.random()*entryPool.length)]||entries[0];";
     if(source.includes(oldEntry))source=source.replace(oldEntry,newEntry);
+
     const blob=new Blob([source],{type:'text/javascript'}),url=URL.createObjectURL(blob);
     try{await import(url)}finally{URL.revokeObjectURL(url)}
     return true;
@@ -50,21 +71,20 @@ try{
   localStorage.setItem(metaKey,JSON.stringify(local));
 }catch(error){console.warn('Dialogue metadata sync skipped safely.',error)}
 
-// Keep the authoring taxonomy to the five active play roles and then add the
-// shared Hazbin expansion after canonical defaults have finished merging.
 await loadClassic('js/dialogue-five-role-cleanup.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-a.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-b.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-c.js?v=1');
 await loadClassic('js/charlie-mega-content-pack.js?v=1');
 
-// Relationship progression should be earned. v3 is safe on saves where v2
-// already ran: it only rebalances newly added Charlie mega scenes in that case.
 await loadClassic('js/affection-balance-v3.js?v=1');
 await loadClassic('js/relationship-friction-dialogues.js?v=1');
-
 await loadClassic('js/dialogue-episode-upgrade-all.js?v=4');
 await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
+
+// Upgrade stable character interactions to 2–5 stages only after all content
+// migrations have finished, then validate every nextNodeId before the core loads.
+await loadClassic('js/dialogue-multistage-upgrader-v1.js?v=1');
 
 // One conversation selector, one exit controller, one state machine.
 await loadClassic('js/dialogue-continuity-controller-v6.js?v=2');
@@ -94,7 +114,7 @@ const scripts=[
   ['classic','js/dialogue-file-editor.js?v=2'],
   ['classic','js/dialogue-episode-authoring.js?v=1'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
-  ['classic','js/dialogue-single-beat-runtime-v22.js?v=2'],
+  ['classic','js/dialogue-single-beat-runtime-v23.js?v=1'],
   ['classic','js/editor-ux-suite.js?v=5'],
 
   ['classic','js/thought-render-bridge.js?v=2'],

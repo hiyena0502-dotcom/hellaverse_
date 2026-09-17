@@ -24,9 +24,9 @@
 - `js/dialogue-files/lucifer-action.js`
 - `js/lucifer-conversation-chains.js`
 - `js/character-dialogue-rules.js`
-- `js/hazbin-canon-dialogues.js`
+- `js/hazbin-canon-dialogues.js` — v2부터 Lilith / Speaker of God / Saint Peter를 팩 자체에서 만들지 않습니다.
 - `js/hazbin-room-exits.js` — Hazbin 캐릭터별 EXIT/헤어짐 장면.
-- `js/cast-exclusions.js` — Lilith / Speaker of God / Saint Peter 등 제외 데이터 최종 정리.
+- `js/cast-exclusions.js` — 삭제 캐릭터와 기존 localStorage 잔여 데이터를 최종 정리.
 - `js/dialogue-episode-upgrade-all.js` — 모든 content pack 이후 episode 형태 정규화.
 
 ## Dialogue runtime / editor
@@ -39,8 +39,9 @@
 - `js/dialogue-single-beat-runtime.js` — one-beat/NEXT 표시와 ASK/ACTION submenu 전환.
 - `js/dialogue-mood-indicator.js` — Mood 표시.
 - `js/dialogue-foundation-safety.js` — 대화 데이터 안전 보정.
+- `css/dialogue-stability.css` — 대화 전환 깜빡임/애니메이션 안정화의 단일 CSS 소유자.
 
-`final-ux-cleanup.js`는 더 이상 이전 방 DOM을 복제하거나 `state.page='life'`로 강제 복귀시키지 않습니다.
+`final-ux-cleanup.js`는 더 이상 이전 방 DOM 복제, 강제 `state.page='life'` 복귀, dialogue stability CSS 동적 삽입을 하지 않습니다.
 
 ## Item / Gift / Inventory
 
@@ -75,6 +76,8 @@
 - `js/thought-archive.js`
 - `css/thought-archive.css`
 
+Thought Settings는 Settings grid의 DOM 삽입 시점에 의존하지 않습니다. `css/settings-management-hub.css`에서 순서를 고정해 **MANAGEMENT → PLAYER(전체 폭) → APPEARANCE(왼쪽) + THOUGHT SETTINGS(오른쪽)**으로 유지합니다. 모바일/좁은 화면에서만 한 열로 바뀝니다.
+
 ### 남은 구조 이슈
 
 `thought-archive.js`의 legacy `patchNav()`는 아직 `.main-nav.innerHTML`을 통째로 교체합니다. GACHA/MISSIONS/SETTINGS와 충돌 가능성이 있어 원본 리팩터링 대상입니다. 이 문제가 남아 있는 동안 `final-ux-cleanup.js`의 Thought nav 복구 부분은 제거하지 않습니다.
@@ -86,11 +89,13 @@
 
 ## Settings / Management
 
-- `hv-stable.js` — Settings 원본 렌더.
+- `hv-stable.js` — Settings 원본 렌더. 기본 `.settings-grid`는 데스크톱 2열, 모바일 1열입니다.
 - `settings-rescue.js` — 실제 Settings가 없을 때만 fallback.
 - `settings-management-hub.js` — MANAGEMENT 단일 진입점.
+- `css/settings-management-hub.css` — Settings 패널의 안정적인 grid 순서/배치.
 - `js/ux/runtime-diagnostics.js` — Runtime Diagnostics.
 - `final-ux-cleanup.js` — 표시 정리만 담당하며 Settings 복구/재삽입은 더 이상 하지 않습니다.
+- `css/final-ux-cleanup.css` — 예전 `.ux-settings-clean` 1열 강제 및 Gacha Player 복구 스타일은 삭제했습니다.
 
 ## Other active modules
 
@@ -114,10 +119,18 @@
 - `js/affiliation-music.js`
 - `css/affiliation-music.css`
 
+추가로 삭제/통합한 stale code:
+
+- Gacha의 Settings 전체 override 및 Gacha Settings accordion
+- `final-ux-cleanup.js`의 Player Settings 재삽입/Gacha Settings 제거 로직
+- `final-ux-cleanup.css`의 Settings 1열 강제 및 옛 Player 복구 CSS
+- `final-ux-cleanup.js`의 `dialogue-stability.css` 중복 동적 삽입
+- Hazbin canon 팩의 Saint Peter 재생성/대화/질문 잔여 코드
+
 `tests/`와 문서 파일은 런타임에 로드되지 않으므로 유지합니다.
 
 ## 현재 리팩터링 우선순위
 
-1. Dialogue — 상태 소유자를 `dialogue-ui.js` 중심으로 더 줄이기.
-2. Thoughts — `patchNav()`의 nav 전체 교체 제거.
-3. Core defaults — 삭제된 기본 캐릭터가 원본 seed에 다시 들어가지 않도록 정리.
+1. Thoughts — `patchNav()`의 nav 전체 교체 제거 후 `final-ux-cleanup`의 nav 복구도 삭제.
+2. Dialogue — 상태 소유자를 `dialogue-ui.js` 중심으로 더 줄이기.
+3. Core defaults — 삭제된 기본 캐릭터가 `hv-stable.js` seed에 다시 들어가지 않도록 정리.

@@ -14,15 +14,16 @@
 
 ## Repository guide
 
-파일이 늘어나면서 기능이 서로 덮어쓰는 문제를 줄이기 위해 새 코드는 역할별 폴더를 사용합니다.
+현재 런타임은 별도의 공용 state wrapper를 두지 않습니다. 각 기능이 `hellaverse_dialogue_state_v1`을 읽고 자신이 소유한 필드만 수정하며, 화면 갱신이 필요하면 `hellaverse:state-updated` 이벤트를 사용합니다.
 
-- `js/core/` — 공용 state/event helper
-- `js/ux/` — UX, 접근성, runtime diagnostics
-- `css/ux/` — UX 전용 style
+- `js/*.js` — 현재 기능/콘텐츠 런타임. 기존 로딩 순서와 localStorage 마이그레이션 의존성 때문에 임의로 파일을 이동하지 않습니다.
+- `js/ux/` — UX/runtime diagnostics
+- `css/*.css` — 현재 기능 스타일
+- `css/ux/` — 진단 UI 스타일
 - `docs/ARCHITECTURE.md` — 로딩 순서, state 규칙, ID 규칙, 리팩터링 정책
 - `docs/FILE_MAP.md` — 현재 실제로 로드되는 파일과 역할
 
-기존 `js/*.js` 파일은 한 번에 옮기지 않습니다. 캐시/로드 순서 문제를 피하기 위해 기능을 수정할 때마다 `collection/gacha → gifts → dialogue → editor` 순서로 점진적으로 정리합니다.
+새 보정 파일을 계속 추가하기보다 기존 기능 소유자에 통합하는 것을 우선합니다. `repair`, `cleanup`, `migration`, `safety` 파일은 실제 역할이 사라지면 로더와 파일을 함께 제거합니다.
 
 ## Debugging
 

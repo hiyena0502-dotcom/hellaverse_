@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V6__)return;
-window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V6__=1;
+if(window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V7__)return;
+window.__HELLAVERSE_DIALOGUE_RUNTIME_CLEANUP_V7__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const META_KEY='hellaverse_dialogue_render_meta_v1';
@@ -62,10 +62,18 @@ function ensureRoomUtility(box){
  const expected='LOG|ASK|ACTION|INVENTORY|LEAVE ROOM';
  if(current.dataset.stableUtility!==expected){const wrap=document.createElement('div');wrap.innerHTML=roomUtility();current.replaceWith(wrap.firstElementChild)}
 }
+function ensureRuntimeReturn(box){
+ if(!box)return null;
+ let b=$('[data-runtime-return]',box)||$('.dialogue-return',box);
+ if(!b){b=document.createElement('button');b.className='dialogue-return';b.textContent='RETURN';box.appendChild(b)}
+ b.type='button';b.dataset.runtimeReturn='1';b.removeAttribute('data-end');b.hidden=false;b.style.removeProperty('display');
+ return b;
+}
 function emptyState(box,mode,message){
  ensureRoomUtility(box);
  const utility=$('.dialogue-utility',box)?.outerHTML||roomUtility();
- box.innerHTML=`${utility}<p class="speaker">${mode}</p><p class="dialogue-current">${message}</p><button class="dialogue-return" data-end>RETURN</button>`;
+ box.innerHTML=`${utility}<p class="speaker">${mode}</p><p class="dialogue-current">${message}</p><button type="button" class="dialogue-return" data-runtime-return>RETURN</button>`;
+ box.dataset.hvSpecialMenu=mode;
  pendingMode='';sessionStorage.removeItem(RKEY);
 }
 function sceneButtonsFor(box,mode){
@@ -78,9 +86,13 @@ function sceneButtonsFor(box,mode){
 function showQuestionPicker(box){
  ensureRoomUtility(box);
  const all=$$('[data-scene]',box),questions=sceneButtonsFor(box,'QUESTION');
- if(!all.length)return false;
- for(const b of all)b.hidden=!questions.includes(b);
- box.dataset.hvQuestionPicker='1';
+ if(!all.length){emptyState(box,'QUESTION','지금 물어볼 수 있는 질문이 없습니다.');return true}
+ for(const b of all){const visible=questions.includes(b);b.hidden=!visible;if(visible)b.style.removeProperty('display')}
+ box.dataset.hvQuestionPicker='1';box.dataset.hvSpecialMenu='QUESTION';
+ const speaker=$('.speaker',box),list=$('.choice-list',box);
+ if(speaker){speaker.hidden=false;speaker.style.removeProperty('display')}
+ if(list){list.hidden=false;list.style.removeProperty('display')}
+ ensureRuntimeReturn(box);
  pendingMode='';sessionStorage.removeItem(RKEY);
  if(!questions.length)emptyState(box,'QUESTION','지금 물어볼 수 있는 질문이 없습니다.');
  return true;
@@ -99,10 +111,11 @@ function chooseCandidate(box,mode){
 function autoStart(){
  const box=$('.character-room .dialogue-box');if(!box)return;
  ensureRoomUtility(box);
- const sceneButtons=$$('[data-scene]',box);if(!sceneButtons.length)return;
  const mode=pendingMode||up(sessionStorage.getItem(RKEY)||'');
  if(!['CONVERSATION','QUESTION','ACTION'].includes(mode))return;
+ const sceneButtons=$$('[data-scene]',box);
  if(mode==='QUESTION'){showQuestionPicker(box);return}
+ if(!sceneButtons.length){emptyState(box,mode,'지금 시작할 수 있는 에피소드가 없습니다.');return}
  const target=chooseCandidate(box,mode);
  if(target){
   pendingMode='';sessionStorage.removeItem(RKEY);
@@ -121,7 +134,7 @@ document.addEventListener('click',e=>{
    pendingMode=mode;
    sessionStorage.setItem(RKEY,mode);
    const box=$('.character-room .dialogue-box');
-   if(box){box.removeAttribute('data-hv-episode-auto');box.removeAttribute('data-hv-question-picker')}
+   if(box){box.removeAttribute('data-hv-episode-auto');box.removeAttribute('data-hv-question-picker');box.removeAttribute('data-hv-special-menu')}
   }
  }
 },true);

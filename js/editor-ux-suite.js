@@ -1,13 +1,25 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_EDITOR_UX_SUITE_V3__)return;
-window.__HELLAVERSE_EDITOR_UX_SUITE_V3__=1;
+if(window.__HELLAVERSE_EDITOR_UX_SUITE_V4__)return;
+window.__HELLAVERSE_EDITOR_UX_SUITE_V4__=1;
 
+const STATE_KEY='hellaverse_dialogue_state_v1';
 let queued=false;
 const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const byId=id=>document.getElementById(id);
 const labelFor=id=>byId(id)?.closest('label')||null;
+const esc=(v='')=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
+function readState(){try{return JSON.parse(localStorage.getItem(STATE_KEY)||'{}')||{}}catch{return{}}}
+function writeState(state,clearDirty=false){
+  try{
+    const value=JSON.stringify(state);
+    localStorage.setItem(STATE_KEY,value);
+    try{window.dispatchEvent(new StorageEvent('storage',{key:STATE_KEY,newValue:value}))}catch{}
+    window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'editor-ux-suite',clearDirty}}));
+  }catch(error){console.warn('Could not save editor compatibility state',error)}
+}
 function move(ids,root,wide=[]){
   const wideSet=new Set(wide);
   for(const id of ids){
@@ -58,6 +70,79 @@ function wrapActions(card,saveSelector,newSelector){
 function markSavedPanel(card){
   const next=card.nextElementSibling;
   if(next?.classList.contains('saved-panel'))next.classList.add('hv-suite-saved');
+}
+
+function characterFromProfile(state,root){
+  const cid=root.querySelector('[data-room]')?.dataset.room||state.profile||'';
+  return (state.characters||[]).find(c=>c?.id===cid)||null;
+}
+function simplifyPublicProfiles(state){
+  $$('.character-file').forEach(root=>{
+    const c=characterFromProfile(state,root);
+    const sections=$('.file-sections',root);
+    if(!c||!sections)return;
+    const description=String(c.description||'').trim();
+    const key=`${c.id}|${description}`;
+    if(sections.dataset.simpleProfileKey===key)return;
+    sections.dataset.simpleProfileKey=key;
+    sections.innerHTML=`<section class="hv-simple-description-section"><h3>ABOUT</h3><p>${description?esc(description):'<span class="empty-state">아직 한 줄 설명이 없습니다.</span>'}</p></section>`;
+  });
+}
+function hideLegacyProfileFields(){
+  const editor=$('.editor-main');
+  if(!editor||!$('#pName',editor))return;
+  const ids=['pStatus','ppersonality','pspeech','pstory','pfeatures','prelations','pSample','pTags'];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    const label=el?.closest('label');
+    if(label)label.style.display='none';
+  });
+}
+function addDescriptionEditor(state){
+  const editor=$('.editor-main');
+  if(!editor||!$('#pName',editor))return;
+  const grid=$('.form-grid',editor);
+  if(!grid)return;
+  const cid=$('#edChar')?.value||state.active||'';
+  const c=(state.characters||[]).find(x=>x?.id===cid);
+  if(!c)return;
+  let label=$('.hv-simple-description-input',grid);
+  if(!label){
+    label=document.createElement('label');
+    label.className='full hv-simple-description-input';
+    const hiddenAnchor=document.getElementById('pStatus')?.closest('label');
+    if(hiddenAnchor)hiddenAnchor.before(label);else grid.appendChild(label);
+  }
+  const value=String(c.description||'');
+  if(label.dataset.cid!==cid){
+    label.dataset.cid=cid;
+    label.innerHTML=`CHARACTER DESCRIPTION<input id="hvCharacterDescription" maxlength="180" placeholder="캐릭터를 한 줄로 설명하세요" value="${esc(value)}"><small>프로필에는 이 한 줄 설명만 표시됩니다.</small>`;
+  }
+}
+function simplifyProfileEditor(state){
+  hideLegacyProfileFields();
+  addDescriptionEditor(state);
+}
+function redirectLegacyMemorySection(){
+  const state=readState();
+  if(state.page!=='editor'||state.section!=='memory')return false;
+  state.section='dialogue';
+  if(state.draft&&typeof state.draft==='object')delete state.draft.memory;
+  writeState(state,true);
+  return true;
+}
+function removeLegacyMemoryUI(){
+  $$('.editor-tabs [data-sec="memory"]').forEach(el=>el.remove());
+  const editor=$('.editor-main');
+  if(!editor)return;
+  $$('[data-save-mem],[data-new="memory"]',editor).forEach(el=>el.remove());
+}
+function enhanceLegacyCoreEditor(){
+  if(redirectLegacyMemorySection())return;
+  const state=readState();
+  simplifyPublicProfiles(state);
+  simplifyProfileEditor(state);
+  removeLegacyMemoryUI();
 }
 
 function enhanceGift(){
@@ -122,6 +207,7 @@ function cleanRemovedValidationUI(){
 }
 function enhance(){
   cleanRemovedValidationUI();
+  enhanceLegacyCoreEditor();
   enhanceGift();
   enhanceEventModal();
 }
@@ -130,6 +216,35 @@ function schedule(){
   queued=true;
   requestAnimationFrame(()=>{queued=false;enhance()});
 }
+
+document.addEventListener('click',event=>{
+  const target=event.target instanceof Element?event.target:null;
+  if(!target)return;
+  const memoryTab=target.closest('[data-sec="memory"]');
+  if(memoryTab){
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+    const state=readState();
+    state.page='editor';state.section='dialogue';
+    if(state.draft&&typeof state.draft==='object')delete state.draft.memory;
+    writeState(state,true);
+    return;
+  }
+  if(target.closest('[data-save-profile]')){
+    const input=$('#hvCharacterDescription');
+    if(!input)return;
+    const state=readState();
+    const cid=$('#edChar')?.value||state.active||'';
+    const description=input.value.trim();
+    setTimeout(()=>{
+      const latest=readState();
+      const c=(latest.characters||[]).find(x=>x?.id===cid);
+      if(!c)return;
+      c.description=description;
+      writeState(latest,true);
+    },0);
+  }
+},true);
+
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
 window.addEventListener('hellaverse:state-updated',schedule);
 document.addEventListener('DOMContentLoaded',schedule);

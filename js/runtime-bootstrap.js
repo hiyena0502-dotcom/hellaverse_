@@ -71,20 +71,22 @@ try{
   localStorage.setItem(metaKey,JSON.stringify(local));
 }catch(error){console.warn('Dialogue metadata sync skipped safely.',error)}
 
+// Load every authored/default content pack before touching dialogue graphs.
 await loadClassic('js/dialogue-five-role-cleanup.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-a.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-b.js?v=1');
 await loadClassic('js/hazbin-major-dialogue-expansion-c.js?v=1');
 await loadClassic('js/charlie-mega-content-pack.js?v=1');
 await loadClassic('js/charlie-bright-guilt-duality-pack.js?v=1');
-
 await loadClassic('js/affection-balance-v3.js?v=1');
 await loadClassic('js/relationship-friction-dialogues.js?v=1');
-await loadClassic('js/dialogue-episode-upgrade-all.js?v=4');
 await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 
-await loadClassic('js/dialogue-multistage-upgrader-v1.js?v=1');
+// Migrations are one-shot only. No dialogue graph is mutated while a scene is playing.
+await loadClassic('js/dialogue-content-normalize-once-v1.js?v=1');
+await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=4');
 
+// One conversation selector, one exit controller, one state machine.
 await loadClassic('js/dialogue-continuity-controller-v6.js?v=2');
 await loadClassic('js/room-exit-transition.js?v=2');
 await loadStableCore();
@@ -123,7 +125,7 @@ const scripts=[
   ['classic','js/final-ux-cleanup.js?v=14'],
 
   ['classic','js/dialogue-interaction-engine-v2.js?v=1'],
-  ['classic','js/dialogue-room-controller-v3.js?v=2']
+  ['classic','js/dialogue-room-controller-v3.js?v=3']
 ];
 
 for(const [type,src] of scripts){if(type==='module')await loadModule(src);else await loadClassic(src)}

@@ -5,7 +5,7 @@ if(ready&&typeof ready.then==='function'){
 
 function absolute(src){return new URL(src,document.baseURI).href}
 async function loadModule(src){try{await import(absolute(src));return true}catch(error){console.error(`Failed to load module: ${src}`,error);return false}}
-function loadClassic(src){return new Promise(resolve=>{const script=document.createElement('script');script.src=src;script.async=false;script.onload=()=>resolve(true);script.onerror=()=>{console.error(`Failed to load script: ${src}`,error);resolve(false)};document.head.appendChild(script)})}
+function loadClassic(src){return new Promise(resolve=>{const script=document.createElement('script');script.src=src;script.async=false;script.onload=()=>resolve(true);script.onerror=(event)=>{console.error(`Failed to load script: ${src}`,event);resolve(false)};document.head.appendChild(script)})}
 
 async function loadStableCore(){
   const src='js/hv-stable.js?v=56';

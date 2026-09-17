@@ -1,12 +1,11 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_FOUNDATION_V3__)return;
-window.__HELLAVERSE_DIALOGUE_FOUNDATION_V3__=1;
+if(window.__HELLAVERSE_DIALOGUE_FOUNDATION_V4__)return;
+window.__HELLAVERSE_DIALOGUE_FOUNDATION_V4__=1;
 let queued=false,lastAction='',lastAt=0;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 
 function runtimeUX(){
-  document.querySelectorAll('[data-hv-health-check],[data-hv-health-backdrop],.hv-health-modal,.hv-editor-check').forEach(el=>el.remove());
   const stage=$('.dialogue-stage');
   if(!stage)return;
   const lines=$('.dialogue-lines',stage);

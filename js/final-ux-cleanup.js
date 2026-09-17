@@ -1,11 +1,10 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V13__)return;
-window.__HELLAVERSE_FINAL_UX_CLEANUP_V13__=1;
+if(window.__HELLAVERSE_FINAL_UX_CLEANUP_V14__)return;
+window.__HELLAVERSE_FINAL_UX_CLEANUP_V14__=1;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 let queued=false,observer=null;
-const NAV_KEY='hellaverse_current_main_nav_v1';
 const txt=el=>String(el?.textContent||'').replace(/\s+/g,' ').trim();
 
 function cleanRedundantSpeakers(){
@@ -14,27 +13,8 @@ function cleanRedundantSpeakers(){
     if(speaker&&$('.dialogue-lines',box))speaker.style.setProperty('display','none','important');
   }
 }
-function saveGoodNav(nav){
-  if(!nav)return;
-  const hasSettings=!!nav.querySelector('[data-page="settings"],[data-hv-settings-rescue]');
-  const hasThoughts=!!nav.querySelector('[data-open-thoughts]');
-  const hasCurrentExtras=!!nav.querySelector('[data-hvg-open],[data-hv-missions]');
-  if(hasSettings&&hasThoughts&&hasCurrentExtras){
-    try{sessionStorage.setItem(NAV_KEY,nav.innerHTML)}catch{}
-  }
-}
-function restoreThoughtNav(nav){
-  if(!nav||!$('.thought-page'))return;
-  const broken=!nav.querySelector('[data-page="settings"],[data-hv-settings-rescue]')||!nav.querySelector('[data-hvg-open]')||!nav.querySelector('[data-hv-missions]');
-  if(!broken)return;
-  let saved='';
-  try{saved=sessionStorage.getItem(NAV_KEY)||''}catch{}
-  if(saved&&nav.innerHTML!==saved)nav.innerHTML=saved;
-}
 function cleanNav(){
   for(const nav of $$('.main-nav')){
-    if($('.thought-page'))restoreThoughtNav(nav);
-    else if(!nav.closest('#hellaverseGachaRoot'))saveGoodNav(nav);
     for(const b of $$('button,a',nav)){
       const t=txt(b).toUpperCase();
       if(t.includes('GACHA')){b.classList.add('hvg-nav-button');if(t!=='GACHA')b.textContent='GACHA'}
@@ -72,7 +52,6 @@ function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queu
 function boot(){const app=$('#app');if(app&&!observer){observer=new MutationObserver(schedule);observer.observe(app,{childList:true,subtree:true})}schedule()}
 window.addEventListener('click',e=>{
   const t=e.target instanceof Element?e.target:null;if(!t)return;
-  if(t.closest('[data-open-thoughts]')&&!t.closest('#hellaverseGachaRoot'))saveGoodNav($('.main-nav'));
   const gachaNav=t.closest('#hellaverseGachaRoot .hvg-global-hud');
   if(gachaNav){if(t.closest('[data-hvg-open]')){e.preventDefault();e.stopPropagation();return}document.body.classList.remove('hvg-open');$('#hellaverseGachaRoot')?.remove()}
   if(t.closest('[data-hvg-open]')||t.closest('#hellaverseGachaRoot'))setTimeout(schedule,0);

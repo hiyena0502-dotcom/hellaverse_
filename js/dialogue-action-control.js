@@ -1,13 +1,13 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_ACTION_CONTROL_V1__)return;
-window.__HELLAVERSE_DIALOGUE_ACTION_CONTROL_V1__=1;
+if(window.__HELLAVERSE_DIALOGUE_ACTION_CONTROL_V2__)return;
+window.__HELLAVERSE_DIALOGUE_ACTION_CONTROL_V2__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const up=v=>String(v||'').trim().toUpperCase();
-let queued=false,actionPending=false,bridge=false;
+let queued=false,actionPending=false,conversationPending=false,bridge=false;
 
 function read(){try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}}
 function choices(sc){return(sc?.nodes||[]).flatMap(n=>Array.isArray(n?.choices)?n.choices:[])}
@@ -49,22 +49,81 @@ function ensureActionButton(){
   else utility.appendChild(button);
 }
 
+function availableSceneButtons(box,mode){
+  const state=read(),byId=new Map((state.dialogues||[]).map(sc=>[String(sc.id),sc]));
+  return $$('[data-scene]',box).filter(button=>{
+    if(button.disabled||button.classList.contains('locked')||button.hidden)return false;
+    const scene=byId.get(String(button.dataset.scene||''));
+    return !!scene&&fileOf(scene,state)===mode;
+  }).map(button=>({button,scene:byId.get(String(button.dataset.scene||''))}));
+}
+function pickConversation(rows,state){
+  if(!rows.length)return null;
+  const cid=String(state.active||'');
+  const recent=new Set(state.visits?.[cid]?.recentSceneIds||[]);
+  const unseen=rows.filter(({scene})=>!scene.used&&!recent.has(scene.id));
+  const nonRecent=rows.filter(({scene})=>!recent.has(scene.id));
+  const pool=unseen.length?unseen:nonRecent.length?nonRecent:rows;
+  let total=0;
+  const weighted=pool.map(row=>{
+    const base=Math.max(.1,Number(row.scene?.probability==null?100:row.scene.probability)/100);
+    const priority=Math.max(.25,1+Number(row.scene?.priority||0));
+    const weight=base*priority;total+=weight;return{...row,weight};
+  });
+  let n=Math.random()*Math.max(total,.0001);
+  for(const row of weighted){n-=row.weight;if(n<=0)return row.button}
+  return weighted.at(-1)?.button||pool[0]?.button||null;
+}
+function concealConversationPicker(box){
+  if(!box)return;
+  box.dataset.hvConversationAuto='1';
+  box.style.visibility='hidden';
+  box.style.pointerEvents='none';
+}
+function releaseConversationPicker(box){
+  if(!box)return;
+  box.style.removeProperty('visibility');
+  box.style.removeProperty('pointer-events');
+  delete box.dataset.hvConversationAuto;
+}
+function autoStartConversation(){
+  if(!conversationPending)return false;
+  const box=$('.character-room .dialogue-box');if(!box)return false;
+  if($('[data-vn-page]',box)||$('.dialogue-lines',box)){
+    conversationPending=false;releaseConversationPicker(box);return false;
+  }
+  const sceneButtons=$$('[data-scene]',box);if(!sceneButtons.length)return false;
+  concealConversationPicker(box);
+  const state=read(),target=pickConversation(availableSceneButtons(box,'CONVERSATION'),state);
+  if(!target){
+    conversationPending=false;
+    const back=$('[data-end]',box);
+    if(back){bridge=true;try{back.click()}finally{bridge=false}}
+    else releaseConversationPicker(box);
+    return true;
+  }
+  conversationPending=false;
+  bridge=true;
+  try{target.click()}finally{bridge=false}
+  setTimeout(schedule,0);
+  return true;
+}
+
 function openTalkPicker(){
   const room=$('.character-room');if(!room||!actionPending)return;
   const talk=$('[data-action="TALK"]',room);
   if(talk){bridge=true;try{talk.click()}finally{bridge=false}}
   setTimeout(schedule,0);
 }
-
 function beginActionPicker(){
   if(actionPending)return;
+  conversationPending=false;
   actionPending=true;
   const box=$('.character-room .dialogue-box');
   if(box)clickBridge({'data-end':''});
   setTimeout(openTalkPicker,0);
   setTimeout(openTalkPicker,80);
 }
-
 function filterActionPicker(){
   if(!actionPending)return;
   const box=$('.character-room .dialogue-box');if(!box)return;
@@ -84,7 +143,11 @@ function filterActionPicker(){
   }else empty?.remove();
 }
 
-function run(){ensureActionButton();filterActionPicker()}
+function run(){
+  ensureActionButton();
+  if(autoStartConversation())return;
+  filterActionPicker();
+}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 
 window.addEventListener('click',event=>{
@@ -93,12 +156,20 @@ window.addEventListener('click',event=>{
   if(target.closest('[data-hv-action]')){
     event.preventDefault();event.stopImmediatePropagation();beginActionPicker();return;
   }
+  const talk=target.closest('.character-room [data-action="TALK"]');
+  if(talk&&!actionPending){
+    conversationPending=true;
+    setTimeout(schedule,0);
+    return;
+  }
   const scene=target.closest('[data-scene]');
   if(scene&&actionPending){
     const state=read(),sc=(state.dialogues||[]).find(x=>String(x.id)===String(scene.dataset.scene||''));
     if(sc&&fileOf(sc,state)==='ACTION')actionPending=false;
   }
-  if(target.closest('[data-vn-leave],[data-page],[data-room],[data-runtime-return]'))actionPending=false;
+  if(target.closest('[data-vn-leave],[data-page],[data-room],[data-runtime-return]')){
+    actionPending=false;conversationPending=false;
+  }
 },true);
 
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});

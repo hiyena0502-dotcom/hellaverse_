@@ -3,6 +3,25 @@ if(ready&&typeof ready.then==='function'){
   try{await ready}catch(error){console.warn('Default content readiness failed safely.',error)}
 }
 
+// The canonical backup still carries eight legacy Eve dialogue index entries even though Eve is excluded.
+// Remove those orphan indexes after the default merge so the deleted character leaves no dialogue-map residue.
+try{
+  const key='hellaverse_dialogue_state_v1';
+  const raw=localStorage.getItem(key);
+  if(raw){
+    const state=JSON.parse(raw)||{};
+    const ids=[
+      'base-v1-eve-entry-1','base-v1-eve-entry-2','base-v1-eve-entry-3',
+      'base-v1-eve-ask-1','base-v1-eve-ask-2','base-v1-eve-ask-3',
+      'base-v1-eve-talk-1','base-v1-eve-talk-2'
+    ];
+    for(const mapKey of ['dialogueFileMap','dialogueMeta']){
+      if(state[mapKey]&&typeof state[mapKey]==='object')for(const id of ids)delete state[mapKey][id];
+    }
+    localStorage.setItem(key,JSON.stringify(state));
+  }
+}catch(error){console.warn('Excluded dialogue index cleanup skipped safely.',error)}
+
 const scripts=[
   ['module','js/dialogue-ui.js?v=55'],
   ['module','js/hv-stable.js?v=56'],

@@ -465,18 +465,24 @@ function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
  const q=(casual,polite)=>formal?polite:casual;
  if(theme==='duck'&&motif){
   if(String(cid)===String(ownerId)){
-   const detail=duckDetail(i);
+   const detail=duckDetail(i),lucifer=String(cid)==='lucifer-morningstar';
+   const r1=lucifer?`루시퍼가 「${item}」의 ${O(detail)} 가리키며 금세 신이 난다. “${motif.name} 모티브로 만들 거면 이건 빠질 수 없잖아! 디테일이 중요하다고.”`:response;
+   const r2=lucifer?`루시퍼가 오리를 한 바퀴 돌려 보인다. “제일 살리고 싶었던 부분? ${detail}. 그게 ${motif.name}답다는 걸 제일 빨리 보여주니까.”`:context;
+   const r3=lucifer?`루시퍼가 ${O(detail)} 다시 확인하고 만족스럽게 웃는다. “응, 바로 그 부분. 그거 때문에 이 버전이 꽤 마음에 들어.”`:silent;
    return[
-    row('motif-why',`「${item}」의 ${O(detail)} 왜 넣었는지 묻는다.`,q(`이 「${item}」, ${detail}까지 넣은 이유가 뭐야?`,`이 「${item}」, ${detail}까지 넣으신 이유가 뭐예요?`),response,plus),
-    row('motif-show',`${motif.name}에게 ${O('「'+item+'」')} 보여준 적 있는지 묻는다.`,q(`${motif.name}한테 이 「${item}」도 보여준 적 있어?`,`${motif.name}한테 이 「${item}」도 보여주신 적 있으세요?`),context,delta),
-    row('motif-detail',`「${item}」에서 ${motif.name}답게 만든 부분을 살펴본다.`,`「${item}」의 ${O(detail)} 가까이 살펴보며 건넨다.`,silent,quiet,'action')
+    row('motif-why',`「${item}」의 ${O(detail)} 왜 넣었는지 묻는다.`,q(`이 「${item}」, ${detail}까지 넣은 이유가 뭐야?`,`이 「${item}」, ${detail}까지 넣으신 이유가 뭐예요?`),r1,plus),
+    row('motif-focus',`${motif.name} 모티브 중 가장 살리고 싶었던 부분을 묻는다.`,q(`이거 만들 때 ${motif.name}의 어떤 점을 제일 살리고 싶었어?`,`이거 만드실 때 ${motif.name}의 어떤 점을 제일 살리고 싶으셨어요?`),r2,delta),
+    row('motif-detail',`「${item}」에서 ${motif.name}답게 만든 부분을 살펴본다.`,`「${item}」의 ${O(detail)} 가까이 살펴보며 건넨다.`,r3,quiet,'action')
    ]
   }
   if(motif.id&&String(cid)===String(motif.id)){
+   const detail=duckDetail(i),self1=response+` “닮았냐고? 적어도 ${detail}은 내 쪽에서 가져온 티가 나네.”`,
+    self2=context+` “${owner}가 나를 이렇게 봤다는 거면, ${detail}부터 집은 이유는 알겠어.”`,
+    self3=silent+` ${who}가 「${item}」의 ${O(detail)} 한 번 더 확인한다.`;
    return[
-    row('motif-self',`${S('「'+item+'」')} 본인을 닮았는지 묻는다.`,q(`이 「${item}」, 직접 보니까 너랑 좀 닮은 것 같아?`,`이 「${item}」, 직접 보시면 본인하고 좀 닮았다고 생각하세요?`),response,plus),
-    row('motif-maker',`${S(owner)} 자신을 이렇게 표현한 게 어떤지 묻는다.`,q(`${S(owner)} 너를 이렇게 만든 거, 마음에 들어?`,`${S(owner)} 이렇게 표현한 거, 마음에 드세요?`),context,delta),
-    row('motif-compare',`「${item}」에서 실제 모습과 닮은 부분을 찾아본다.`,`「${item}」과 실제 모습을 번갈아 보며 조심스럽게 건넨다.`,silent,quiet,'action')
+    row('motif-self',`${S('「'+item+'」')} 본인을 닮았는지 묻는다.`,q(`이 「${item}」, 직접 보니까 너랑 좀 닮은 것 같아?`,`이 「${item}」, 직접 보시면 본인하고 좀 닮았다고 생각하세요?`),self1,plus),
+    row('motif-maker',`${S(owner)} 자신을 이렇게 표현한 게 어떤지 묻는다.`,q(`${S(owner)} 너를 이렇게 만든 거, 마음에 들어?`,`${S(owner)} 이렇게 표현한 거, 마음에 드세요?`),self2,delta),
+    row('motif-compare',`「${item}」에서 실제 모습과 닮은 부분을 찾아본다.`,`「${item}」과 실제 모습을 번갈아 보며 조심스럽게 건넨다.`,self3,quiet,'action')
    ]
   }
   return[

@@ -41,6 +41,7 @@ function processCompletions(){
     if(changed){
       const value=JSON.stringify(s);
       localStorage.setItem(K,value);
+      try{window.dispatchEvent(new StorageEvent('storage',{key:K,newValue:value,storageArea:localStorage,url:location.href}))}catch{}
       window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'event-progression-runtime',clearDirty:false}}));
     }
   }catch(error){

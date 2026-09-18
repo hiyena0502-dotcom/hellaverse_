@@ -1,10 +1,16 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V5__)return;
-window.__HELLAVERSE_AMBIENT100_RUNTIME_V5__=1;
+if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V6__)return;
+window.__HELLAVERSE_AMBIENT100_RUNTIME_V6__=1;
 
-const K='hellaverse_dialogue_state_v1',PACK='ambient100-v5';
+const K='hellaverse_dialogue_state_v1',PACK='ambient100-v6';
 const EXCLUDED=new Set(['eve','lilith-morningstar','speaker-of-god','michael','gabriel','azrael','saint-peter','st-peter','peter']);
+const FORMAL_PLAYER_TARGETS=new Set([
+ 'lucifer-morningstar','alastor','husk','sir-pentious','sera','adam','vox','valentino',
+ 'carmilla-carmine','rosie','zestial','paimon','satan','mammon','asmodeus','beelzebub',
+ 'belphegor','leviathan','stolas'
+]);
+const formalTarget=cid=>FORMAL_PLAYER_TARGETS.has(String(cid||''));
 const $=(s,r=document)=>r.querySelector(s);
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
 const split=v=>Array.isArray(v)?v.map(String).map(clean).filter(Boolean):String(v||'').split(/[\n,;/|]+/).map(clean).filter(Boolean);
@@ -475,6 +481,30 @@ const QB=[
  '{topic}을 다시 처음부터 한다면 바꿀 게 있어?',
  '{topic} 얘기를 지금 꺼내도 괜찮은 이유가 있어?'
 ];
+const QA_FORMAL=[
+ '{topic}에서 제일 먼저 보시는 건 뭐예요?',
+ '{topic} 얘기하실 때 태도가 달라지는 이유가 있어요?',
+ '{topic}에선 절대 양보하지 않는 기준이 뭐예요?',
+ '{topic} 때문에 생각이 바뀐 적도 있으세요?',
+ '{topic}을 다른 사람이 건드리면 보통 어떻게 하세요?',
+ '{topic}에서 제일 싫어하시는 오해는 뭐예요?',
+ '{topic}을 누군가에게 설명하신다면 어디부터 말씀하실 거예요?',
+ '{topic}에 대해 예전이랑 지금 생각이 달라지셨어요?',
+ '{topic}에서 혼자 결정하지 않는 부분도 있으세요?',
+ '{topic}을 계속 붙잡고 계신 이유가 뭐예요?'
+];
+const QB_FORMAL=[
+ '{topic}에서 의외로 마음에 드는 부분도 있으세요?',
+ '다른 사람은 {topic}을 다르게 볼 것 같은데, 어떻게 생각하세요?',
+ '{topic} 때문에 누군가와 부딪힌 적 있으세요?',
+ '{topic}을 아예 피하고 싶은 날도 있으세요?',
+ '{topic}에서 가장 기억에 남는 순간은 뭐예요?',
+ '{topic}을 너무 심각하게 생각한다는 말을 들은 적 있으세요?',
+ '{topic}에서 후회하시는 선택도 있으세요?',
+ '{topic}에 관해서는 누구를 제일 믿으세요?',
+ '{topic}을 다시 처음부터 하신다면 바꾸고 싶은 게 있으세요?',
+ '{topic} 얘기를 지금 꺼내도 괜찮은 이유가 있으세요?'
+];
 const SUFFIX=[' 상대가 끼어들 틈을 남기며 말을 멈춘다.',' 이번에는 농담이나 격식으로 끝까지 숨기지 않는다.'];
 const ANGLES=['첫인상','습관','기준','변화','충돌','오해','설명','과거와 지금','신뢰','놓지 못하는 것'];
 const FOLLOW_A=[
@@ -529,7 +559,8 @@ function eventId(cid,stage){return 'ambient100.'+cid+'.'+stage}
 function eventDef(cid,name,stage,desc){return{id:eventId(cid,stage),name:name+' · '+stage.toUpperCase(),description:desc,type:'MILESTONE',characterId:cid,namespace:'ambient100'}}
 function sceneFor(c,p,i){
  const topic=p.t[i]||('대화 주제 '+(i+1)),id='ambient100-'+c.id+'-'+String(i+1).padStart(2,'0'),node='start';
- const q1=QA[i%QA.length].replaceAll('{topic}',topic),q2=QB[i%QB.length].replaceAll('{topic}',topic);
+ const polite=formalTarget(c.id),qa=polite?QA_FORMAL:QA,qb=polite?QB_FORMAL:QB;
+ const q1=qa[i%qa.length].replaceAll('{topic}',topic),q2=qb[i%qb.length].replaceAll('{topic}',topic);
  const follow=[2,5,8].includes(i),nextId=follow?'follow-'+(i+1):'';
  const c1={id:id+'-a',type:'speech',text:q1,playerLine:'',response:responseVariants(c,p,topic,0),affectionDelta:i%4===0?1:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.listened',removeFlags:'',addMemoryTitle:i===8?topic:'',addMemorySummary:i===8?responseVariants(c,p,topic,1).split('\n')[0]:'',addMemoryTags:i===8?'conversation, trust':'',moodChange:'',unlockItemId:'',nextNodeId:nextId,endConversation:!follow};
  const c2={id:id+'-b',type:'speech',text:q2,playerLine:'',response:responseVariants(c,p,topic,1),affectionDelta:i%5===4?-1:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:nextId,endConversation:!follow};
@@ -537,8 +568,8 @@ function sceneFor(c,p,i){
  if(follow){
   const ftopic='조금 더 개인적인 '+topic;
   nodes.push({id:nextId,speaker:'character',text:responseVariants(c,p,ftopic,2).split('\n')[0]||'',choices:[
-   {id:id+'-f1',type:'speech',text:'그 부분은 네가 편한 만큼만 말해도 돼.',playerLine:'',response:responseVariants(c,p,ftopic,0),affectionDelta:1,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.safe',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true},
-   {id:id+'-f2',type:'speech',text:'그럼 다른 쪽에서 물어볼게. 지금 네가 원하는 건 뭐야?',playerLine:'',response:responseVariants(c,p,ftopic,1),affectionDelta:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true}
+   {id:id+'-f1',type:'speech',text:polite?'그 부분은 편하신 만큼만 말씀해 주세요.':'그 부분은 네가 편한 만큼만 말해도 돼.',playerLine:'',response:responseVariants(c,p,ftopic,0),affectionDelta:1,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.safe',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true},
+   {id:id+'-f2',type:'speech',text:polite?'그럼 다른 쪽에서 여쭤볼게요. 지금 원하시는 건 뭐예요?':'그럼 다른 쪽에서 물어볼게. 지금 네가 원하는 건 뭐야?',playerLine:'',response:responseVariants(c,p,ftopic,1),affectionDelta:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true}
   ]});
  }
  const req=i===3?eventId(c.id,'opened'):i===6?eventId(c.id,'pattern'):i===9?eventId(c.id,'trust'):'';

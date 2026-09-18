@@ -96,6 +96,7 @@ await loadClassic('js/dialogue-continuity-controller-v6.js?v=4');
 await loadClassic('js/room-exit-transition.js?v=4');
 await loadStableCore();
 await loadClassic('js/event-progression-runtime-v1.js?v=2');
+await loadClassic('js/character-ambient-100-runtime-v1.js?v=1');
 
 try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}catch{}
 
@@ -107,8 +108,10 @@ const scripts=[
   ['classic','js/relationship-render-bridge.js?v=1'],
   ['classic','js/item-inventory-migration.js?v=1'],
   ['classic','js/item-catalog-rebalance.js?v=2'],
+  ['classic','js/charlie-collection-canon-repair-v1.js?v=1'],
+  ['classic','js/lucifer-item-dialogue-pack-v1.js?v=1'],
   ['classic','js/satan-paperweight-delivery.js?v=1'],
-  ['classic','js/item-system-v2.js?v=1'],
+  ['classic','js/item-system-v2.js?v=2'],
   ['classic','js/item-manager-v2.js?v=2'],
   ['classic','js/item-event-bridge-v2.js?v=1'],
   ['module','js/site-runtime.js?v=67'],

@@ -91,7 +91,7 @@ await loadClassic('js/dialogue-content-normalize-once-v1.js?v=2');
 await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=6');
 
 await loadClassic('js/dialogue-continuity-controller-v6.js?v=2');
-await loadClassic('js/room-exit-transition.js?v=2');
+await loadClassic('js/room-exit-transition.js?v=3');
 await loadStableCore();
 
 try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}catch{}

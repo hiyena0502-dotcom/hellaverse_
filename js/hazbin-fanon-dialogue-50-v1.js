@@ -62,6 +62,22 @@ const CHARACTER_NAMES={
  'sera':'세라','emily':'에밀리','lute':'류트','adam':'아담','vox':'복스','valentino':'발렌티노',
  'velvette':'벨벳','carmilla-carmine':'카밀라','rosie':'로지','zestial':'제스티얼','baxter':'백스터','abel':'아벨'
 };
+
+const TOPIC_OPENINGS={
+ 'lucifer-morningstar':[
+  '루시퍼가 서랍 안의 오래된 리본과 작은 카드들을 정리하다가, 버리려던 하나를 결국 다시 안쪽에 넣는다.',
+  '작업대 한쪽에 반쯤 완성된 고무 오리가 평소보다 많이 늘어 있다. 루시퍼는 그중 하나를 괜히 다시 손본다.',
+  '루시퍼가 이미 충분히 달아 보이는 음료에 설탕을 한 스푼 더 넣고 아무렇지 않은 얼굴을 한다.',
+  '루시퍼가 호텔 서류에 펜을 대려다가 찰리가 정리해 둔 표시를 보고 잠깐 멈춘 뒤, 손을 거둔다.',
+  '왕관은 아무렇게나 옆으로 밀어둔 루시퍼가 찰리가 남긴 짧은 메모 한 장은 반듯하게 펴서 다시 읽는다.',
+  '루시퍼가 한참 떠들다 진지한 말이 나오려는 순간, 갑자기 과장된 농담 하나를 끼워 넣는다.',
+  '루시퍼가 가족사진을 몇 장 넘기다가 한 장에서 손을 멈춘다. 다음 사진으로 넘어가는 데 유난히 시간이 걸린다.',
+  '서랍 안쪽에서 천국을 떠올리게 하는 오래된 장식이 보이자 루시퍼가 웃으며 다른 물건을 그 위에 덮어둔다.',
+  '멀리서 알래스터의 방송 소리가 들리자 루시퍼가 하던 일을 멈추고 눈썹을 찌푸린다. 그러면서도 굳이 소리를 끄러 가진 않는다.',
+  '루시퍼가 찰리에게 건넬 물건을 준비하다가 이미 충분한 장식 위에 금박을 하나 더 얹는다.'
+ ]
+};
+
 const VOICE_CLASS={
  'lucifer-morningstar':'lucifer',
  'charlie-morningstar':'warm','emily':'warm','abel':'warm',
@@ -147,8 +163,8 @@ function voiceFor(cid,ai){
  const cls=VOICE_CLASS[cid]||'warm',rows=VOICE[cls]||VOICE.warm,row=rows[ai%rows.length]||rows[0];
  return row;
 }
-function openingFor(cid,topic,ai){
- const name=CHARACTER_NAMES[cid]||cid,subject=topic+(hasBatchim(topic)?'이':'가'),object=topic+(hasBatchim(topic)?'을':'를'),nameSubj=name+(hasBatchim(name)?'이':'가'),nameTopic=name+(hasBatchim(name)?'은':'는');
+function openingFor(cid,topic,ai,ti=0){
+ const name=CHARACTER_NAMES[cid]||cid,subject=topic+(hasBatchim(topic)?'이':'가'),object=topic+(hasBatchim(topic)?'을':'를'),nameSubj=name+(hasBatchim(name)?'이':'가'),nameTopic=name+(hasBatchim(name)?'은':'는'),specific=TOPIC_OPENINGS[cid]?.[ti]||'';
  const rows=[
   `[[NARRATION]] ${nameSubj} 하던 일을 잠깐 멈춘다. 그 순간 ${subject} 자연스럽게 눈에 띈다.`,
   `[[NARRATION]] 잠시 조용해진 사이, ${nameSubj} ${topic}에 대해 먼저 한마디 꺼낸다.`,
@@ -169,7 +185,8 @@ function openingFor(cid,topic,ai){
   grand:['“오오! 이것까지 눈치챘단 말이오?”','“사소해 보여도 나름의 이유가 있는 법이오!”','“비밀이라 부를 정도는 아니오!”','“과거의 나와 지금의 나는 분명 조금 다르지!”','“가까이 지내면 위대한 자의 일상도 보이는 법이오!”']
  };
  const cls=VOICE_CLASS[cid]||'warm',speech=(intro[cls]||intro.warm)[ai%5];
- return rows[ai%5]+'\n[[CHARACTER]] '+speech;
+ const narration=specific?'[[NARRATION]] '+specific:rows[ai%5];
+ return narration+'\n[[CHARACTER]] '+speech;
 }
 const escText=v=>String(v||'').replace(/\s+/g,' ').trim();
 function hasBatchim(v){const s=String(v||'').trim(),ch=s.charCodeAt(s.length-1);return ch>=0xAC00&&ch<=0xD7A3?((ch-0xAC00)%28)!==0:false}
@@ -189,7 +206,7 @@ function markedOpening(v){
 }
 function sceneFor(cid,p,ti,ai){
  const topic=p.t[ti],angle=ANGLES[ai],n=ti*5+ai+1,id='hazbin-fanon50-'+cid+'-'+String(n).padStart(3,'0'),formal=FORMAL.has(cid);
- const [q1,q2]=playerChoices(formal,ai,ti),[a,b]=voiceFor(cid,ai),opening=openingFor(cid,topic,ai);
+ const [q1,q2]=playerChoices(formal,ai,ti),[a,b]=voiceFor(cid,ai),opening=openingFor(cid,topic,ai,ti);
  return{id,characterId:cid,title:topic+' · '+angle.title,kind:'TALK',sceneRole:'CONVERSATION',conversationType:'FANDOM_SLICE_OF_LIFE',repeatable:false,requiredAffection:0,maxAffection:100,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority:4,probability:100,opening,openingType:'narration',exitLine:'',after:'',used:false,nodes:[{id:'start',speaker:'character',text:'',choices:[choice(id+'-a',q1,a),choice(id+'-b',q2,b)]}],openingNodeId:'start',contentPack:PACK,canonGrounding:'fandom-inspired fanmade; not official canon',radioappleExcluded:true,firstClearAffection:1,_hvHazbinFanon50:true};
 }
 function isPack(sc){return!!sc&&(sc.contentPack===PACK||sc._hvHazbinFanon50===true||String(sc.id||'').startsWith('hazbin-fanon50-'))}

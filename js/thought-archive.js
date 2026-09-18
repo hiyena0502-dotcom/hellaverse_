@@ -88,7 +88,7 @@ function itemTitle(i){return i?.name||i?.title||'Item'}
 function itemDesc(i){return i?.desc||i?.description||i?.memo||i?.body||''}
 function countCollection(s,cid){let all=s.collectionItems.filter(i=>i.characterId===cid),own=all.filter(i=>s.ownedItems.includes(i.id));return{all:all.length,owned:own.length,p:all.length?Math.round(own.length/all.length*100):0}}
 function countThoughts(s,cid){let all=s.thoughts.filter(t=>t.characterId===cid),seen=all.filter(t=>s.seenThoughtIds.includes(t.id));return{all:all.length,seen:seen.length,p:all.length?Math.round(seen.length/all.length*100):0}}
-function patchNav(){let s=readState(),u=readUI(),nav=$('.main-nav');if(nav){let active=u.page||s.page,thought=$('[data-open-thoughts]',nav);if(!thought){thought=document.createElement('button');thought.type='button';thought.className='nav-button';thought.dataset.openThoughts='';thought.textContent='THOUGHTS';let anchor=$('[data-hv-missions],[data-page="settings"],[data-hv-settings-rescue]',nav);if(anchor)nav.insertBefore(thought,anchor);else nav.appendChild(thought)}let copies=$$('[data-open-thoughts]',nav);copies.slice(1).forEach(x=>x.remove());thought.classList.toggle('active',active==='thoughts');if(active==='thoughts')$$('.nav-button',nav).forEach(b=>{if(b!==thought)b.classList.remove('active')});$$('[data-open-mystery]',nav).forEach(x=>x.remove())}$$('[data-open-box]').forEach(b=>{if(b.closest('.home-quickbar'))b.remove()})}
+function patchNav(){let s=readState(),u=readUI(),nav=$('.main-nav');if(nav){let active=u.page||s.page,thought=$('[data-open-thoughts]',nav);if(thought){thought.classList.toggle('active',active==='thoughts');if(active==='thoughts')$('.nav-button',nav).forEach(b=>{if(b!==thought)b.classList.remove('active')})}$('[data-open-mystery]',nav).forEach(x=>x.remove())}$('[data-open-box]').forEach(b=>{if(b.closest('.home-quickbar'))b.remove()})}
 function patchHome(){let s=readState(),quick=$('.home-quickbar');if(!quick)return;let cid=s.homeCharacter||s.active,cc=countCollection(s,cid),tc=countThoughts(s,cid),mc=(s.memories||[]).filter(m=>m.characterId===cid&&!m.hidden).length;quick.innerHTML=`<button data-page="collection">COLLECTION ${cc.owned}/${cc.all}</button><button data-open-thoughts>THOUGHTS ${tc.seen}/${tc.all}</button><button data-memories="${esc(cid)}">MEMORIES ${mc}</button>`}
 function progressBlock(p,small){return`<span class="progress-block"><i><b style="width:${p}%"></b></i><small>${esc(small)}</small></span>`}
 function renderExternalPage(){let u=readUI();if(u.page==='thoughts'&&!$('.thought-page'))return renderThoughtPage();if(u.page==='mystery'&&!$('.mystery-page'))return renderMysteryPage()}
@@ -160,14 +160,16 @@ function handleClick(e){let target=e.target;if(!(target instanceof Element))retu
 function handleChange(e){let t=e.target;if(!(t instanceof Element))return;if(t.id==='thoughtInterval'){let val=t.value,seconds=val==='custom'?Number($('#thoughtCustom')?.value||60):Number(val);updateState(s=>{s.settings.thoughtIntervalSeconds=clamp(seconds,10,3600)});toast('THOUGHT SETTINGS SAVED');patchSettings();scheduleAutoThought(true);return}if(t.id==='thoughtCustom'){updateState(s=>{s.settings.thoughtIntervalSeconds=clamp(t.value,10,3600)});toast('THOUGHT SETTINGS SAVED');scheduleAutoThought(true);return}}
 function handleInput(e){let t=e.target;if(!(t instanceof Element))return;if(t.matches('[data-picker-search="category"]')){e.stopImmediatePropagation();let q=t.value.toLowerCase().trim();$$('#tCategoryOptions [data-category-option]').forEach(btn=>{btn.hidden=!!q&&!String(btn.dataset.searchText||'').includes(q)});return}}
 function handleKey(e){let tag=e.target&&e.target.tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;if(e.key==='Escape'){let u=readUI();if(u.page){u.page='';writeUI(u)}}}
-function observeMainApp(){let app=$('#app');if(!app)return;let queued=false;new MutationObserver(ms=>{if(!ms.some(m=>m.target===app))return;if(queued)return;queued=true;queueMicrotask(()=>{queued=false;afterRender()})}).observe(app,{childList:true})}
+let thoughtAppObserver=null;
+function observeMainApp(){let app=$('#app');if(!app)return;if(thoughtAppObserver)thoughtAppObserver.disconnect();let queued=false;thoughtAppObserver=new MutationObserver(ms=>{if(!ms.some(m=>m.target===app||app.contains(m.target)))return;if(queued)return;queued=true;queueMicrotask(()=>{queued=false;afterRender()})});thoughtAppObserver.observe(app,{childList:true,subtree:true})}
+function initThoughtUX(){observeMainApp();afterRender()}
 writeState(readState());
 document.addEventListener('mouseover',e=>{let t=e.target;if(t instanceof Element&&t.closest('[data-thought]'))e.stopImmediatePropagation()},true);
 document.addEventListener('click',handleClick,true);
 document.addEventListener('change',handleChange,true);
 document.addEventListener('input',handleInput,true);
 document.addEventListener('keydown',handleKey,true);
-document.addEventListener('DOMContentLoaded',()=>{observeMainApp();afterRender()});
-window.addEventListener('load',afterRender);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initThoughtUX,{once:true});else initThoughtUX();
+window.addEventListener('load',()=>{observeMainApp();afterRender()});
 setTimeout(afterRender,50);setTimeout(afterRender,250);setTimeout(afterRender,900);
 })();

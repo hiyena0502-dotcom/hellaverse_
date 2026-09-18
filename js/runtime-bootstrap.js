@@ -8,7 +8,7 @@ async function loadModule(src){try{await import(absolute(src));return true}catch
 function loadClassic(src){return new Promise(resolve=>{const script=document.createElement('script');script.src=src;script.async=false;script.onload=()=>resolve(true);script.onerror=(event)=>{console.error(`Failed to load script: ${src}`,event);resolve(false)};document.head.appendChild(script)})}
 
 async function loadStableCore(){
-  const src='js/hv-stable.js?v=57';
+  const src='js/hv-stable.js?v=58';
   try{
     const response=await fetch(absolute(src),{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);
     let source=await response.text();
@@ -99,7 +99,7 @@ try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}
 const scripts=[
   ['classic','js/dialogue-token-renderer.js?v=4'],
   ['module','js/event-manager.js?v=50'],
-  ['module','js/thought-archive.js?v=52'],
+  ['module','js/thought-archive.js?v=53'],
   ['module','js/relationship-editor.js?v=51'],
   ['classic','js/relationship-render-bridge.js?v=1'],
   ['classic','js/item-inventory-migration.js?v=1'],

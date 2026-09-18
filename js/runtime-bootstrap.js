@@ -95,14 +95,14 @@ await loadClassic('js/event-progression-pack-v1.js?v=1');
 await loadClassic('js/dialogue-continuity-controller-v6.js?v=4');
 await loadClassic('js/room-exit-transition.js?v=4');
 await loadStableCore();
-await loadClassic('js/event-progression-runtime-v1.js?v=1');
+await loadClassic('js/event-progression-runtime-v1.js?v=2');
 
 try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}catch{}
 
 const scripts=[
   ['classic','js/dialogue-token-renderer.js?v=4'],
   ['module','js/event-manager.js?v=50'],
-  ['module','js/thought-archive.js?v=55'],
+  ['module','js/thought-archive.js?v=56'],
   ['module','js/relationship-editor.js?v=51'],
   ['classic','js/relationship-render-bridge.js?v=1'],
   ['classic','js/item-inventory-migration.js?v=1'],
@@ -116,7 +116,7 @@ const scripts=[
   ['classic','js/gacha-item-copy-pack.js?v=1'],
   ['classic','js/player-game-loop.js?v=5'],
   ['classic','js/settings-management-hub.js?v=3'],
-  ['classic','js/dialogue-file-editor.js?v=3'],
+  ['classic','js/dialogue-file-editor.js?v=4'],
   ['classic','js/dialogue-episode-authoring.js?v=1'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
   ['classic','js/dialogue-single-beat-runtime-v23.js?v=1'],

@@ -41,6 +41,8 @@
 body.hv-room-exiting .hv-room-action-bar{display:none!important;}
 /* During farewell exit, the legacy room menu must never flash or accept clicks. */
 body.hv-room-exiting .character-room .room-stage{visibility:hidden!important;pointer-events:none!important;}
+/* Conversation -> Conversation handoff must never reveal the legacy room menu. */
+body.hv-dialogue-chain-transition .character-room .room-stage{visibility:hidden!important;pointer-events:none!important;}
 body.hv-direct-dialogue-entry .character-room .room-stage{visibility:hidden;pointer-events:none;}
 
 .hv-ask-panel,

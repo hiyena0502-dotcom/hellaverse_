@@ -96,7 +96,7 @@ await loadClassic('js/dialogue-continuity-controller-v6.js?v=4');
 await loadClassic('js/room-exit-transition.js?v=4');
 await loadStableCore();
 await loadClassic('js/event-progression-runtime-v1.js?v=2');
-await loadClassic('js/character-ambient-100-runtime-v1.js?v=5');
+await loadClassic('js/character-ambient-100-runtime-v1.js?v=6');
 
 await loadClassic('js/dialogue-token-renderer.js?v=7');
 await loadClassic('js/dialogue-single-beat-runtime-v23.js?v=2');
@@ -115,7 +115,7 @@ const scripts=[
   ['classic','js/charlie-collection-canon-repair-v1.js?v=1'],
   ['classic','js/lucifer-item-dialogue-pack-v1.js?v=1'],
   ['classic','js/satan-paperweight-delivery.js?v=1'],
-  ['classic','js/item-gift-character-reactions-v1.js?v=2'],
+  ['classic','js/item-gift-character-reactions-v1.js?v=3'],
   ['classic','js/item-system-v2.js?v=4'],
   ['classic','js/item-manager-v2.js?v=3'],
   ['classic','js/item-event-bridge-v2.js?v=1'],

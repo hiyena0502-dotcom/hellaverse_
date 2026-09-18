@@ -9,6 +9,20 @@ const up=v=>String(v??'').trim().toUpperCase();
 const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};
 const write=s=>{try{localStorage.setItem(K,JSON.stringify(s))}catch(e){console.warn('Dialogue one-shot normalize save failed',e)}};
 const hasMarkers=v=>/\[\[(?:CHARACTER|NARRATION|PLAYER)\]\]/i.test(String(v||''));
+function looksNarration(v){
+  const t=String(v||'').replace(/\s+/g,' ').trim();if(!t)return false;
+  if(/^[“"「『]/.test(t))return false;
+  if(/^(?:그는|그가|그녀는|그녀가|당신은|당신이|상대는|상대가)\s/.test(t))return true;
+  if(/^(?:방 안|침대 위|책상|벽에|문 쪽|작업대|복도|피아노|창가|테이블|바닥|서랍|액자|의자|왕좌|엘리베이터|호텔)\S*\s/.test(t)&&/다\.$/.test(t))return true;
+  const subject=t.match(/^([가-힣A-Za-z·.' -]{2,24})(은|는|이|가)\s/);
+  if(subject&&!/^(?:나|내|너|네|우리|그것|이것|저것|사람들?)$/.test(subject[1].trim())&&/다\.$/.test(t))return true;
+  return false;
+}
+function pushBeat(out,kind,text){
+  text=String(text||'').trim();if(!text)return;
+  let k=kind;if(k==='CHARACTER'&&looksNarration(text))k='NARRATION';
+  out.push({kind:k,text});
+}
 
 function markerKind(v,fallback='CHARACTER'){
   const k=up(v);return k==='NARRATION'?'NARRATION':k==='PLAYER'?'PLAYER':fallback;
@@ -17,22 +31,22 @@ function mixedBeats(raw,fallback='CHARACTER'){
   const text=String(raw||'').trim();if(!text)return[];
   const quote=/[“"]([^”"]+)[”"]/g;let last=0,m,out=[];
   while((m=quote.exec(text))){
-    const before=text.slice(last,m.index).trim();if(before)out.push({kind:'NARRATION',text:before});
-    const said=String(m[1]||'').trim();if(said)out.push({kind:'CHARACTER',text:said});
+    const before=text.slice(last,m.index).trim();if(before)pushBeat(out,'NARRATION',before);
+    const said=String(m[1]||'').trim();if(said)pushBeat(out,'CHARACTER',said);
     last=quote.lastIndex;
   }
-  const after=text.slice(last).trim();if(after)out.push({kind:out.length?'NARRATION':markerKind(fallback,fallback),text:after});
-  return out.length?out:[{kind:markerKind(fallback,fallback),text}];
+  const after=text.slice(last).trim();if(after)pushBeat(out,out.length?'NARRATION':(looksNarration(after)?'NARRATION':markerKind(fallback,fallback)),after);
+  if(out.length)return out;const single=[];pushBeat(single,looksNarration(text)?'NARRATION':markerKind(fallback,fallback),text);return single;
 }
 function parseMarked(raw,fallback='CHARACTER'){
   raw=String(raw||'').trim();if(!raw)return[];
   if(!hasMarkers(raw))return mixedBeats(raw,fallback);
   const token=/\[\[(CHARACTER|NARRATION|PLAYER)\]\]/ig,out=[];let kind=markerKind(fallback,fallback),last=0,m;
   while((m=token.exec(raw))){
-    const before=raw.slice(last,m.index).trim();if(before)out.push({kind,text:before});
+    const before=raw.slice(last,m.index).trim();if(before)pushBeat(out,kind,before);
     kind=up(m[1]);last=token.lastIndex;
   }
-  const tail=raw.slice(last).trim();if(tail)out.push({kind,text:tail});
+  const tail=raw.slice(last).trim();if(tail)pushBeat(out,kind,tail);
   return out;
 }
 function encode(beats){
@@ -56,6 +70,7 @@ function nodeKind(node){return up(node?.speaker)==='NARRATION'?'NARRATION':up(no
 function openingKind(sc,role){
   const explicit=up(sc?.openingType||sc?.openingSpeaker);if(explicit==='NARRATION'||explicit==='PLAYER')return explicit;
   const raw=String(sc?.opening||'');
+  if(looksNarration(raw))return'NARRATION';
   if(role==='QUESTION'&&/^\s*당신/.test(raw))return'NARRATION';
   if(role==='ACTION'&&/^\s*(당신|플레이어|그는|그녀는|방|복도|문|테이블|작업대)/.test(raw))return'NARRATION';
   return'CHARACTER';

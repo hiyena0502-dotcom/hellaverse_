@@ -467,9 +467,9 @@ function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
   if(String(cid)===String(ownerId)){
    const detail=duckDetail(i);
    return[
-    row('motif-why',`「${item}」의 ${detail}을 왜 넣었는지 묻는다.`,q(`이 「${item}」, ${detail}까지 넣은 이유가 뭐야?`,`이 「${item}」, ${detail}까지 넣으신 이유가 뭐예요?`),response,plus),
+    row('motif-why',`「${item}」의 ${O(detail)} 왜 넣었는지 묻는다.`,q(`이 「${item}」, ${detail}까지 넣은 이유가 뭐야?`,`이 「${item}」, ${detail}까지 넣으신 이유가 뭐예요?`),response,plus),
     row('motif-show',`${motif.name}에게 ${O('「'+item+'」')} 보여준 적 있는지 묻는다.`,q(`${motif.name}한테 이 「${item}」도 보여준 적 있어?`,`${motif.name}한테 이 「${item}」도 보여주신 적 있으세요?`),context,delta),
-    row('motif-detail',`「${item}」에서 ${motif.name}답게 만든 부분을 살펴본다.`,`「${item}」의 ${detail}을 가까이 살펴보며 건넨다.`,silent,quiet,'action')
+    row('motif-detail',`「${item}」에서 ${motif.name}답게 만든 부분을 살펴본다.`,`「${item}」의 ${O(detail)} 가까이 살펴보며 건넨다.`,silent,quiet,'action')
    ]
   }
   if(motif.id&&String(cid)===String(motif.id)){
@@ -488,9 +488,9 @@ function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
  if(theme==='duck'){
   const detail=duckDetail(i);
   return[
-   row('duck-detail',`「${item}」의 ${detail}을 왜 넣었는지 묻는다.`,q(`이 「${item}」, ${detail}이 제일 눈에 띄는데 왜 이렇게 만든 거야?`,`이 「${item}」, ${detail}이 제일 눈에 띄는데 왜 이렇게 만드신 거예요?`),response,plus),
+   row('duck-detail',`「${item}」의 ${O(detail)} 왜 넣었는지 묻는다.`,q(`이 「${item}」, ${detail}이 제일 눈에 띄는데 왜 이렇게 만든 거야?`,`이 「${item}」, ${detail}이 제일 눈에 띄는데 왜 이렇게 만드신 거예요?`),response,plus),
    row('duck-memory',`${O('「'+item+'」')} 만들 때 떠올린 장면을 묻는다.`,q(`이 「${item}」 만들 때 제일 먼저 떠올린 장면이 뭐야?`,`이 ${O('「'+item+'」')} 만드실 때 제일 먼저 떠올린 장면이 뭐예요?`),context,delta),
-   row('duck-hand',`「${item}」의 ${detail}을 살펴보며 건넨다.`,`「${item}」의 ${detail}을 망가뜨리지 않게 조심하며 건넨다.`,silent,quiet,'action')
+   row('duck-hand',`「${item}」의 ${O(detail)} 살펴보며 건넨다.`,`「${item}」의 ${O(detail)} 망가뜨리지 않게 조심하며 건넨다.`,silent,quiet,'action')
   ]
  }
  if(theme==='photo')return[
@@ -574,6 +574,27 @@ function migrateSavedGiftPoliteness(){
   if(changed)localStorage.setItem(K,JSON.stringify(s));
  }catch{}
 }
+function migrateSavedGenericApproaches(){
+ try{
+  const K='hellaverse_dialogue_state_v1',s=JSON.parse(localStorage.getItem(K)||'{}')||{},rules=s.inventoryV2?.giftRules;
+  if(!rules||typeof rules!=='object')return;
+  const items=[...(Array.isArray(s.collectionItems)?s.collectionItems:[]),...(Array.isArray(s.inventoryV2?.basicItems)?s.inventoryV2.basicItems:[])];
+  const byId=new Map(items.filter(x=>x?.id).map(x=>[String(x.id),x]));let changed=false;
+  const generic=a=>Array.isArray(a)&&a.length===3&&
+    a.some(x=>x?.id==='personal'&&['네 생각이 나서 가져왔어.','생각나서 가져왔어요.'].includes(String(x?.label||'')))&&
+    a.some(x=>x?.id==='story'&&['이 물건에 얽힌 이야기를 들려준다.','이 물건에 얽힌 이야기를 들려드린다.'].includes(String(x?.label||'')))&&
+    a.some(x=>x?.id==='silent'&&String(x?.label||'')==='말없이 조심스럽게 건넨다.');
+  for(const [itemId,perItem] of Object.entries(rules)){
+   const i=byId.get(String(itemId));if(!i||!perItem||typeof perItem!=='object')continue;
+   for(const [cid,rule] of Object.entries(perItem)){
+    if(!rule||!generic(rule.approaches))continue;
+    const fresh=build(s,i,cid);rule.approaches=fresh.approaches;changed=true;
+   }
+  }
+  if(changed)localStorage.setItem(K,JSON.stringify(s));
+ }catch{}
+}
 migrateSavedGiftPoliteness();
+migrateSavedGenericApproaches();
 window.__HV_BUILD_GIFT_REACTION__=build;
 })();

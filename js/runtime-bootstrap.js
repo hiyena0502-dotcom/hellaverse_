@@ -97,12 +97,12 @@ await loadClassic('js/room-exit-transition.js?v=4');
 await loadStableCore();
 await loadClassic('js/event-progression-runtime-v1.js?v=2');
 await loadClassic('js/character-ambient-100-runtime-v1.js?v=7');
-await loadClassic('js/hazbin-fanon-dialogue-50-v1.js?v=2');
+await loadClassic('js/hazbin-fanon-dialogue-50-v1.js?v=3');
 
 await loadClassic('js/dialogue-token-renderer.js?v=7');
 await loadClassic('js/dialogue-single-beat-runtime-v23.js?v=2');
-await loadClassic('js/dialogue-interaction-engine-v2.js?v=1');
-await loadClassic('js/dialogue-room-controller-v3.js?v=5');
+await loadClassic('js/dialogue-interaction-engine-v2.js?v=2');
+await loadClassic('js/dialogue-room-controller-v3.js?v=6');
 
 try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}catch{}
 
@@ -116,7 +116,7 @@ const scripts=[
   ['classic','js/charlie-collection-canon-repair-v1.js?v=1'],
   ['classic','js/lucifer-item-dialogue-pack-v1.js?v=1'],
   ['classic','js/satan-paperweight-delivery.js?v=1'],
-  ['classic','js/item-gift-character-reactions-v1.js?v=4'],
+  ['classic','js/item-gift-character-reactions-v1.js?v=5'],
   ['classic','js/item-system-v2.js?v=4'],
   ['classic','js/item-manager-v2.js?v=3'],
   ['classic','js/item-event-bridge-v2.js?v=1'],

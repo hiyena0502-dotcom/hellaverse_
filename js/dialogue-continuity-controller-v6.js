@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V6__)return;
-window.__HELLAVERSE_DIALOGUE_CONTINUITY_V6__=1;
+if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V7__)return;
+window.__HELLAVERSE_DIALOGUE_CONTINUITY_V7__=1;
 
 const K='hellaverse_dialogue_state_v1',META='hellaverse_dialogue_render_meta_v1',CHAIN='hv-conversation-chain';
 const $=(s,r=document)=>r.querySelector(s);
@@ -64,15 +64,18 @@ function pickConversation(){
 function sceneById(id){const s=state();return(s.dialogues||[]).find(x=>String(x?.id||'')===String(id))||null}
 function roleForId(id){const s=state(),sc=(s.dialogues||[]).find(x=>String(x?.id||'')===String(id));return sc?role(sc,s,meta()):''}
 function syntheticScene(sc){
-  if(!sc||starting)return false;const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.scene=String(sc.id);b.dataset.hvContinuityBridge='6';host.appendChild(b);
-  starting=true;bridge=true;document.body.classList.add(CHAIN);remember(sc);try{b.click()}finally{bridge=false;if(b.isConnected)b.remove();setTimeout(()=>{starting=false},120)}return true;
+  if(!sc||starting)return false;const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.scene=String(sc.id);b.dataset.hvContinuityBridge='7';host.appendChild(b);
+  starting=true;bridge=true;document.body.classList.add(CHAIN);remember(sc);try{b.click()}finally{bridge=false;if(b.isConnected)b.remove();setTimeout(()=>{starting=false},120)}
+  requestAnimationFrame(()=>{if($('.character-room .dialogue-box'))document.body.classList.remove(CHAIN_TRANSITION)});
+  return true;
 }
 function startConversation({fresh=false}={}){if(starting||continuing)return false;const cid=String(state().active||'');if(fresh||!chainCid)resetSession(cid);const sc=pickConversation();return sc?syntheticScene(sc):false}
-function stopChain(clear=true){document.body.classList.remove(CHAIN);starting=false;continuing=false;if(clear)resetSession('')}
-function syntheticEnd(){const host=$('.character-room')||$('#app');if(!host)return;const b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.end='';b.dataset.hvContinuityBridge='6';host.appendChild(b);bridge=true;try{b.click()}finally{bridge=false;if(b.isConnected)b.remove()}}
+function stopChain(clear=true){document.body.classList.remove(CHAIN,CHAIN_TRANSITION);starting=false;continuing=false;if(clear)resetSession('')}
+function syntheticEnd(){const host=$('.character-room')||$('#app');if(!host)return;const b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.end='';b.dataset.hvContinuityBridge='7';host.appendChild(b);bridge=true;try{b.click()}finally{bridge=false;if(b.isConnected)b.remove()}}
 function exhaust(){stopChain();setTimeout(syntheticEnd,0)}
 function finishAndContinue(button){
   if(continuing)return;continuing=true;const startedAt=performance.now();
+  document.body.classList.add(CHAIN_TRANSITION);
   setTimeout(()=>{
     if(button?.isConnected){bridge=true;try{button.click()}finally{bridge=false}}
     const wait=()=>{
@@ -81,12 +84,16 @@ function finishAndContinue(button){
         if(performance.now()-startedAt>1800){continuing=false;stopChain(false);return}
         setTimeout(wait,20);return
       }
-      continuing=false;if(!startConversation())exhaust()
+      continuing=false;
+      if(!startConversation())exhaust();
+      else requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        if($('.character-room .dialogue-box'))document.body.classList.remove(CHAIN_TRANSITION);
+      }));
     };
-    setTimeout(wait,16);
+    setTimeout(wait,0);
   },0);
 }
-function normalizeEnds(){if(!document.body.classList.contains(CHAIN))return;for(const b of document.querySelectorAll('.character-room .dialogue-box [data-end]')){b.dataset.hvContinuityEnd='6';if(String(b.textContent||'').trim().toUpperCase()==='RETURN')b.textContent='NEXT'}}
+function normalizeEnds(){if(!document.body.classList.contains(CHAIN))return;for(const b of document.querySelectorAll('.character-room .dialogue-box [data-end]')){b.dataset.hvContinuityEnd='7';if(String(b.textContent||'').trim().toUpperCase()==='RETURN')b.textContent='NEXT'}}
 function schedule(){requestAnimationFrame(normalizeEnds)}
 
 window.addEventListener('click',e=>{const t=e.target instanceof Element?e.target:null;if(!t)return;if(t.closest('[data-vn-leave],[data-runtime-leave],[data-page="characters"],.room-back,[data-room]'))stopChain()},true);

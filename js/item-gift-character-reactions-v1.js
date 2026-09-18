@@ -6,6 +6,12 @@ window.__HELLAVERSE_ITEM_GIFT_CHARACTER_REACTIONS_V1__=1;
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
 const rare=v=>{let r=clean(v||'COMMON').toUpperCase();if(r==='MYSTIC')r='MISTIC';if(r==='LEGEND')r='LEGENDARY';return r};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,Number(n)||0));
+const FORMAL_PLAYER_TARGETS=new Set([
+ 'lucifer-morningstar','alastor','husk','sir-pentious','sera','adam','vox','valentino',
+ 'carmilla-carmine','rosie','zestial','paimon','satan','mammon','asmodeus','beelzebub',
+ 'belphegor','leviathan','stolas'
+]);
+const isFormalTarget=cid=>FORMAL_PLAYER_TARGETS.has(String(cid||''));
 const char=(s,id)=>(s.characters||[]).find(c=>String(c?.id||'')===String(id||''))||null;
 const cname=(s,id)=>char(s,id)?.name||String(id||'CHARACTER');
 const iname=i=>clean(i?.name||i?.title||'아이템');
@@ -409,12 +415,37 @@ function build(s,i,cid){
   response,
   afterEvent:'',setFlags:'',removeFlags:'',moodChange:rel==='HATE'?'ANNOYED':rel==='LOVE'||rel==='OWN'?'GOOD':'',
   memoryTitle:`GIFT: ${item}`,memorySummary:`${who}에게 「${item}」을 선물했다.`,memoryTags:`gift, collection, ${String(i?.id||'')}, ${String(cid)}`,
-  approaches:[
+  approaches:isFormalTarget(cid)?[
+   {id:'personal',label:'생각나서 가져왔어요.',type:'speech',playerLine:'생각나서 가져왔어요.',response:personal,affectionDelta:clamp(delta+(delta>=0?1:0),-4,5),afterEvent:''},
+   {id:'story',label:'이 물건에 얽힌 이야기를 들려드린다.',type:'speech',playerLine:`이건 ${owner}와 관련된 물건이에요. 이야기도 같이 들어주실래요?`,response:context,affectionDelta:delta,afterEvent:''},
+   {id:'silent',label:'말없이 조심스럽게 건넨다.',type:'action',playerLine:`${item}을 조심스럽게 건넨다.`,response:silent,affectionDelta:clamp(delta-(rel==='HATE'?0:1),-4,5),afterEvent:''}
+  ]:[
    {id:'personal',label:'네 생각이 나서 가져왔어.',type:'speech',playerLine:'네 생각이 나서 가져왔어.',response:personal,affectionDelta:clamp(delta+(delta>=0?1:0),-4,5),afterEvent:''},
    {id:'story',label:'이 물건에 얽힌 이야기를 들려준다.',type:'speech',playerLine:`이건 ${owner}와 관련된 물건이야. 이야기도 같이 들어줄래?`,response:context,affectionDelta:delta,afterEvent:''},
    {id:'silent',label:'말없이 조심스럽게 건넨다.',type:'action',playerLine:`${item}을 조심스럽게 건넨다.`,response:silent,affectionDelta:clamp(delta-(rel==='HATE'?0:1),-4,5),afterEvent:''}
   ]
  };
 }
+function migrateSavedGiftPoliteness(){
+ try{
+  const K='hellaverse_dialogue_state_v1',s=JSON.parse(localStorage.getItem(K)||'{}')||{},rules=s.inventoryV2?.giftRules;
+  if(!rules||typeof rules!=='object')return;
+  let changed=false;
+  for(const perItem of Object.values(rules)){
+   if(!perItem||typeof perItem!=='object')continue;
+   for(const [cid,rule] of Object.entries(perItem)){
+    if(!isFormalTarget(cid)||!rule||!Array.isArray(rule.approaches))continue;
+    for(const a of rule.approaches){
+     if(a?.label==='네 생각이 나서 가져왔어.'){a.label='생각나서 가져왔어요.';changed=true}
+     if(a?.playerLine==='네 생각이 나서 가져왔어.'){a.playerLine='생각나서 가져왔어요.';changed=true}
+     if(a?.label==='이 물건에 얽힌 이야기를 들려준다.'){a.label='이 물건에 얽힌 이야기를 들려드린다.';changed=true}
+     if(typeof a?.playerLine==='string'&&a.playerLine.includes('관련된 물건이야. 이야기도 같이 들어줄래?')){a.playerLine=a.playerLine.replace('관련된 물건이야. 이야기도 같이 들어줄래?','관련된 물건이에요. 이야기도 같이 들어주실래요?');changed=true}
+    }
+   }
+  }
+  if(changed)localStorage.setItem(K,JSON.stringify(s));
+ }catch{}
+}
+migrateSavedGiftPoliteness();
 window.__HV_BUILD_GIFT_REACTION__=build;
 })();

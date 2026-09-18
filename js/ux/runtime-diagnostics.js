@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_RUNTIME_DIAGNOSTICS_V7__)return;
+if(window.__HELLAVERSE_RUNTIME_DIAGNOSTICS_V8__)return;
 window.__HELLAVERSE_RUNTIME_DIAGNOSTICS_V7__=1;
 
 const STATE_KEY='hellaverse_dialogue_state_v1';

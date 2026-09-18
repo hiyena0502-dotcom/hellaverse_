@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_INTERACTION_ENGINE_V2__)return;
-window.__HELLAVERSE_DIALOGUE_INTERACTION_ENGINE_V2__=1;
+if(window.__HELLAVERSE_DIALOGUE_INTERACTION_ENGINE_V3__)return;
+window.__HELLAVERSE_DIALOGUE_INTERACTION_ENGINE_V3__=1;
 
 const K='hellaverse_dialogue_state_v1',META='hellaverse_dialogue_render_meta_v1',PREFIX='hv-runtime-v2-';
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -28,6 +28,13 @@ function syntheticScene(id){
   const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
   b.type='button';b.hidden=true;b.dataset.scene=String(id);b.dataset.hvInteractionBridge='2';host.appendChild(b);
   bridge=true;try{b.click()}finally{bridge=false;if(b.isConnected)b.remove()}
+}
+function ensureDialogueBox(){
+  if($('.character-room .dialogue-box'))return true;
+  const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
+  b.type='button';b.hidden=true;b.dataset.action='ASK';b.dataset.hvInteractionBridge='3';host.appendChild(b);
+  bridge=true;try{b.click()}finally{bridge=false;if(b.isConnected)b.remove()}
+  return !!$('.character-room .dialogue-box');
 }
 function cleanRuntime(s){
   const now=Date.now();s.dialogues=Array.isArray(s.dialogues)?s.dialogues:[];
@@ -101,7 +108,7 @@ function actionRows(){
   const seen=new Set();return [...generated,...custom].filter(row=>{const k=row.label.trim().toLowerCase();if(seen.has(k))return false;seen.add(k);return true})
 }
 function actionHtml(){const rows=actionRows();return `<section class="hv-action-panel" data-hv-action-panel><header><div><small>ACTION</small><h2>무엇을 할까?</h2><p>행동은 직접 고르고, 캐릭터의 반응은 여러 반응 중 하나가 나옵니다.</p></div><button type="button" data-hv-action-close aria-label="닫기">×</button></header><div class="hv-action-list">${rows.map((r,i)=>`<button type="button" data-hv-action-choice="${esc(r.id)}" data-hv-action-type="${r.type}"><b>${String(i+1).padStart(2,'0')}</b><span><strong>${esc(r.label)}</strong><small>${esc(r.hint)}</small></span></button>`).join('')}</div></section>`}
-function openAction(){const box=$('.character-room .dialogue-box');if(!box)return;closeAction();box.classList.add('hv-action-open');box.insertAdjacentHTML('beforeend',actionHtml())}
+function openAction(){if(!ensureDialogueBox())return;const box=$('.character-room .dialogue-box');if(!box)return;closeAction();box.classList.add('hv-action-open');box.insertAdjacentHTML('beforeend',actionHtml())}
 function closeAction(){$$('[data-hv-action-panel]').forEach(x=>x.remove());$$('.dialogue-box.hv-action-open').forEach(x=>x.classList.remove('hv-action-open'))}
 function pickReaction(action){
   const list=action[4]||[],key=`${cid()}:${action[0]}`;if(!list.length)return'';let pool=list.map((x,i)=>({x,i}));const last=lastReaction.get(key);if(pool.length>1)pool=pool.filter(r=>r.i!==last);const row=pool[Math.floor(Math.random()*pool.length)]||pool[0];lastReaction.set(key,row.i);return row.x

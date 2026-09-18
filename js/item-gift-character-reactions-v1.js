@@ -441,6 +441,23 @@ function itemTheme(i){
  if(/무기|검|창|총|폭탄|dagger|sword|weapon|bomb/.test(t))return'weapon';
  return'object';
 }
+const DUCK_DETAILS=[
+ [/키키 덕/i,'고양이 귀와 열쇠 기능'],[/허스크 덕/i,'미니 술잔'],[/복스 덕/i,'금 간 화면'],[/벨벳 덕/i,'홀로그램'],
+ [/펜셔스 덕/i,'작은 기어'],[/에밀리 덕/i,'교체 가능한 금색 날개'],[/체리밤 덕/i,'폭발 버튼'],[/니프티 덕/i,'작고 빠른 움직임'],
+ [/알래스터 덕/i,'사슴뿔과 저주 인형 같은 디자인'],[/엔젤 더스트 덕/i,'지나치게 화려한 장식'],[/세라 덕/i,'백조처럼 보이는 실루엣'],
+ [/가브리엘 덕/i,'누르면 나오는 목소리'],[/에즈라엘 덕/i,'수리 자국과 흠집'],[/모닝스타 왕좌 덕/i,'빙글 도는 미니 왕좌'],
+ [/왕과 왕비 덕/i,'서로 다시 붙는 자석'],[/웨딩 덕/i,'신랑·신부 역할을 숨긴 디자인'],[/가족 덕 세트/i,'세 마리를 한 세트로 둔 구성'],
+ [/꼬마 찰리 덕/i,'작은 리본'],[/찰리 덕/i,'계속 업그레이드되는 버전'],[/루시퍼 덕/i,'찰리 덕 옆에 두는 자리'],
+ [/릴리스 덕/i,'머리와 장식이 다른 여러 버전'],[/최초의 덕/i,'삐뚤지만 첫 작품인 점'],[/백플립 덕/i,'백플립 기능'],
+ [/웃는 덕/i,'활짝 웃는 얼굴'],[/우울한 덕/i,'축 처진 표정'],[/금단의 사과 덕/i,'사과 장식'],[/레비아탄 덕/i,'서로 다투는 두 머리'],
+ [/벨페고르 덕/i,'유난히 폭신한 몸'],[/비엘제붑 덕/i,'달콤한 향'],[/아스모데우스 덕/i,'하트와 깃털 장식'],[/마몬 덕/i,'금빛 도금'],
+ [/사탄 덕/i,'잔뜩 화난 얼굴'],[/오버로드 회의 덕/i,'회의석의 빈 자리'],[/로지 덕/i,'장미 장식과 향'],[/제스티얼 덕/i,'가만히 앉아 있어도 묘한 분위기'],
+ [/카밀라 덕/i,'전해주려다 오래 묵힌 사연'],[/발렌티노 덕/i,'세트를 맞추기 위해 만든 디자인'],[/노래 덕/i,'버튼을 누르면 나오는 멜로디'],
+ [/재활 덕/i,'찰리의 재활 아이디어가 들어간 배지'],[/배기 덕/i,'바기의 특징을 오리로 옮긴 디자인'],[/에덴 덕/i,'에덴 시절을 떠올리게 하는 오래된 표면'],
+ [/신의 대변자 덕/i,'깊숙이 숨겨둘 만큼 민감한 모티브'],[/미카엘 덕/i,'말을 멈추게 할 만큼 오래된 기억'],[/이름 없는 덕/i,'끝내 이름을 붙이지 않은 점']
+];
+function duckDetail(i){const n=iname(i);for(const [re,d] of DUCK_DETAILS)if(re.test(n))return d;return'모티브를 오리로 옮긴 디테일'}
+
 function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
  const item=vars.item,owner=vars.owner,ownerId=String(i?.characterId||''),formal=isFormalTarget(cid),motif=motifOf(i),theme=itemTheme(i);
  const plus=clamp(delta+(delta>=0?1:0),-4,5),quiet=clamp(delta-(rel==='HATE'?0:1),-4,5);
@@ -448,10 +465,11 @@ function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
  const q=(casual,polite)=>formal?polite:casual;
  if(theme==='duck'&&motif){
   if(String(cid)===String(ownerId)){
+   const detail=duckDetail(i);
    return[
-    row('motif-why',`「${item}」에서 ${O(motif.name)} 이렇게 표현한 이유를 묻는다.`,q(`이 「${item}」, ${O(motif.name)} 이렇게 오리로 만든 이유가 뭐야?`,`이 「${item}」, ${O(motif.name)} 이렇게 오리로 만든 이유가 뭐예요?`),response,plus),
+    row('motif-why',`「${item}」의 ${detail}을 왜 넣었는지 묻는다.`,q(`이 「${item}」, ${detail}까지 넣은 이유가 뭐야?`,`이 「${item}」, ${detail}까지 넣으신 이유가 뭐예요?`),response,plus),
     row('motif-show',`${motif.name}에게 ${O('「'+item+'」')} 보여준 적 있는지 묻는다.`,q(`${motif.name}한테 이 「${item}」도 보여준 적 있어?`,`${motif.name}한테 이 「${item}」도 보여주신 적 있으세요?`),context,delta),
-    row('motif-detail',`「${item}」에서 ${motif.name}답게 만든 디테일을 살펴본다.`,`「${item}」의 ${motif.name} 모티브를 하나씩 살펴보며 건넨다.`,silent,quiet,'action')
+    row('motif-detail',`「${item}」에서 ${motif.name}답게 만든 부분을 살펴본다.`,`「${item}」의 ${detail}을 가까이 살펴보며 건넨다.`,silent,quiet,'action')
    ]
   }
   if(motif.id&&String(cid)===String(motif.id)){
@@ -467,39 +485,57 @@ function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
    row('motif-hand',`「${item}」의 ${motif.name} 모티브를 보여주며 건넨다.`,`「${item}」에서 ${O(motif.name)} 본뜬 부분을 보여주며 건넨다.`,silent,quiet,'action')
   ]
  }
+ if(theme==='duck'){
+  const detail=duckDetail(i);
+  return[
+   row('duck-detail',`「${item}」의 ${detail}을 왜 넣었는지 묻는다.`,q(`이 「${item}」, ${detail}이 제일 눈에 띄는데 왜 이렇게 만든 거야?`,`이 「${item}」, ${detail}이 제일 눈에 띄는데 왜 이렇게 만드신 거예요?`),response,plus),
+   row('duck-memory',`${O('「'+item+'」')} 만들 때 떠올린 장면을 묻는다.`,q(`이 「${item}」 만들 때 제일 먼저 떠올린 장면이 뭐야?`,`이 ${O('「'+item+'」')} 만드실 때 제일 먼저 떠올린 장면이 뭐예요?`),context,delta),
+   row('duck-hand',`「${item}」의 ${detail}을 살펴보며 건넨다.`,`「${item}」의 ${detail}을 망가뜨리지 않게 조심하며 건넨다.`,silent,quiet,'action')
+  ]
+ }
  if(theme==='photo')return[
   row('photo-first',`「${item}」에서 제일 먼저 눈에 들어오는 걸 묻는다.`,q(`이 「${item}」에서 제일 먼저 눈에 들어오는 게 뭐야?`,`이 「${item}」에서 제일 먼저 눈에 들어오는 게 뭐예요?`),response,plus),
-  row('photo-memory',`${O('「'+item+'」')} 보면 떠오르는 기억을 묻는다.`,q(`이 사진 보면 제일 먼저 떠오르는 기억 있어?`,`이 사진을 보면 제일 먼저 떠오르는 기억이 있으세요?`),context,delta),
+  row('photo-memory',`${O('「'+item+'」')} 보면 떠오르는 기억을 묻는다.`,q(`이 「${item}」 보면 제일 먼저 떠오르는 기억 있어?`,`이 ${O('「'+item+'」')} 보면 제일 먼저 떠오르는 기억이 있으세요?`),context,delta),
   row('photo-hand',`「${item}」의 모서리를 잡아 조심스럽게 건넨다.`,`${S('「'+item+'」')} 구겨지지 않게 가장자리를 잡아 건넨다.`,silent,quiet,'action')
  ];
  if(theme==='letter')return[
   row('letter-kept',`${O('「'+item+'」')} 아직 남겨둔 이유를 묻는다.`,q(`이 「${item}」, 아직 남겨둔 이유가 있어?`,`이 「${item}」, 아직 남겨두신 이유가 있으세요?`),response,plus),
-  row('letter-now',`${O('「'+item+'」')} 지금 다시 읽으면 어떨지 묻는다.`,q(`이거 지금 다시 읽으면 그때랑 느낌이 다를 것 같아?`,`이걸 지금 다시 읽으시면 그때랑 느낌이 다를 것 같으세요?`),context,delta),
+  row('letter-now',`${O('「'+item+'」')} 지금 다시 읽으면 어떨지 묻는다.`,q(`이 「${item}」 지금 다시 읽으면 그때랑 느낌이 다를 것 같아?`,`이 ${O('「'+item+'」')} 지금 다시 읽으시면 그때랑 느낌이 다를 것 같으세요?`),context,delta),
   row('letter-hand',`「${item}」의 글씨를 가리지 않게 펼쳐 건넨다.`,`「${item}」의 접힌 자국을 따라 조심스럽게 펴서 건넨다.`,silent,quiet,'action')
  ];
  if(theme==='family')return[
   row('family-first',`${O('「'+item+'」')} 보면 가족 중 누가 먼저 떠오르는지 묻는다.`,q(`이 「${item}」 보면 가족 중에 누가 제일 먼저 생각나?`,`이 ${O('「'+item+'」')} 보면 가족 중에 누가 제일 먼저 생각나세요?`),response,plus),
-  row('family-kept',`${O('「'+item+'」')} 소중히 두는 이유를 묻는다.`,q(`이걸 계속 소중하게 두는 이유, 물어봐도 돼?`,`이걸 계속 소중하게 두시는 이유, 여쭤봐도 돼요?`),context,delta),
+  row('family-kept',`${O('「'+item+'」')} 소중히 두는 이유를 묻는다.`,q(`이 「${item}」 계속 소중하게 두는 이유, 물어봐도 돼?`,`이 ${O('「'+item+'」')} 계속 소중하게 두시는 이유, 여쭤봐도 돼요?`),context,delta),
   row('family-hand',`「${item}」의 오래된 흔적을 살피며 건넨다.`,`「${item}」의 닳은 부분을 건드리지 않게 조심히 건넨다.`,silent,quiet,'action')
  ];
  if(theme==='heaven')return[
   row('heaven-link',`「${item}」과 과거의 연결을 묻는다.`,q(`이 「${item}」, 예전 이야기랑 이어져 있는 물건이지?`,`이 「${item}」, 예전 이야기와 이어져 있는 물건이죠?`),response,plus),
-  row('heaven-kept',`${O('「'+item+'」')} 지금도 간직하는 이유를 묻는다.`,q(`이걸 지금도 가지고 있는 이유 물어봐도 돼?`,`이걸 지금도 가지고 계신 이유를 여쭤봐도 돼요?`),context,delta),
+  row('heaven-kept',`${O('「'+item+'」')} 지금도 간직하는 이유를 묻는다.`,q(`이 「${item}」 지금도 가지고 있는 이유 물어봐도 돼?`,`이 ${O('「'+item+'」')} 지금도 가지고 계신 이유를 여쭤봐도 돼요?`),context,delta),
   row('heaven-hand',`${O('「'+item+'」')} 말없이 한 번 바라본 뒤 건넨다.`,`${O('「'+item+'」')} 함부로 만지지 않고 손바닥 위에 올려 건넨다.`,silent,quiet,'action')
  ];
  if(theme==='music')return[
   row('music-sound',`「${item}」과 연결된 소리를 묻는다.`,q(`이 「${item}」 보면 제일 먼저 어떤 소리가 생각나?`,`이 ${O('「'+item+'」')} 보면 제일 먼저 어떤 소리가 생각나세요?`),response,plus),
-  row('music-memory',`「${item}」과 가장 가까운 기억을 묻는다.`,q(`이거랑 제일 가까운 기억 하나만 꼽으면 뭐야?`,`이거랑 제일 가까운 기억 하나만 꼽으시면 뭐예요?`),context,delta),
+  row('music-memory',`「${item}」과 가장 가까운 기억을 묻는다.`,q(`「${item}」이랑 제일 가까운 기억 하나만 꼽으면 뭐야?`,`「${item}」이랑 제일 가까운 기억 하나만 꼽으시면 뭐예요?`),context,delta),
   row('music-hand',`「${item}」의 장식과 사용 흔적을 살펴보며 건넨다.`,`「${item}」의 사용 흔적을 한 번 살펴본 뒤 건넨다.`,silent,quiet,'action')
+ ];
+ if(theme==='royal')return[
+  row('royal-meaning',`「${item}」에 담긴 왕실 의미를 묻는다.`,q(`이 「${item}」, 그냥 장식은 아닌 것 같은데 어떤 의미야?`,`이 「${item}」, 그냥 장식은 아닌 것 같은데 어떤 의미예요?`),response,plus),
+  row('royal-use',`${O('「'+item+'」')} 실제로 쓰던 때를 묻는다.`,q(`이 「${item}」 실제로 쓰던 때 기억나?`,`이 ${O('「'+item+'」')} 실제로 쓰시던 때가 기억나세요?`),context,delta),
+  row('royal-hand',`「${item}」의 왕실 장식을 살펴보며 건넨다.`,`「${item}」의 장식이 긁히지 않게 조심스럽게 건넨다.`,silent,quiet,'action')
+ ];
+ if(theme==='weapon')return[
+  row('weapon-story',`${S('「'+item+'」')} 실제로 쓰였던 일을 묻는다.`,q(`이 「${item}」, 실제로 쓴 적도 있어?`,`이 「${item}」, 실제로 쓰신 적도 있으세요?`),response,plus),
+  row('weapon-kept',`${O('「'+item+'」')} 계속 보관하는 이유를 묻는다.`,q(`이 「${item}」 아직 보관하는 이유가 뭐야?`,`이 ${O('「'+item+'」')} 아직 보관하시는 이유가 뭐예요?`),context,delta),
+  row('weapon-hand',`「${item}」의 위험한 부분을 피해서 건넨다.`,`「${item}」의 날이나 작동부를 건드리지 않고 건넨다.`,silent,quiet,'action')
  ];
  if(theme==='bar')return[
   row('bar-use',`${O('「'+item+'」')} 실제로 어떻게 썼는지 묻는다.`,q(`이 「${item}」, 실제로 자주 쓰던 거야?`,`이 「${item}」, 실제로 자주 쓰시던 거예요?`),response,plus),
-  row('bar-story',`「${item}」에 얽힌 가장 기억나는 일을 묻는다.`,q(`이 물건에 얽힌 일 중에 제일 기억나는 건 뭐야?`,`이 물건에 얽힌 일 중에 제일 기억나는 건 뭐예요?`),context,delta),
+  row('bar-story',`「${item}」에 얽힌 가장 기억나는 일을 묻는다.`,q(`「${item}」에 얽힌 일 중에 제일 기억나는 건 뭐야?`,`「${item}」에 얽힌 일 중에 제일 기억나는 건 뭐예요?`),context,delta),
   row('bar-hand',`「${item}」의 닳은 부분을 확인하며 건넨다.`,`「${item}」의 사용 흔적을 확인한 뒤 건넨다.`,silent,quiet,'action')
  ];
  return[
   row('item-why',`${O('「'+item+'」')} 따로 남겨둔 이유를 묻는다.`,q(`이 「${item}」, 따로 남겨둔 이유가 있어?`,`이 「${item}」, 따로 남겨두신 이유가 있으세요?`),response,plus),
-  row('item-point',`「${item}」에서 가장 마음에 드는 부분을 묻는다.`,q(`이 물건에서 제일 마음에 드는 부분이 뭐야?`,`이 물건에서 제일 마음에 드는 부분이 뭐예요?`),context,delta),
+  row('item-point',`「${item}」에서 가장 마음에 드는 부분을 묻는다.`,q(`「${item}」에서 제일 마음에 드는 부분이 뭐야?`,`「${item}」에서 제일 마음에 드는 부분이 뭐예요?`),context,delta),
   row('item-hand',`「${item}」의 모양과 흔적을 살펴보며 건넨다.`,`${O('「'+item+'」')} 한 번 자세히 살펴본 뒤 조심스럽게 건넨다.`,silent,quiet,'action')
  ];
 }

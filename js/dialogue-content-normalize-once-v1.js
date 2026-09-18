@@ -15,7 +15,8 @@ function looksNarration(v){
   if(/^(?:그는|그가|그녀는|그녀가|당신은|당신이|상대는|상대가)\s/.test(t))return true;
   if(/^(?:방 안|침대 위|책상|벽에|문 쪽|작업대|복도|피아노|창가|테이블|바닥|서랍|액자|의자|왕좌|엘리베이터|호텔)\S*\s/.test(t)&&/다\.$/.test(t))return true;
   const subject=t.match(/^([가-힣A-Za-z·.' -]{2,24})(은|는|이|가)\s/);
-  if(subject&&!/^(?:나|내|너|네|우리|그것|이것|저것|사람들?)$/.test(subject[1].trim())&&/다\.$/.test(t))return true;
+  const actionCue=/(?:손|시선|고개|몸|표정|눈|미소|웃|바라|돌리|꺼내|넣|잡|들고|놓|앉|일어나|움직|멈추|중얼|피하|만지|정리|읽|살피|끄덕|젓|기울|둘러|펼치|접|기대|찡그|서랍|작업대|문 쪽|벽|테이블|의자|피아노)/;
+  if(subject&&!/^(?:나|내|너|네|우리|그것|이것|저것|사람들?)$/.test(subject[1].trim())&&actionCue.test(t)&&/다\.$/.test(t))return true;
   return false;
 }
 function pushBeat(out,kind,text){

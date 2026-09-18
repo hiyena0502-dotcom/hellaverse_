@@ -127,7 +127,7 @@ const GIVER={
 function giverCfg(id){return GIVER[id]||GIVER['lucifer-morningstar']}
 function rarityRule(r){
  r=rare(r);
- return r==='MISTIC'?{heart:90,p:2,gate:'personal'}:r==='LEGENDARY'?{heart:75,p:6,gate:'trust'}:r==='EPIC'?{heart:50,p:18,gate:'pattern'}:r==='RARE'?{heart:30,p:35,gate:'opened'}:r==='UNCOMMON'?{heart:15,p:60,gate:''}:{heart:0,p:85,gate:''};
+ return r==='MISTIC'?{heart:90,p:2,gate:'personal'}:r==='LEGENDARY'?{heart:75,p:6,gate:'personal'}:r==='EPIC'?{heart:50,p:18,gate:'trust'}:r==='RARE'?{heart:30,p:35,gate:'pattern'}:r==='UNCOMMON'?{heart:15,p:60,gate:'opened'}:{heart:0,p:85,gate:''};
 }
 function eventReq(giver,r){
  const rule=rarityRule(r),need=[];

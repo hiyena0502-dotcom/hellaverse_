@@ -7,7 +7,7 @@ const K='hellaverse_dialogue_state_v1',META='hellaverse_dialogue_render_meta_v1'
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
 const up=v=>String(v||'').trim().toUpperCase();
-let queued=false,bridge=false,direct=null;
+let queued=false,bridge=false,direct=null,bootResumePending=false,bootResumeAttempted=false;
 
 function read(key=K,f={}){try{return JSON.parse(localStorage.getItem(key)||'')||f}catch{return f}}
 function state(){return read(K,{})}
@@ -69,7 +69,20 @@ function directStart(){
   }
   setTimeout(schedule,direct.started?90:70);
 }
-function run(){labelNavigation();ensureBar();directStart()}
+function resumeAfterReload(){
+  if(!bootResumePending||bootResumeAttempted||direct)return;
+  if(document.body.classList.contains('hv-room-exiting')||document.body.classList.contains('hv-dialogue-chain-transition'))return;
+  if($('.character-room .dialogue-box')){bootResumePending=false;return}
+  const placeholder=$('.character-room [data-hv-room-direct-placeholder]');
+  if(!placeholder)return;
+  const s=state();if(String(s.page||'')!=='life'){bootResumePending=false;return}
+  const fn=window.__HV_START_CONVERSATION__;if(typeof fn!=='function')return;
+  bootResumeAttempted=true;
+  const ok=!!fn({fresh:true});
+  bootResumePending=false;
+  if(!ok)toast('현재 시작할 수 있는 대화가 없습니다.');
+}
+function run(){labelNavigation();ensureBar();directStart();resumeAfterReload()}
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}
 
 window.addEventListener('click',e=>{
@@ -87,5 +100,6 @@ window.addEventListener('click',e=>{
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
 window.addEventListener('resize',schedule,{passive:true});
 window.addEventListener('hellaverse:state-updated',schedule);window.addEventListener('hellaverse:runtime-ready',schedule);
+bootResumePending=String(state().page||'')==='life';
 document.addEventListener('DOMContentLoaded',schedule);window.addEventListener('load',schedule);if(document.readyState!=='loading')schedule();
 })();

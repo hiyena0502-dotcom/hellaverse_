@@ -23,23 +23,41 @@ const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{r
 function choice(id,text,response){
  return{id,type:'speech',text,playerLine:'',response,affectionDelta:0,requiredAffection:0,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true};
 }
+function markedOpening(v){
+ const t=String(v||'').trim();if(!t)return'';
+ let m=t.match(/^“([^”]+)”\s*(.*)$/);if(m)return '[[CHARACTER]] “'+m[1]+'”'+(m[2]?'\n[[NARRATION]] '+m[2]:'');
+ m=t.match(/^(.*?)\s*“([^”]+)”\s*(.*)$/);if(m&&m[1].trim())return '[[NARRATION]] '+m[1].trim()+'\n[[CHARACTER]] “'+m[2]+'”'+(m[3]?'\n[[NARRATION]] '+m[3]:'');
+ return '[[NARRATION]] '+t;
+}
 function sceneFor(cid,p,ti,ai){
  const topic=p.t[ti],angle=ANGLES[ai],n=ti*5+ai+1,id='hazbin-fanon50-'+cid+'-'+String(n).padStart(3,'0'),formal=FORMAL.has(cid),vars={topic};
- const q1=fill(formal?angle.qf:angle.q,vars),q2=fill(formal?angle.rf:angle.r,vars),opening=fill(p.o[ai],vars),a=fill(p.a[ai],vars),b=fill(p.b[ai],vars);
- return{id,characterId:cid,title:topic+' · '+angle.title,kind:'TALK',sceneRole:'CONVERSATION',conversationType:'FANDOM_SLICE_OF_LIFE',repeatable:true,requiredAffection:0,maxAffection:100,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority:4,probability:100,opening,openingType:'character',exitLine:'',after:'',used:false,nodes:[{id:'start',speaker:'character',text:'',choices:[choice(id+'-a',q1,a),choice(id+'-b',q2,b)]}],openingNodeId:'start',contentPack:PACK,canonGrounding:'fandom-inspired fanmade; not official canon',radioappleExcluded:true,_hvHazbinFanon50:true};
+ const q1=fill(formal?angle.qf:angle.q,vars),q2=fill(formal?angle.rf:angle.r,vars),opening=markedOpening(fill(p.o[ai],vars)),a=fill(p.a[ai],vars),b=fill(p.b[ai],vars);
+ return{id,characterId:cid,title:topic+' · '+angle.title,kind:'TALK',sceneRole:'CONVERSATION',conversationType:'FANDOM_SLICE_OF_LIFE',repeatable:true,requiredAffection:0,maxAffection:100,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority:4,probability:100,opening,openingType:'narration',exitLine:'',after:'',used:false,nodes:[{id:'start',speaker:'character',text:'',choices:[choice(id+'-a',q1,a),choice(id+'-b',q2,b)]}],openingNodeId:'start',contentPack:PACK,canonGrounding:'fandom-inspired fanmade; not official canon',radioappleExcluded:true,_hvHazbinFanon50:true};
 }
-function run(){
+function isPack(sc){return!!sc&&(sc.contentPack===PACK||sc._hvHazbinFanon50===true||String(sc.id||'').startsWith('hazbin-fanon50-'))}
+function write(s){try{const value=JSON.stringify(s);localStorage.setItem(K,value);window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'hazbin-fanon50-v1',clearDirty:false}}));return true}catch(e){console.warn('Hazbin fanon 50 pack save failed safely.',e);return false}}
+function ensureForActive(){
  const s=read();s.characters=Array.isArray(s.characters)?s.characters:[];s.dialogues=Array.isArray(s.dialogues)?s.dialogues:[];
- const active=new Set(s.characters.filter(c=>c&&!c.hidden).map(c=>String(c.id||''))),targets=HAZBIN.filter(id=>active.has(id));
- const current=s.dialogues.filter(x=>x&&x.contentPack===PACK);
- const by=new Map();for(const sc of current)by.set(sc.characterId,(by.get(sc.characterId)||0)+1);
- if(targets.length&&targets.every(id=>by.get(id)===50)&&current.length===targets.length*50)return;
- s.dialogues=s.dialogues.filter(x=>!(x&&(x.contentPack===PACK||x._hvHazbinFanon50===true||String(x.id||'').startsWith('hazbin-fanon50-'))));
- for(const cid of targets){const p=P[cid];if(!p||p.t.length!==10||p.o.length!==5||p.a.length!==5||p.b.length!==5)continue;for(let ti=0;ti<10;ti++)for(let ai=0;ai<5;ai++)s.dialogues.push(sceneFor(cid,p,ti,ai))}
+ const cid=String(s.active||''),char=s.characters.find(x=>String(x?.id||'')===cid),valid=!!char&&!char.hidden&&HAZBIN.includes(cid),current=s.dialogues.filter(isPack),unique=new Set(current.map(x=>String(x?.id||'')));
+ if(valid&&current.length===50&&unique.size===50&&current.every(x=>x.characterId===cid&&x.contentPack===PACK))return;
+ s.dialogues=s.dialogues.filter(x=>!isPack(x));
  s.dialogueFileMap=s.dialogueFileMap&&typeof s.dialogueFileMap==='object'?s.dialogueFileMap:{};
+ s.dialogueMeta=s.dialogueMeta&&typeof s.dialogueMeta==='object'&&!Array.isArray(s.dialogueMeta)?s.dialogueMeta:{};
  for(const id of Object.keys(s.dialogueFileMap))if(id.startsWith('hazbin-fanon50-'))delete s.dialogueFileMap[id];
- for(const sc of s.dialogues)if(sc?.contentPack===PACK)s.dialogueFileMap[sc.id]='js/hazbin-fanon-dialogue-50-v1.js';
- try{const value=JSON.stringify(s);localStorage.setItem(K,value);window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'hazbin-fanon50-v1',clearDirty:false}}))}catch(e){console.warn('Hazbin fanon 50 pack save failed safely.',e)}
+ for(const id of Object.keys(s.dialogueMeta))if(id.startsWith('hazbin-fanon50-'))delete s.dialogueMeta[id];
+ if(valid){
+  const p=P[cid];if(p&&p.t.length===10&&p.o.length===5&&p.a.length===5&&p.b.length===5){
+   for(let ti=0;ti<10;ti++)for(let ai=0;ai<5;ai++){const sc=sceneFor(cid,p,ti,ai);s.dialogues.push(sc);s.dialogueFileMap[sc.id]='CONVERSATION'}
+  }
+ }
+ write(s);
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(run,0),{once:true});else setTimeout(run,0);
+let timer=0;function schedule(ms=25){clearTimeout(timer);timer=setTimeout(ensureForActive,ms)}
+document.addEventListener('click',e=>{const t=e.target instanceof Element?e.target:null;if(t?.closest('[data-room],[data-page="characters"],[data-back]'))schedule(45)},false);
+window.addEventListener('storage',e=>{if(e.key===K)schedule(30)});
+window.addEventListener('hellaverse:state-updated',e=>{if(e.detail?.source!=='hazbin-fanon50-v1')schedule(35)});
+new MutationObserver(()=>schedule(70)).observe(document.documentElement,{childList:true,subtree:true});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>schedule(0),{once:true});else schedule(0);
+window.addEventListener('load',()=>schedule(0));
+window.__HV_HAZBIN_FANON50_INFO__={pack:PACK,scenesPerActiveCharacter:50,profiles:HAZBIN.length,radioappleExcluded:true};
 })();

@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_ROOM_EXIT_TRANSITION_V2__)return;
-window.__HELLAVERSE_ROOM_EXIT_TRANSITION_V2__=1;
+if(window.__HELLAVERSE_ROOM_EXIT_TRANSITION_V3__)return;
+window.__HELLAVERSE_ROOM_EXIT_TRANSITION_V3__=1;
 
 const STATE_KEY='hellaverse_dialogue_state_v1';
 const META_KEY='hellaverse_dialogue_render_meta_v1';
@@ -70,10 +70,22 @@ function schedule(){requestAnimationFrame(normalizeExitUi)}
 
 window.addEventListener('click',event=>{
   if(bridge)return;const target=event.target instanceof Element?event.target:null;if(!target)return;
+
+  // EXIT의 마지막 NEXT/END는 코어에 넘기지 않는다.
+  // 코어가 먼저 sess=null + render()를 하면 옛 room 메뉴가 한 프레임 보이므로,
+  // 작별 장면 완료 후에는 곧바로 CHARACTERS로 이동한다.
+  const localNext=target.closest('.character-room .dialogue-box [data-single-beat-next]');
+  if(pending&&exitStarted&&localNext?.dataset.singleBeatMode==='end'){
+    event.preventDefault();event.stopImmediatePropagation();navigateCharacters();return;
+  }
+  const rawEnd=target.closest('.character-room .dialogue-box [data-end]');
+  if(pending&&exitStarted&&rawEnd){
+    event.preventDefault();event.stopImmediatePropagation();navigateCharacters();return;
+  }
+
   const sceneButton=target.closest('[data-scene]');if(pending&&sceneButton&&roleForSceneId(sceneButton.dataset.scene||'')==='EXIT'){exitStarted=true;sawExitBox=false;setTimeout(schedule,0)}
   if(target.closest('.character-room [data-vn-leave],.character-room [data-runtime-leave]')){beginPending();return}
   if(isCharactersTrigger(target)){event.preventDefault();event.stopImmediatePropagation();beginPending();setTimeout(syntheticLeave,0);return}
-  const end=target.closest('.character-room .dialogue-box [data-end]');if(pending&&exitStarted&&end){setTimeout(()=>{if(pending)navigateCharacters()},90)}
 },true);
 
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,characterData:true});

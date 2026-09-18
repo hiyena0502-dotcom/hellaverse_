@@ -1,9 +1,9 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V4__)return;
-window.__HELLAVERSE_AMBIENT100_RUNTIME_V4__=1;
+if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V5__)return;
+window.__HELLAVERSE_AMBIENT100_RUNTIME_V5__=1;
 
-const K='hellaverse_dialogue_state_v1',PACK='ambient100-v4';
+const K='hellaverse_dialogue_state_v1',PACK='ambient100-v5';
 const EXCLUDED=new Set(['eve','lilith-morningstar','speaker-of-god','michael','gabriel','azrael','saint-peter','st-peter','peter']);
 const $=(s,r=document)=>r.querySelector(s);
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -509,16 +509,21 @@ function fallback(c){
  return{t:topics,v,a:['“그건 단순하게 한 문장으로 끝낼 문제는 아닌 것 같아.”','“예전보다 지금이 조금 달라진 건 맞아.”','“상대가 어떻게 받아들이는지도 생각해야겠지.”','“내 기준이 늘 정답이라고 생각하진 않아.”'],thought:'말하지 않았던 부분까지 전부 숨길 필요는 없을지도 모른다.'};
 }
 function profile(c){return P[c.id]||fallback(c)}
+function stableIndex(seed,len){
+ if(!len)return 0;let h=0;for(const ch of String(seed||''))h=((h<<5)-h+ch.charCodeAt(0))|0;return Math.abs(h)%len;
+}
 function openingVariants(c,p,topic){
  const vars={name:c.name||c.id,topic};
  const out=[];
  for(let i=0;i<10;i++){const base=repl(p.v[i%p.v.length]||FallbackV[i%FallbackV.length],vars),suffix=SUFFIX[Math.floor(i/p.v.length)%SUFFIX.length]||'';out.push(base+suffix)}
- return [...new Set(out)].join('\n');
+ const unique=[...new Set(out)].filter(Boolean);
+ return unique[stableIndex((c.id||'')+'|'+topic,unique.length)]||'';
 }
 function responseVariants(c,p,topic,offset=0){
  const vars={name:c.name||c.id,topic};const out=[];
  for(let i=0;i<4;i++)out.push(repl(p.a[(i+offset)%p.a.length]||'',vars));
- return [...new Set(out)].filter(Boolean).join('\n');
+ const unique=[...new Set(out)].filter(Boolean);
+ return unique[stableIndex((c.id||'')+'|'+topic+'|'+offset,unique.length)]||'';
 }
 function eventId(cid,stage){return 'ambient100.'+cid+'.'+stage}
 function eventDef(cid,name,stage,desc){return{id:eventId(cid,stage),name:name+' · '+stage.toUpperCase(),description:desc,type:'MILESTONE',characterId:cid,namespace:'ambient100'}}

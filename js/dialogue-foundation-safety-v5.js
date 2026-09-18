@@ -12,7 +12,7 @@ function runtimeUX(){
   if(lines){
     lines.setAttribute('aria-live','polite');
     lines.setAttribute('aria-relevant','additions text');
-    requestAnimationFrame(()=>{lines.scrollTop=lines.scrollHeight});
+    requestAnimationFrame(()=>{lines.scrollTop=document.documentElement.classList.contains('hv-single-beat-runtime')?0:lines.scrollHeight});
   }
   for(const button of $$('.choice-option',stage)){
     button.type='button';

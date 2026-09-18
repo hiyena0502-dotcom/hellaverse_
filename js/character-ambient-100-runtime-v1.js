@@ -1,9 +1,9 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V2__)return;
-window.__HELLAVERSE_AMBIENT100_RUNTIME_V2__=1;
+if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V3__)return;
+window.__HELLAVERSE_AMBIENT100_RUNTIME_V3__=1;
 
-const K='hellaverse_dialogue_state_v1',PACK='ambient100-v2';
+const K='hellaverse_dialogue_state_v1',PACK='ambient100-v3';
 const EXCLUDED=new Set(['eve','lilith-morningstar','speaker-of-god','michael','gabriel','azrael','saint-peter','st-peter','peter']);
 const $=(s,r=document)=>r.querySelector(s);
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -546,12 +546,14 @@ function sceneFor(c,p,i){
 function ensureForActive(){
  const s=read(),cid=String(s.active||''),c=(s.characters||[]).find(x=>String(x?.id||'')===cid);
  if(!c||EXCLUDED.has(cid)||c.hidden)return;
- const current=(s.dialogues||[]).filter(x=>x?._hvAmbient100);
- if(current.length===100&&current.every(x=>x.characterId===cid&&x.contentPack===PACK))return;
- s.dialogues=Array.isArray(s.dialogues)?s.dialogues.filter(x=>!x?._hvAmbient100):[];
+ const isAmbient=sc=>!!sc&&(sc._hvAmbient100===true||String(sc.id||'').startsWith('ambient100-'));
+ const current=(s.dialogues||[]).filter(isAmbient),uniqueIds=new Set(current.map(x=>String(x?.id||'')).filter(Boolean));
+ if(current.length===100&&uniqueIds.size===100&&current.every(x=>x.characterId===cid&&x.contentPack===PACK))return;
+ s.dialogues=Array.isArray(s.dialogues)?s.dialogues.filter(x=>!isAmbient(x)):[];
  s.dialogueFileMap=s.dialogueFileMap&&typeof s.dialogueFileMap==='object'?s.dialogueFileMap:{};
  s.dialogueMeta=s.dialogueMeta&&typeof s.dialogueMeta==='object'&&!Array.isArray(s.dialogueMeta)?s.dialogueMeta:{};
  for(const id of Object.keys(s.dialogueFileMap))if(id.startsWith('ambient100-'))delete s.dialogueFileMap[id];
+ for(const id of Object.keys(s.dialogueMeta))if(id.startsWith('ambient100-'))delete s.dialogueMeta[id];
  const p=profile(c),scenes=Array.from({length:100},(_,i)=>sceneFor(c,p,i));
  for(const sc of scenes){s.dialogues.push(sc);s.dialogueFileMap[sc.id]='CONVERSATION'}
  const milestones=[

@@ -3,7 +3,7 @@
 if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V7__)return;
 window.__HELLAVERSE_DIALOGUE_CONTINUITY_V7__=1;
 
-const K='hellaverse_dialogue_state_v1',META='hellaverse_dialogue_render_meta_v1',CHAIN='hv-conversation-chain';
+const K='hellaverse_dialogue_state_v1',META='hellaverse_dialogue_render_meta_v1',CHAIN='hv-conversation-chain',CHAIN_TRANSITION='hv-dialogue-chain-transition';
 const $=(s,r=document)=>r.querySelector(s);
 const up=v=>String(v||'').trim().toUpperCase();
 const list=v=>Array.isArray(v)?v.map(String).map(x=>x.trim()).filter(Boolean):String(v||'').split(/[\n,;/|]+/).map(x=>x.trim()).filter(Boolean);
@@ -70,7 +70,7 @@ function syntheticScene(sc){
   return true;
 }
 function startConversation({fresh=false}={}){if(starting||continuing)return false;const cid=String(state().active||'');if(fresh||!chainCid)resetSession(cid);const sc=pickConversation();return sc?syntheticScene(sc):false}
-function stopChain(clear=true){document.body.classList.remove(CHAIN,CHAIN_TRANSITION);starting=false;continuing=false;if(clear)resetSession('')}
+function stopChain(clear=true){try{document.body.classList.remove(CHAIN,CHAIN_TRANSITION)}catch{}starting=false;continuing=false;if(clear)resetSession('')}
 function syntheticEnd(){const host=$('.character-room')||$('#app');if(!host)return;const b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.end='';b.dataset.hvContinuityBridge='7';host.appendChild(b);bridge=true;try{b.click()}finally{bridge=false;if(b.isConnected)b.remove()}}
 function exhaust(){stopChain();setTimeout(syntheticEnd,0)}
 function finishAndContinue(button){

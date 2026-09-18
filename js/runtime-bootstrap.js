@@ -87,7 +87,7 @@ await loadClassic('js/affection-balance-v3.js?v=1');
 await loadClassic('js/relationship-friction-dialogues.js?v=1');
 await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 
-await loadClassic('js/dialogue-content-normalize-once-v1.js?v=4');
+await loadClassic('js/dialogue-content-normalize-once-v1.js?v=5');
 await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=6');
 await loadClassic('js/dialogue-player-line-normalizer.js?v=1');
 await loadClassic('js/event-progression-pack-v1.js?v=1');
@@ -98,7 +98,7 @@ await loadStableCore();
 await loadClassic('js/event-progression-runtime-v1.js?v=2');
 await loadClassic('js/character-ambient-100-runtime-v1.js?v=5');
 
-await loadClassic('js/dialogue-token-renderer.js?v=6');
+await loadClassic('js/dialogue-token-renderer.js?v=7');
 await loadClassic('js/dialogue-single-beat-runtime-v23.js?v=2');
 await loadClassic('js/dialogue-interaction-engine-v2.js?v=1');
 await loadClassic('js/dialogue-room-controller-v3.js?v=5');

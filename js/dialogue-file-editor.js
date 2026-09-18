@@ -64,7 +64,8 @@ function saveNodes(list){const el=$('#sNodesJson');if(!el)return;el.value=JSON.s
 function refs(list,id){let n=0;for(const node of list)for(const ch of node.choices||[])if(String(ch?.nextNodeId||'')===String(id))n++;return n}
 
 function nextChoiceMarkup(c={},i=0){
- return`<article class="dfe-nested-choice" data-dfe-nested-choice="${i}"><div class="dfe-nested-head"><strong>NEXT CHOICE ${i+1}</strong><button type="button" data-dfe-remove-nested="${i}">REMOVE</button></div><div class="dfe-grid"><label>TYPE<select data-dfe-nested-type><option value="speech" ${c.type!=='action'?'selected':''}>SPEECH</option><option value="action" ${c.type==='action'?'selected':''}>ACTION</option></select></label><label>HEART<input data-dfe-nested-delta type="number" value="${esc(c.affectionDelta||0)}"></label><label class="full">CHOICE TEXT<input data-dfe-nested-text value="${esc(c.text||'')}"></label><label class="full">PLAYER LINE / ACTION<input data-dfe-nested-player value="${esc(c.playerLine||'')}"></label><label class="full">CHARACTER RESPONSE<textarea data-dfe-nested-response rows="2">${esc(c.response||'')}</textarea></label></div></article>`;
+ const custom=String(c.playerLine||'').trim()&&String(c.playerLine||'').trim()!==String(c.text||'').trim();
+ return`<article class="dfe-nested-choice" data-dfe-nested-choice="${i}"><div class="dfe-nested-head"><strong>NEXT CHOICE ${i+1}</strong><button type="button" data-dfe-remove-nested="${i}">REMOVE</button></div><div class="dfe-grid"><label>TYPE<select data-dfe-nested-type><option value="speech" ${c.type!=='action'?'selected':''}>SPEECH</option><option value="action" ${c.type==='action'?'selected':''}>ACTION</option></select></label><label>HEART<input data-dfe-nested-delta type="number" value="${esc(c.affectionDelta||0)}"></label><label class="full">CHOICE TEXT<input data-dfe-nested-text value="${esc(c.text||'')}"></label><label class="full">CHARACTER RESPONSE<textarea data-dfe-nested-response rows="2">${esc(c.response||'')}</textarea></label></div><details class="dfe-choice-advanced dfe-player-line-advanced" ${custom?'open':''}><summary>ADVANCED · CUSTOM PLAYER LINE</summary><div class="dfe-grid"><label class="full">PLAYER LINE / ACTION <small>Optional · CHOICE TEXT와 다를 때만 입력합니다. 비워두면 CHOICE TEXT를 그대로 사용합니다.</small><input data-dfe-nested-player value="${esc(custom?c.playerLine:'')}" placeholder="비워두면 CHOICE TEXT 사용"></label></div></details></article>`;
 }
 function flowMarkup(n){
  const next=$(`#c${n}next`),list=nodes(),node=list.find(x=>String(x?.id||'')===String(next?.value||''));
@@ -75,7 +76,8 @@ function flowMarkup(n){
 function renderFlow(n,host){if(host)host.innerHTML=flowMarkup(n)}
 function getFlowNode(n,list=nodes()){const id=String($(`#c${n}next`)?.value||'');return list.find(x=>String(x?.id||'')===id)||null}
 function nestedFromRow(row,old={}){
- return{...old,id:old.id||uid('choice'),type:$('[data-dfe-nested-type]',row)?.value==='action'?'action':'speech',text:$('[data-dfe-nested-text]',row)?.value||'',playerLine:$('[data-dfe-nested-player]',row)?.value||'',response:$('[data-dfe-nested-response]',row)?.value||'',affectionDelta:Number($('[data-dfe-nested-delta]',row)?.value||0),requiredAffection:Number(old.requiredAffection||0),requiredStage:old.requiredStage||'',requiredMood:old.requiredMood||'ANY',requiredFlags:old.requiredFlags||'',blockedFlags:old.blockedFlags||'',requiredMemoryTags:old.requiredMemoryTags||'',lockDisplay:old.lockDisplay||'disabled',setFlags:old.setFlags||'',removeFlags:old.removeFlags||'',addMemoryTitle:old.addMemoryTitle||'',addMemorySummary:old.addMemorySummary||'',addMemoryTags:old.addMemoryTags||'',moodChange:old.moodChange||'',unlockItemId:old.unlockItemId||'',nextNodeId:old.nextNodeId||'',endConversation:old.endConversation!==false};
+ const text=$('[data-dfe-nested-text]',row)?.value||'',rawPlayer=$('[data-dfe-nested-player]',row)?.value||'',playerLine=rawPlayer.trim()&&rawPlayer.trim()!==text.trim()?rawPlayer:'';
+ return{...old,id:old.id||uid('choice'),type:$('[data-dfe-nested-type]',row)?.value==='action'?'action':'speech',text,playerLine,response:$('[data-dfe-nested-response]',row)?.value||'',affectionDelta:Number($('[data-dfe-nested-delta]',row)?.value||0),requiredAffection:Number(old.requiredAffection||0),requiredStage:old.requiredStage||'',requiredMood:old.requiredMood||'ANY',requiredFlags:old.requiredFlags||'',blockedFlags:old.blockedFlags||'',requiredMemoryTags:old.requiredMemoryTags||'',lockDisplay:old.lockDisplay||'disabled',setFlags:old.setFlags||'',removeFlags:old.removeFlags||'',addMemoryTitle:old.addMemoryTitle||'',addMemorySummary:old.addMemorySummary||'',addMemoryTags:old.addMemoryTags||'',moodChange:old.moodChange||'',unlockItemId:old.unlockItemId||'',nextNodeId:old.nextNodeId||'',endConversation:old.endConversation!==false};
 }
 function updateFlow(n){
  const list=nodes(),node=getFlowNode(n,list);if(!node)return;
@@ -123,8 +125,12 @@ function buildChoice(n,old){
  box.innerHTML=`<summary><b>${n}</b><span><strong>CHOICE ${n}</strong><small data-dfe-choice-preview="${n}">${esc(preview(n))}</small></span></summary>`;
  const body=document.createElement('div');body.className='dfe-choice-body';
  const core=document.createElement('div');core.className='dfe-grid';
- move([`c${n}type`,`c${n}text`,`c${n}player`,`c${n}res`,`c${n}delta`],core,[`c${n}text`,`c${n}player`,`c${n}res`]);
+ move([`c${n}type`,`c${n}text`,`c${n}res`,`c${n}delta`],core,[`c${n}text`,`c${n}res`]);
  body.appendChild(core);
+ const player=document.createElement('details');player.className='dfe-choice-advanced dfe-player-line-advanced';
+ const playerInput=$(`#c${n}player`),textInput=$(`#c${n}text`),hasCustom=!!(playerInput?.value.trim()&&playerInput.value.trim()!==(textInput?.value||'').trim());if(hasCustom)player.open=true;
+ player.innerHTML='<summary>ADVANCED · CUSTOM PLAYER LINE</summary>';
+ const playerGrid=document.createElement('div');playerGrid.className='dfe-grid';move([`c${n}player`],playerGrid,[`c${n}player`]);player.appendChild(playerGrid);body.appendChild(player);
  const flow=document.createElement('section');flow.className='dfe-flow';flow.dataset.dfeFlowHost=String(n);flow.innerHTML=flowMarkup(n);body.appendChild(flow);
  const adv=document.createElement('details');adv.className='dfe-choice-advanced';adv.innerHTML='<summary>조건 · 이벤트 · 아이템 · 고급 분기</summary>';
  const grid=document.createElement('div');grid.className='dfe-grid';

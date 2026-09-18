@@ -90,7 +90,7 @@ await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 await loadClassic('js/dialogue-content-normalize-once-v1.js?v=2');
 await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=6');
 
-await loadClassic('js/dialogue-continuity-controller-v6.js?v=2');
+await loadClassic('js/dialogue-continuity-controller-v6.js?v=3');
 await loadClassic('js/room-exit-transition.js?v=3');
 await loadStableCore();
 

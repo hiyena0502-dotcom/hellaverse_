@@ -98,10 +98,14 @@ await loadStableCore();
 await loadClassic('js/event-progression-runtime-v1.js?v=2');
 await loadClassic('js/character-ambient-100-runtime-v1.js?v=5');
 
+await loadClassic('js/dialogue-token-renderer.js?v=6');
+await loadClassic('js/dialogue-single-beat-runtime-v23.js?v=2');
+await loadClassic('js/dialogue-interaction-engine-v2.js?v=1');
+await loadClassic('js/dialogue-room-controller-v3.js?v=5');
+
 try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}catch{}
 
 const scripts=[
-  ['classic','js/dialogue-token-renderer.js?v=6'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=56'],
   ['module','js/relationship-editor.js?v=51'],
@@ -123,15 +127,12 @@ const scripts=[
   ['classic','js/dialogue-file-editor.js?v=4'],
   ['classic','js/dialogue-episode-authoring.js?v=1'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
-  ['classic','js/dialogue-single-beat-runtime-v23.js?v=2'],
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/collection-gacha-editor.js?v=4'],
   ['classic','js/collection-reveal-line-bridge.js?v=1'],
   ['classic','js/collection-emoji-corrections.js?v=2'],
   ['classic','js/ux/runtime-diagnostics.js?v=8'],
   ['classic','js/final-ux-cleanup.js?v=15'],
-  ['classic','js/dialogue-interaction-engine-v2.js?v=1'],
-  ['classic','js/dialogue-room-controller-v3.js?v=4']
 ];
 
 for(const [type,src] of scripts){if(type==='module')await loadModule(src);else await loadClassic(src)}

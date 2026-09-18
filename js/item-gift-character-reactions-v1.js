@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_ITEM_GIFT_CHARACTER_REACTIONS_V1__)return;
-window.__HELLAVERSE_ITEM_GIFT_CHARACTER_REACTIONS_V1__=1;
+if(window.__HELLAVERSE_ITEM_GIFT_CHARACTER_REACTIONS_V2__)return;
+window.__HELLAVERSE_ITEM_GIFT_CHARACTER_REACTIONS_V2__=1;
 
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
 const rare=v=>{let r=clean(v||'COMMON').toUpperCase();if(r==='MYSTIC')r='MISTIC';if(r==='LEGEND')r='LEGENDARY';return r};
@@ -404,6 +404,101 @@ function baseResponse(p,rel,key,vars){
  }
  return text;
 }
+
+function idesc(i){return clean(i?.desc||i?.description||i?.shortDescription||i?.revealLine||i?.claimLine||'')}
+const MOTIFS=[
+ [/키키|\bkiki\b/i,'키키','kiki'],[/허스크|\bhusk\b/i,'허스크','husk'],[/니프티|\bniffty\b/i,'니프티','niffty'],
+ [/알래스터|\balastor\b/i,'알래스터','alastor'],[/엔젤(?: 더스트)?|\bangel(?: dust)?\b/i,'엔젤','angel-dust'],
+ [/펜셔스|\bpentious\b/i,'펜셔스','sir-pentious'],[/체리(?:밤| 봄)?|\bcherri\b/i,'체리','cherri-bomb'],
+ [/배기|바기|\bvaggie\b/i,'바기','vaggie'],[/찰리|\bcharlie\b/i,'찰리','charlie-morningstar'],
+ [/루시퍼|\blucifer\b/i,'루시퍼','lucifer-morningstar'],[/세라|\bsera\b/i,'세라','sera'],
+ [/에밀리|\bemily\b/i,'에밀리','emily'],[/류트|\blute\b/i,'류트','lute'],[/아담|\badam\b/i,'아담','adam'],
+ [/복스|\bvox\b/i,'복스','vox'],[/발렌티노|\bvalentino\b/i,'발렌티노','valentino'],[/벨벳|\bvelvette\b/i,'벨벳','velvette'],
+ [/카밀라|\bcarmilla\b/i,'카밀라','carmilla-carmine'],[/로지|\brosie\b/i,'로지','rosie'],[/제스티얼|\bzestial\b/i,'제스티얼','zestial'],
+ [/백스터|\bbaxter\b/i,'백스터','baxter'],[/아벨|\babel\b/i,'아벨','abel'],[/사탄|\bsatan\b/i,'사탄','satan'],
+ [/마몬|\bmammon\b/i,'마몬','mammon'],[/아스모데우스|오지|\basmodeus\b/i,'아스모데우스','asmodeus'],
+ [/비엘제붑|\bbeelzebub\b/i,'비엘제붑','beelzebub'],[/벨페고르|\bbelphegor\b/i,'벨페고르','belphegor'],
+ [/레비아탄|\bleviathan\b/i,'레비아탄','leviathan'],[/스토라스|\bstolas\b/i,'스토라스','stolas']
+];
+function motifOf(i){
+ const t=iname(i)+' '+idesc(i);for(const [re,name,id] of MOTIFS)if(re.test(t))return{name,id};return null
+}
+function itemTheme(i){
+ const t=(iname(i)+' '+idesc(i)).toLowerCase();
+ if(/덕|오리|duck/.test(t))return'duck';
+ if(/사진|photo|포토/.test(t))return'photo';
+ if(/편지|letter|러브레터/.test(t))return'letter';
+ if(/가족|family|daddy|웨딩|부부|릴리스|찰리의 어린|꼬마 찰리/.test(t))return'family';
+ if(/후광|천국|에덴|천사|halo|heaven/.test(t))return'heaven';
+ if(/피아노|악보|노래|레코드|음반|마이크|기타|멜로디|music|song/.test(t))return'music';
+ if(/왕관|왕좌|왕실|king|queen|crown|throne/.test(t))return'royal';
+ if(/술|칵테일|드링크|바 |잔|주사위|포커|카지노|drink|casino/.test(t))return'bar';
+ if(/무기|검|창|총|폭탄|dagger|sword|weapon|bomb/.test(t))return'weapon';
+ return'object';
+}
+function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
+ const item=vars.item,owner=vars.owner,ownerId=String(i?.characterId||''),formal=isFormalTarget(cid),motif=motifOf(i),theme=itemTheme(i);
+ const plus=clamp(delta+(delta>=0?1:0),-4,5),quiet=clamp(delta-(rel==='HATE'?0:1),-4,5);
+ const row=(id,label,playerLine,res,d=delta,type='speech')=>({id,label,type,playerLine,response:res,affectionDelta:d,afterEvent:''});
+ const q=(casual,polite)=>formal?polite:casual;
+ if(theme==='duck'&&motif){
+  if(String(cid)===String(ownerId)){
+   return[
+    row('motif-why',`「${item}」에서 ${motif.name}을 이렇게 표현한 이유를 묻는다.`,q(`이 「${item}」, ${motif.name}을 이렇게 오리로 만든 이유가 뭐야?`,`이 「${item}」, ${motif.name}을 이렇게 오리로 만든 이유가 뭐예요?`),response,plus),
+    row('motif-show',`${motif.name}에게 「${item}」을 보여준 적 있는지 묻는다.`,q(`${motif.name}한테 이 「${item}」도 보여준 적 있어?`,`${motif.name}한테 이 「${item}」도 보여주신 적 있으세요?`),context,delta),
+    row('motif-detail',`「${item}」에서 ${motif.name}답게 만든 디테일을 살펴본다.`,`「${item}」의 ${motif.name} 모티브를 하나씩 살펴보며 건넨다.`,silent,quiet,'action')
+   ]
+  }
+  if(motif.id&&String(cid)===String(motif.id)){
+   return[
+    row('motif-self',`「${item}」이 본인을 닮았는지 묻는다.`,q(`이 「${item}」, 직접 보니까 너랑 좀 닮은 것 같아?`,`이 「${item}」, 직접 보시면 본인하고 좀 닮았다고 생각하세요?`),response,plus),
+    row('motif-maker',`${owner}가 자신을 이렇게 표현한 게 어떤지 묻는다.`,q(`${owner}가 너를 이렇게 만든 거, 마음에 들어?`,`${owner}가 이렇게 표현한 거, 마음에 드세요?`),context,delta),
+    row('motif-compare',`「${item}」에서 실제 모습과 닮은 부분을 찾아본다.`,`「${item}」과 실제 모습을 번갈아 보며 조심스럽게 건넨다.`,silent,quiet,'action')
+   ]
+  }
+  return[
+   row('motif-reminds',`「${item}」을 보면 ${motif.name}이 먼저 떠오르는지 묻는다.`,q(`이 「${item}」 보면 ${motif.name} 생각부터 나?`,`이 「${item}」을 보면 ${motif.name} 생각부터 나세요?`),response,plus),
+   row('motif-fit',`${motif.name} 모티브가 잘 어울리는지 묻는다.`,q(`${owner}가 ${motif.name}을 이렇게 표현한 거, 잘 어울린다고 생각해?`,`${owner}가 ${motif.name}을 이렇게 표현한 거, 잘 어울린다고 생각하세요?`),context,delta),
+   row('motif-hand',`「${item}」의 ${motif.name} 모티브를 보여주며 건넨다.`,`「${item}」에서 ${motif.name}을 본뜬 부분을 보여주며 건넨다.`,silent,quiet,'action')
+  ]
+ }
+ if(theme==='photo')return[
+  row('photo-first',`「${item}」에서 제일 먼저 눈에 들어오는 걸 묻는다.`,q(`이 「${item}」에서 제일 먼저 눈에 들어오는 게 뭐야?`,`이 「${item}」에서 제일 먼저 눈에 들어오는 게 뭐예요?`),response,plus),
+  row('photo-memory',`「${item}」을 보면 떠오르는 기억을 묻는다.`,q(`이 사진 보면 제일 먼저 떠오르는 기억 있어?`,`이 사진을 보면 제일 먼저 떠오르는 기억이 있으세요?`),context,delta),
+  row('photo-hand',`「${item}」의 모서리를 잡아 조심스럽게 건넨다.`,`「${item}」이 구겨지지 않게 가장자리를 잡아 건넨다.`,silent,quiet,'action')
+ ];
+ if(theme==='letter')return[
+  row('letter-kept',`「${item}」을 아직 남겨둔 이유를 묻는다.`,q(`이 「${item}」, 아직 남겨둔 이유가 있어?`,`이 「${item}」, 아직 남겨두신 이유가 있으세요?`),response,plus),
+  row('letter-now',`「${item}」을 지금 다시 읽으면 어떨지 묻는다.`,q(`이거 지금 다시 읽으면 그때랑 느낌이 다를 것 같아?`,`이걸 지금 다시 읽으시면 그때랑 느낌이 다를 것 같으세요?`),context,delta),
+  row('letter-hand',`「${item}」의 글씨를 가리지 않게 펼쳐 건넨다.`,`「${item}」의 접힌 자국을 따라 조심스럽게 펴서 건넨다.`,silent,quiet,'action')
+ ];
+ if(theme==='family')return[
+  row('family-first',`「${item}」을 보면 가족 중 누가 먼저 떠오르는지 묻는다.`,q(`이 「${item}」 보면 가족 중에 누가 제일 먼저 생각나?`,`이 「${item}」을 보면 가족 중에 누가 제일 먼저 생각나세요?`),response,plus),
+  row('family-kept',`「${item}」을 소중히 두는 이유를 묻는다.`,q(`이걸 계속 소중하게 두는 이유, 물어봐도 돼?`,`이걸 계속 소중하게 두시는 이유, 여쭤봐도 돼요?`),context,delta),
+  row('family-hand',`「${item}」의 오래된 흔적을 살피며 건넨다.`,`「${item}」의 닳은 부분을 건드리지 않게 조심히 건넨다.`,silent,quiet,'action')
+ ];
+ if(theme==='heaven')return[
+  row('heaven-link',`「${item}」과 과거의 연결을 묻는다.`,q(`이 「${item}」, 예전 이야기랑 이어져 있는 물건이지?`,`이 「${item}」, 예전 이야기와 이어져 있는 물건이죠?`),response,plus),
+  row('heaven-kept',`「${item}」을 지금도 간직하는 이유를 묻는다.`,q(`이걸 지금도 가지고 있는 이유 물어봐도 돼?`,`이걸 지금도 가지고 계신 이유를 여쭤봐도 돼요?`),context,delta),
+  row('heaven-hand',`「${item}」을 말없이 한 번 바라본 뒤 건넨다.`,`「${item}」을 함부로 만지지 않고 손바닥 위에 올려 건넨다.`,silent,quiet,'action')
+ ];
+ if(theme==='music')return[
+  row('music-sound',`「${item}」과 연결된 소리를 묻는다.`,q(`이 「${item}」 보면 제일 먼저 어떤 소리가 생각나?`,`이 「${item}」을 보면 제일 먼저 어떤 소리가 생각나세요?`),response,plus),
+  row('music-memory',`「${item}」과 가장 가까운 기억을 묻는다.`,q(`이거랑 제일 가까운 기억 하나만 꼽으면 뭐야?`,`이거랑 제일 가까운 기억 하나만 꼽으시면 뭐예요?`),context,delta),
+  row('music-hand',`「${item}」의 장식과 사용 흔적을 살펴보며 건넨다.`,`「${item}」의 사용 흔적을 한 번 살펴본 뒤 건넨다.`,silent,quiet,'action')
+ ];
+ if(theme==='bar')return[
+  row('bar-use',`「${item}」을 실제로 어떻게 썼는지 묻는다.`,q(`이 「${item}」, 실제로 자주 쓰던 거야?`,`이 「${item}」, 실제로 자주 쓰시던 거예요?`),response,plus),
+  row('bar-story',`「${item}」에 얽힌 가장 기억나는 일을 묻는다.`,q(`이 물건에 얽힌 일 중에 제일 기억나는 건 뭐야?`,`이 물건에 얽힌 일 중에 제일 기억나는 건 뭐예요?`),context,delta),
+  row('bar-hand',`「${item}」의 닳은 부분을 확인하며 건넨다.`,`「${item}」의 사용 흔적을 확인한 뒤 건넨다.`,silent,quiet,'action')
+ ];
+ return[
+  row('item-why',`「${item}」을 따로 남겨둔 이유를 묻는다.`,q(`이 「${item}」, 따로 남겨둔 이유가 있어?`,`이 「${item}」, 따로 남겨두신 이유가 있으세요?`),response,plus),
+  row('item-point',`「${item}」에서 가장 마음에 드는 부분을 묻는다.`,q(`이 물건에서 제일 마음에 드는 부분이 뭐야?`,`이 물건에서 제일 마음에 드는 부분이 뭐예요?`),context,delta),
+  row('item-hand',`「${item}」의 모양과 흔적을 살펴보며 건넨다.`,`「${item}」을 한 번 자세히 살펴본 뒤 조심스럽게 건넨다.`,silent,quiet,'action')
+ ];
+}
+
 function build(s,i,cid){
  const item=iname(i),ownerId=String(i?.characterId||''),owner=cname(s,ownerId),who=cname(s,cid),rarity=rare(i?.rarity),rel=relation(String(cid),ownerId),p=profile(String(cid)),key=String(cid)+'|'+String(i?.id||item),vars={item,owner,who,rarity},[preference,baseDelta]=pref(rel);
  const rarityBoost=rarity==='MISTIC'?1:rarity==='LEGENDARY'?1:0,delta=clamp(baseDelta+(baseDelta>=0?rarityBoost:0),-4,5);
@@ -415,15 +510,7 @@ function build(s,i,cid){
   response,
   afterEvent:'',setFlags:'',removeFlags:'',moodChange:rel==='HATE'?'ANNOYED':rel==='LOVE'||rel==='OWN'?'GOOD':'',
   memoryTitle:`GIFT: ${item}`,memorySummary:`${who}에게 「${item}」을 선물했다.`,memoryTags:`gift, collection, ${String(i?.id||'')}, ${String(cid)}`,
-  approaches:isFormalTarget(cid)?[
-   {id:'personal',label:'생각나서 가져왔어요.',type:'speech',playerLine:'생각나서 가져왔어요.',response:personal,affectionDelta:clamp(delta+(delta>=0?1:0),-4,5),afterEvent:''},
-   {id:'story',label:'이 물건에 얽힌 이야기를 들려드린다.',type:'speech',playerLine:`이건 ${owner}와 관련된 물건이에요. 이야기도 같이 들어주실래요?`,response:context,affectionDelta:delta,afterEvent:''},
-   {id:'silent',label:'말없이 조심스럽게 건넨다.',type:'action',playerLine:`${item}을 조심스럽게 건넨다.`,response:silent,affectionDelta:clamp(delta-(rel==='HATE'?0:1),-4,5),afterEvent:''}
-  ]:[
-   {id:'personal',label:'네 생각이 나서 가져왔어.',type:'speech',playerLine:'네 생각이 나서 가져왔어.',response:personal,affectionDelta:clamp(delta+(delta>=0?1:0),-4,5),afterEvent:''},
-   {id:'story',label:'이 물건에 얽힌 이야기를 들려준다.',type:'speech',playerLine:`이건 ${owner}와 관련된 물건이야. 이야기도 같이 들어줄래?`,response:context,affectionDelta:delta,afterEvent:''},
-   {id:'silent',label:'말없이 조심스럽게 건넨다.',type:'action',playerLine:`${item}을 조심스럽게 건넨다.`,response:silent,affectionDelta:clamp(delta-(rel==='HATE'?0:1),-4,5),afterEvent:''}
-  ]
+  approaches:buildApproaches(s,i,String(cid),rel,delta,p,vars,response,context,silent)
  };
 }
 function migrateSavedGiftPoliteness(){

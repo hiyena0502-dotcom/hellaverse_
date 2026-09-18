@@ -78,9 +78,9 @@ try{
 }catch(error){console.warn('Dialogue metadata sync skipped safely.',error)}
 
 await loadClassic('js/dialogue-five-role-cleanup.js?v=1');
-await loadClassic('js/hazbin-major-dialogue-expansion-a.js?v=1');
-await loadClassic('js/hazbin-major-dialogue-expansion-b.js?v=1');
-await loadClassic('js/hazbin-major-dialogue-expansion-c.js?v=1');
+await loadClassic('js/hazbin-major-dialogue-expansion-a.js?v=2');
+await loadClassic('js/hazbin-major-dialogue-expansion-b.js?v=2');
+await loadClassic('js/hazbin-major-dialogue-expansion-c.js?v=2');
 await loadClassic('js/charlie-mega-content-pack.js?v=1');
 await loadClassic('js/charlie-bright-guilt-duality-pack.js?v=1');
 await loadClassic('js/affection-balance-v3.js?v=1');
@@ -88,7 +88,7 @@ await loadClassic('js/relationship-friction-dialogues.js?v=1');
 await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 
 await loadClassic('js/dialogue-content-normalize-once-v1.js?v=2');
-await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=5');
+await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=6');
 
 await loadClassic('js/dialogue-continuity-controller-v6.js?v=2');
 await loadClassic('js/room-exit-transition.js?v=2');

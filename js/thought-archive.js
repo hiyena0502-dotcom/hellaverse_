@@ -161,7 +161,7 @@ function handleChange(e){let t=e.target;if(!(t instanceof Element))return;if(t.i
 function handleInput(e){let t=e.target;if(!(t instanceof Element))return;if(t.matches('[data-picker-search="category"]')){e.stopImmediatePropagation();let q=t.value.toLowerCase().trim();$$('#tCategoryOptions [data-category-option]').forEach(btn=>{btn.hidden=!!q&&!String(btn.dataset.searchText||'').includes(q)});return}}
 function handleKey(e){let tag=e.target&&e.target.tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;if(e.key==='Escape'){let u=readUI();if(u.page){u.page='';writeUI(u)}}}
 let thoughtAppObserver=null;
-function observeMainApp(){let app=$('#app');if(!app)return;if(thoughtAppObserver)thoughtAppObserver.disconnect();let queued=false;thoughtAppObserver=new MutationObserver(ms=>{if(!ms.some(m=>m.target===app||app.contains(m.target)))return;if(queued)return;queued=true;queueMicrotask(()=>{queued=false;afterRender()})});thoughtAppObserver.observe(app,{childList:true,subtree:true})}
+function observeMainApp(){let app=$('#app');if(!app)return;if(thoughtAppObserver)thoughtAppObserver.disconnect();let queued=false;thoughtAppObserver=new MutationObserver(ms=>{if(!ms.some(m=>m.target===app))return;if(queued)return;queued=true;queueMicrotask(()=>{queued=false;afterRender()})});thoughtAppObserver.observe(app,{childList:true})}
 function initThoughtUX(){observeMainApp();afterRender()}
 writeState(readState());
 document.addEventListener('mouseover',e=>{let t=e.target;if(t instanceof Element&&t.closest('[data-thought]'))e.stopImmediatePropagation()},true);

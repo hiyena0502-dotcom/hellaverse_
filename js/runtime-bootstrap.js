@@ -8,7 +8,7 @@ async function loadModule(src){try{await import(absolute(src));return true}catch
 function loadClassic(src){return new Promise(resolve=>{const script=document.createElement('script');script.src=src;script.async=false;script.onload=()=>resolve(true);script.onerror=(event)=>{console.error(`Failed to load script: ${src}`,event);resolve(false)};document.head.appendChild(script)})}
 
 async function loadStableCore(){
-  const src='js/hv-stable.js?v=61';
+  const src='js/hv-stable.js?v=62';
   try{
     const response=await fetch(absolute(src),{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);
     let source=await response.text();
@@ -87,7 +87,7 @@ await loadClassic('js/affection-balance-v3.js?v=1');
 await loadClassic('js/relationship-friction-dialogues.js?v=1');
 await loadClassic('js/dialogue-runtime-temp-cleanup.js?v=2');
 
-await loadClassic('js/dialogue-content-normalize-once-v1.js?v=2');
+await loadClassic('js/dialogue-content-normalize-once-v1.js?v=3');
 await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=6');
 await loadClassic('js/dialogue-player-line-normalizer.js?v=1');
 await loadClassic('js/event-progression-pack-v1.js?v=1');
@@ -101,7 +101,7 @@ await loadClassic('js/character-ambient-100-runtime-v1.js?v=5');
 try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}catch{}
 
 const scripts=[
-  ['classic','js/dialogue-token-renderer.js?v=4'],
+  ['classic','js/dialogue-token-renderer.js?v=5'],
   ['module','js/event-manager.js?v=50'],
   ['module','js/thought-archive.js?v=56'],
   ['module','js/relationship-editor.js?v=51'],
@@ -123,7 +123,7 @@ const scripts=[
   ['classic','js/dialogue-file-editor.js?v=4'],
   ['classic','js/dialogue-episode-authoring.js?v=1'],
   ['classic','js/dialogue-episode-editor-v2.js?v=1'],
-  ['classic','js/dialogue-single-beat-runtime-v23.js?v=1'],
+  ['classic','js/dialogue-single-beat-runtime-v23.js?v=2'],
   ['classic','js/editor-ux-suite.js?v=5'],
   ['classic','js/collection-gacha-editor.js?v=4'],
   ['classic','js/collection-reveal-line-bridge.js?v=1'],

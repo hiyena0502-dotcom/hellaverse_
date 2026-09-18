@@ -148,12 +148,12 @@ function voiceFor(cid,ai){
  return row;
 }
 function openingFor(cid,topic,ai){
- const name=CHARACTER_NAMES[cid]||cid,subject=topic+(hasBatchim(topic)?'이':'가'),object=topic+(hasBatchim(topic)?'을':'를');
+ const name=CHARACTER_NAMES[cid]||cid,subject=topic+(hasBatchim(topic)?'이':'가'),object=topic+(hasBatchim(topic)?'을':'를'),nameSubj=name+(hasBatchim(name)?'이':'가'),nameTopic=name+(hasBatchim(name)?'은':'는');
  const rows=[
-  `[[NARRATION]] ${name}가 하던 일을 잠깐 멈춘다. 그 순간 ${subject} 자연스럽게 눈에 띈다.`,
-  `[[NARRATION]] 잠시 조용해진 사이, ${name}가 ${topic}에 대해 먼저 한마디 꺼낸다.`,
+  `[[NARRATION]] ${nameSubj} 하던 일을 잠깐 멈춘다. 그 순간 ${subject} 자연스럽게 눈에 띈다.`,
+  `[[NARRATION]] 잠시 조용해진 사이, ${nameSubj} ${topic}에 대해 먼저 한마디 꺼낸다.`,
   `[[NARRATION]] 대화가 느슨해진 틈에, ${topic}에 관한 ${name}의 모습이 문득 드러난다.`,
-  `[[NARRATION]] ${name}는 ${object} 굳이 감추려 하지 않은 채 평소처럼 행동한다.`,
+  `[[NARRATION]] ${nameTopic} ${object} 굳이 감추려 하지 않은 채 평소처럼 행동한다.`,
   `[[NARRATION]] 별것 아닌 순간에, ${topic}에 관한 ${name}의 모습이 오히려 선명하게 보인다.`
  ];
  const intro={

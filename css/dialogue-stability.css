@@ -16,3 +16,21 @@
 .dialogue-lines {
   contain: content;
 }
+
+
+/* Single-beat runtime owns visibility. Newly-rendered history stays hidden until
+   the controller explicitly marks exactly one beat as current. */
+html.hv-single-beat-runtime .character-room .dialogue-lines > article.dialogue-line:not([data-hv-single-beat-visible="1"]),
+html.hv-single-beat-runtime .character-room .dialogue-lines > p.narration:not([data-hv-single-beat-visible="1"]),
+html.hv-single-beat-runtime .character-room .dialogue-lines > p.dialogue-current:not([data-hv-single-beat-visible="1"]) {
+  display: none !important;
+}
+
+html.hv-single-beat-runtime .character-room .dialogue-lines > article.dialogue-line[data-hv-single-beat-visible="1"] {
+  display: grid !important;
+}
+
+html.hv-single-beat-runtime .character-room .dialogue-lines > p.narration[data-hv-single-beat-visible="1"],
+html.hv-single-beat-runtime .character-room .dialogue-lines > p.dialogue-current[data-hv-single-beat-visible="1"] {
+  display: block !important;
+}

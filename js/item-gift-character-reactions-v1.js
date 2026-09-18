@@ -478,7 +478,7 @@ function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
   if(motif.id&&String(cid)===String(motif.id)){
    const detail=duckDetail(i),self1=response+` “닮았냐고? 적어도 ${detail}은 내 쪽에서 가져온 티가 나네.”`,
     self2=context+` “${owner}가 나를 이렇게 봤다는 거면, ${detail}부터 집은 이유는 알겠어.”`,
-    self3=silent+` ${who}가 「${item}」의 ${O(detail)} 한 번 더 확인한다.`;
+    self3=silent+` ${vars.who}가 「${item}」의 ${O(detail)} 한 번 더 확인한다.`;
    return[
     row('motif-self',`${S('「'+item+'」')} 본인을 닮았는지 묻는다.`,q(`이 「${item}」, 직접 보니까 너랑 좀 닮은 것 같아?`,`이 「${item}」, 직접 보시면 본인하고 좀 닮았다고 생각하세요?`),self1,plus),
     row('motif-maker',`${S(owner)} 자신을 이렇게 표현한 게 어떤지 묻는다.`,q(`${S(owner)} 너를 이렇게 만든 거, 마음에 들어?`,`${S(owner)} 이렇게 표현한 거, 마음에 드세요?`),self2,delta),

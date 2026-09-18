@@ -91,7 +91,7 @@ window.addEventListener('click',e=>{
   const profile=t.closest('.character-file [data-room]');if(profile){e.preventDefault();e.stopImmediatePropagation();const cid=String(profile.dataset.room||'');beginDirect(cid);synthetic({'data-room':cid});queueMicrotask(schedule);setTimeout(schedule,30);setTimeout(schedule,100);return}
   const command=t.closest('[data-hv-room-command]')?.dataset.hvRoomCommand;
   if(command==='ASK'){e.preventDefault();e.stopImmediatePropagation();openAsk();return}
-  if(command==='INVENTORY'){e.preventDefault();e.stopImmediatePropagation();closeAsk();synthetic({'data-inventory-open':''});return}
+  if(command==='INVENTORY'){e.preventDefault();e.stopImmediatePropagation();closeAsk();if(!window.__HELLAVERSE_ITEM_SYSTEM_V2__){toast('INVENTORY를 불러오는 중입니다. 잠시 후 다시 눌러주세요.');return}synthetic({'data-inventory-open':''});return}
   if(command==='LEAVE'){e.preventDefault();e.stopImmediatePropagation();closeAsk();synthetic({'data-vn-leave':''});return}
   if(t.closest('[data-hv-ask-close]')){e.preventDefault();e.stopImmediatePropagation();closeAsk();return}
   if(t.closest('[data-page="characters"],[data-back],[data-vn-leave],[data-runtime-leave]')){closeAsk();clearDirect()}

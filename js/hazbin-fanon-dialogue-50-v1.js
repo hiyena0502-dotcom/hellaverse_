@@ -24,6 +24,38 @@ const ANGLES=[
   r:'가까이 있으면 자연스럽게 알게 되는 부분 같네.',rf:'가까이 있으면 자연스럽게 알게 되는 부분 같네요.'}
 ];
 
+const CHOICE_VARIANTS=[
+ [
+  {c:['그런 모습은 좀 의외네.','평소엔 잘 티가 안 나는 부분이네.'],f:['그런 모습은 조금 의외네요.','평소엔 잘 티가 안 나는 부분이네요.']},
+  {c:['생각했던 모습이랑은 조금 다르네.','이런 면은 가까이서 봐야 알겠다.'],f:['생각했던 모습과는 조금 다르네요.','이런 면은 가까이서 봐야 알겠어요.']},
+  {c:['이런 부분은 처음 보네.','말 안 했으면 몰랐을 것 같아.'],f:['이런 부분은 처음 보네요.','말씀 안 하셨으면 몰랐을 것 같아요.']}
+ ],
+ [
+  {c:['그건 왠지 너답다.','생각보다 꽤 일상적인 모습이네.'],f:['그건 왠지 잘 어울리세요.','생각보다 꽤 일상적인 모습이네요.']},
+  {c:['이런 모습도 꽤 자연스럽네.','오히려 평소 모습 같아서 좋다.'],f:['이런 모습도 꽤 자연스러우세요.','오히려 평소 모습 같아서 좋네요.']},
+  {c:['그런 사소한 면도 잘 어울려.','이럴 때는 좀 편해 보이네.'],f:['그런 사소한 면도 잘 어울리세요.','이럴 때는 조금 편해 보이네요.']}
+ ],
+ [
+  {c:['굳이 이유까지 설명 안 해도 돼.','말하고 싶을 때만 말해.'],f:['굳이 이유까지 설명하지 않으셔도 괜찮아요.','말하고 싶으실 때만 말씀해주세요.']},
+  {c:['그 얘기는 여기까지만 해도 괜찮아.','편한 만큼만 말하면 돼.'],f:['그 이야기는 여기까지만 하셔도 괜찮아요.','편하신 만큼만 말씀하셔도 돼요.']},
+  {c:['굳이 캐묻고 싶진 않아.','그냥 그런 면도 있구나 하고 알게.'],f:['굳이 캐묻고 싶지는 않아요.','그냥 그런 면도 있으시구나 하고 알게요.']}
+ ],
+ [
+  {c:['예전보다는 조금 편해 보인다.','억지로 감추지 않는 쪽이 더 자연스러워 보여.'],f:['예전보다는 조금 편해 보이세요.','억지로 감추지 않으시는 쪽이 더 자연스러워 보여요.']},
+  {c:['전보다 덜 힘주고 있는 느낌이야.','그냥 두는 쪽이 더 편해 보이네.'],f:['전보다 덜 힘주고 계신 느낌이에요.','그냥 두시는 쪽이 더 편해 보이네요.']},
+  {c:['요즘은 예전만큼 숨기려 하진 않는 것 같네.','조금 달라진 게 보여.'],f:['요즘은 예전만큼 숨기려 하시진 않는 것 같아요.','조금 달라진 게 보여요.']}
+ ],
+ [
+  {c:['그런 건 말보다 행동에서 먼저 보이는 것 같아.','가까이 있으면 자연스럽게 알게 되는 부분 같네.'],f:['그런 건 말보다 행동에서 먼저 보이는 것 같아요.','가까이 있으면 자연스럽게 알게 되는 부분 같네요.']},
+  {c:['이런 건 오래 같이 있어야 보이나 봐.','사소한 습관이 오히려 더 잘 기억나네.'],f:['이런 건 오래 같이 있어야 보이나 봐요.','사소한 습관이 오히려 더 잘 기억나네요.']},
+  {c:['별거 아닌 순간에 더 티 나는 것 같아.','이런 모습이 더 솔직해 보이네.'],f:['별것 아닌 순간에 더 티 나는 것 같아요.','이런 모습이 더 솔직해 보여요.']}
+ ]
+];
+function playerChoices(formal,ai,ti){
+ const group=CHOICE_VARIANTS[ai]||CHOICE_VARIANTS[0],row=group[ti%group.length]||group[0],pair=formal?row.f:row.c;
+ return pair||[ANGLES[ai].q,ANGLES[ai].r];
+}
+
 const CHARACTER_NAMES={
  'lucifer-morningstar':'루시퍼','charlie-morningstar':'찰리','vaggie':'바기','alastor':'알래스터',
  'angel-dust':'엔젤','husk':'허스크','niffty':'니프티','sir-pentious':'펜셔스','cherri-bomb':'체리',
@@ -34,7 +66,7 @@ const VOICE_CLASS={
  'lucifer-morningstar':'lucifer',
  'charlie-morningstar':'warm','emily':'warm','abel':'warm',
  'vaggie':'guarded','lute':'guarded','carmilla-carmine':'guarded','sera':'guarded',
- 'alastor':'oldformal','rosie':'oldformal','zestial':'oldformal',
+ 'alastor':'oldformal','rosie':'oldformal','zestial':'biblical',
  'angel-dust':'snark','cherri-bomb':'snark','adam':'snark','vox':'snark','valentino':'snark','velvette':'snark',
  'husk':'dry','baxter':'analytical','niffty':'manic','sir-pentious':'grand'
 };
@@ -66,6 +98,13 @@ const VOICE={
   ['“오, 배려에 감사드리지요. 모든 이야기에 해설이 필요한 것은 아니랍니다.”','“좋습니다. 입을 열고 싶을 때가 오면 그때 말씀드리지요.”'],
   ['“변화라… 완전히 부정하진 않겠습니다. 세월은 취향 외의 것에도 흔적을 남기니까요.”','“애써 감추는 행위 자체가 때로는 가장 눈에 띄는 법이지요.”'],
   ['“행동을 먼저 보셨다니 관찰력이 좋으시군요.”','“가까운 거리란 원래 사소한 것을 숨기기 어려운 자리랍니다.”']
+ ],
+ biblical:[
+  ['“그대의 눈에 뜻밖이라 보였는가. 허나 작은 버릇 또한 오래 머물면 그 사람의 자취가 되는 법이니라.”','“거듭 행한 것은 마음보다 먼저 몸에 새겨지는 법. 그리 기이한 일은 아니니라.”'],
+  ['“그리 보아 주니 감사히 여기노라.”','“큰일만이 사람을 드러내는 것이 아니니, 사소한 날들에도 본모습은 머무느니라.”'],
+  ['“억지로 묻지 아니하니 그 배려를 귀히 여기노라.”','“때가 이르면 내 입으로 말하리니, 지금은 이만하여도 족하도다.”'],
+  ['“세월이 흐르매 감추는 법 또한 달라지는구나.”','“숨기려 애쓰는 마음이 도리어 더 밝히 드러낼 때도 있느니라.”'],
+  ['“말보다 행실을 먼저 보았도다. 눈이 밝구나.”','“가까이 머무는 자 앞에서는 작은 흔적도 감추기 어려운 법이니라.”']
  ],
  snark:[
   ['“의외야? 와, 나한테 아직 반전이 남아 있었네.”','“맨날 그러다 보니 나도 신경 안 써. 남들이 더 잘 보더라.”'],
@@ -109,19 +148,20 @@ function voiceFor(cid,ai){
  return row;
 }
 function openingFor(cid,topic,ai){
- const name=CHARACTER_NAMES[cid]||cid;
+ const name=CHARACTER_NAMES[cid]||cid,subject=topic+(hasBatchim(topic)?'이':'가'),object=topic+(hasBatchim(topic)?'을':'를');
  const rows=[
-  `[[NARRATION]] ${name}가 하던 일을 잠깐 멈춘다. ${topic}이 자연스럽게 눈에 띈다.`,
+  `[[NARRATION]] ${name}가 하던 일을 잠깐 멈춘다. 그 순간 ${subject} 자연스럽게 눈에 띈다.`,
   `[[NARRATION]] 잠시 조용해진 사이, ${name}가 ${topic}에 대해 먼저 한마디 꺼낸다.`,
-  `[[NARRATION]] 대화가 느슨해진 틈에 ${name}의 ${topic}이 문득 드러난다.`,
-  `[[NARRATION]] ${name}는 ${topic}을 굳이 감추지 않은 채 평소처럼 행동한다.`,
-  `[[NARRATION]] 별것 아닌 순간에 ${name}의 ${topic}이 오히려 선명하게 보인다.`
+  `[[NARRATION]] 대화가 느슨해진 틈에, ${topic}에 관한 ${name}의 모습이 문득 드러난다.`,
+  `[[NARRATION]] ${name}는 ${object} 굳이 감추려 하지 않은 채 평소처럼 행동한다.`,
+  `[[NARRATION]] 별것 아닌 순간에, ${topic}에 관한 ${name}의 모습이 오히려 선명하게 보인다.`
  ];
  const intro={
   lucifer:['“뭐, 이런 면도 있어. 굳이 놀랄 것까진 없잖아?”','“하하, 이건 설명하자면 별거 아닌데… 생각보다 티가 나나 봐.”','“너무 의미 붙이진 마. 그냥 나한테는 익숙한 거야.”','“예전 같았으면 아닌 척했겠지만, 요즘은 뭐.”','“봤으면 어쩔 수 없지. 비밀로 할 정도의 일도 아니고.”'],
   warm:['“아, 이거? 나한텐 꽤 자연스러운 일이야.”','“별거 아닌 얘기인데, 생각보다 자주 이러더라.”','“굳이 숨길 건 아니니까.”','“예전엔 좀 더 의식했는데 요즘은 덜해.”','“이런 사소한 얘기도 가끔은 좋네.”'],
   guarded:['“그냥 습관이야. 큰 의미는 없어.”','“일부러 그러는 건 아니고, 익숙해서 그래.”','“설명할 정도로 대단한 일은 아니야.”','“예전보단 덜 신경 쓰는 편이야.”','“봤으면 봤다고 해. 굳이 숨길 생각은 없어.”'],
   oldformal:['“사소한 습관 하나쯤은 누구에게나 있는 법이지요.”','“오, 별것 아닌 부분까지 보셨군요.”','“굳이 비밀로 둘 이야기는 아니랍니다.”','“세월이 흐르면 감추는 방식도 조금은 달라지는 법이지요.”','“가까이 계시면 이런 자잘한 면도 보이기 마련입니다.”'],
+  biblical:['“작은 버릇 하나라 하여 숨길 까닭은 없느니라.”','“그대가 사소한 흔적까지 보았구나.”','“감출 비밀은 아니니 마음 두지 말라.”','“세월이 흐르매 사람의 버릇 또한 달라지는 법이니라.”','“가까이 머무르면 작은 자취도 보이기 마련이니라.”'],
   snark:['“뭐야, 그거까지 봤어? 관찰력 좋네.”','“별거 아냐. 나도 맨날 거창하게만 살진 않거든.”','“그 표정 뭐야. 생각보다 평범해서 실망했어?”','“예전 같았으면 대충 웃고 넘겼겠지.”','“가까이 있으니까 별걸 다 보네.”'],
   dry:['“별거 아니다. 그냥 습관이야.”','“보다 보면 보이는 거지.”','“굳이 설명할 것까진 없어.”','“예전보단 덜 신경 쓰는 편이고.”','“오래 붙어 있으면 이런 것도 보이게 돼.”'],
   analytical:['“반복 행동이 눈에 띄었군.”','“특별한 이유보다 습관화된 패턴에 가깝다.”','“설명은 가능하지만 반드시 필요한 건 아니지.”','“과거와 비교하면 빈도는 조금 달라졌어.”','“관찰 거리가 가까우면 작은 패턴도 잡히는 법이야.”'],
@@ -149,7 +189,7 @@ function markedOpening(v){
 }
 function sceneFor(cid,p,ti,ai){
  const topic=p.t[ti],angle=ANGLES[ai],n=ti*5+ai+1,id='hazbin-fanon50-'+cid+'-'+String(n).padStart(3,'0'),formal=FORMAL.has(cid);
- const q1=formal?angle.qf:angle.q,q2=formal?angle.rf:angle.r,[a,b]=voiceFor(cid,ai),opening=openingFor(cid,topic,ai);
+ const [q1,q2]=playerChoices(formal,ai,ti),[a,b]=voiceFor(cid,ai),opening=openingFor(cid,topic,ai);
  return{id,characterId:cid,title:topic+' · '+angle.title,kind:'TALK',sceneRole:'CONVERSATION',conversationType:'FANDOM_SLICE_OF_LIFE',repeatable:false,requiredAffection:0,maxAffection:100,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority:4,probability:100,opening,openingType:'narration',exitLine:'',after:'',used:false,nodes:[{id:'start',speaker:'character',text:'',choices:[choice(id+'-a',q1,a),choice(id+'-b',q2,b)]}],openingNodeId:'start',contentPack:PACK,canonGrounding:'fandom-inspired fanmade; not official canon',radioappleExcluded:true,firstClearAffection:1,_hvHazbinFanon50:true};
 }
 function isPack(sc){return!!sc&&(sc.contentPack===PACK||sc._hvHazbinFanon50===true||String(sc.id||'').startsWith('hazbin-fanon50-'))}

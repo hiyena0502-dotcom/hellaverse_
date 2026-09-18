@@ -56,7 +56,7 @@ function scan(){
   for(const item of items){if(!String(item?.symbol||'').trim())warnings.push(`collection item 아이콘 없음: ${item?.id||item?.name||'unknown'}`);if(item?.gachaEnabled!==false&&Number(item?.gachaWeight)<0)issues.push(`음수 gachaWeight: ${item?.id||item?.name||'unknown'}`)}
   for(const key of ['dialogues','gifts','collectionItems','rewards','thoughts','memories','ownedItems'])if(state[key]!=null&&!Array.isArray(state[key]))issues.push(`${key}가 배열이 아님`);
   const errors=errorRows(),runtimeErrorHits=errors.reduce((n,x)=>n+Math.max(1,Number(x.count||1)),0);
-  return{ok:issues.length===0,issues,warnings:[...new Set(warnings)].slice(0,40),stats:{characters:chars.length,dialogues:(state.dialogues||[]).length,gifts:activeGiftConfigs.length,collectionItems:items.length,owned:(state.ownedItems||[]).length,rewards:(state.rewards||[]).length,runtimeErrors:errors.length,runtimeErrorHits},errors};
+  return{ok:issues.length===0&&errors.length===0,issues,warnings:[...new Set(warnings)].slice(0,40),stats:{characters:chars.length,dialogues:(state.dialogues||[]).length,gifts:activeGiftConfigs.length,collectionItems:items.length,owned:(state.ownedItems||[]).length,rewards:(state.rewards||[]).length,runtimeErrors:errors.length,runtimeErrorHits},errors};
 }
 function reportText(r=scan()){
   const s=r.stats||{};

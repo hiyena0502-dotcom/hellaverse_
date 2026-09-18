@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_FILE_EDITOR_V2__)return;
-window.__HELLAVERSE_DIALOGUE_FILE_EDITOR_V2__=1;
+if(window.__HELLAVERSE_DIALOGUE_FILE_EDITOR_V3__)return;
+window.__HELLAVERSE_DIALOGUE_FILE_EDITOR_V3__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const FKEY='hellaverse_dialogue_editor_file_v1';
@@ -18,9 +18,10 @@ const FILES=[
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const esc=(v='')=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const split=v=>Array.isArray(v)?v.map(String).map(x=>x.trim()).filter(Boolean):String(v||'').split(/[\n,;/|]+/).map(x=>x.trim()).filter(Boolean);
 const uid=p=>`${p}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const browserSigs=new WeakMap();
-let queued=false,pendingSaveFile='';
+let queued=false,pendingSaveFile='',pendingCompletionEvents=null;
 
 function read(){try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}}
 function write(s,source='dialogue-file-editor'){
@@ -51,6 +52,22 @@ function activeChar(s){return String(s.active||'')}
 function folderScenes(s,file=selected()){return (s.dialogues||[]).filter(sc=>String(sc?.characterId||'')===activeChar(s)&&fileOf(sc,s)===file)}
 function currentDraft(s){const id=String(s?.draft?.scene||'');return (s.dialogues||[]).find(x=>String(x?.id||'')===id)||null}
 function field(id){return document.getElementById(id)?.closest('label')||null}
+function relabel(id,title,hint=''){
+ const l=field(id);if(!l)return;
+ let done=false;
+ for(const n of Array.from(l.childNodes)){if(n.nodeType===Node.TEXT_NODE&&String(n.textContent||'').trim()){n.textContent=title;done=true;break}}
+ if(!done)l.insertBefore(document.createTextNode(title),l.firstChild);
+ if(hint&&!l.querySelector('.dfe-field-hint')){const s=document.createElement('small');s.className='dfe-field-hint';s.textContent=hint;l.appendChild(s)}
+}
+function wireEventInputs(card,s){
+ let dl=$('#dfeEventCatalog',card);if(!dl){dl=document.createElement('datalist');dl.id='dfeEventCatalog';card.appendChild(dl)}
+ dl.innerHTML=(s.events||[]).map(e=>`<option value="${esc(e.id||'')}">${esc(e.name||e.id||'')}</option>`).join('');
+ for(const id of ['sFlags','sBlocked',...Array.from({length:3},(_,i)=>`c${i+1}rflags`),...Array.from({length:3},(_,i)=>`c${i+1}bflags`),...Array.from({length:3},(_,i)=>`c${i+1}flags`),...Array.from({length:3},(_,i)=>`c${i+1}remove`)]){
+  const el=document.getElementById(id);if(el)el.setAttribute('list','dfeEventCatalog');
+ }
+ const completion=$('#dfeCompletionEvents',card);if(completion)completion.setAttribute('list','dfeEventCatalog');
+}
+
 function move(ids,root,wide=[]){
  const w=new Set(wide);
  for(const id of ids){
@@ -164,10 +181,19 @@ function enhanceEditor(){
  const kind=$('#sKind'),card=kind?.closest('.editor-card');
  if(!card||!card.closest('.editor-main'))return;
  const s=read(),draft=currentDraft(s);
+ relabel('sFlags','REQUIRED EVENT','쉼표로 여러 Event ID를 입력할 수 있습니다.');
+ relabel('sBlocked','BLOCKED EVENT');
+ for(let n=1;n<=3;n++){
+  relabel(`c${n}rflags`,'REQUIRED EVENT');
+  relabel(`c${n}bflags`,'BLOCKED EVENT');
+  relabel(`c${n}flags`,'ACTIVATE EVENT');
+  relabel(`c${n}remove`,'DEACTIVATE EVENT');
+ }
  if(draft&&!pendingSaveFile)setSelected(fileOf(draft,s));
  if(card.dataset.dfe==='1'){
   applyKind();
   refreshBrowser($('[data-dfe-browser]',card),s);
+  wireEventInputs(card,s);
   if(!card.classList.contains('dfe-ready'))card.classList.add('dfe-ready');
   return;
  }
@@ -182,6 +208,7 @@ function enhanceEditor(){
  const bg=document.createElement('div');bg.className='dfe-grid';move(['sTitle','sOpen','sExit','sAfter','sRep'],bg,['sOpen','sExit','sAfter']);basic.appendChild(bg);
  const cond=document.createElement('details');cond.className='dfe-conditions';cond.innerHTML='<summary>장면 조건 펼치기</summary>';
  const cg=document.createElement('div');cg.className='dfe-grid';move(['sReq','sMax','sMood','sFlags','sBlocked','sMem','sItems'],cg,['sFlags','sBlocked','sMem','sItems']);
+ const completion=document.createElement('label');completion.className='full dfe-completion-event';const completionValue=split(s.dialogueMeta?.[draft?.id]?.completionEvents).join(', ');completion.innerHTML=`COMPLETION EVENT<input id="dfeCompletionEvents" value="${esc(completionValue)}" placeholder="이 장면을 끝내면 활성화할 Event ID"><small>장면 완료 시 활성화됩니다. 후속 대화/Thought의 REQUIRED EVENT와 연결하세요.</small>`;cg.appendChild(completion);
  if(form)for(const child of Array.from(form.children)){if(child.contains(kind)){child.classList.add('dfe-hidden-kind');card.appendChild(child)}else cg.appendChild(child)}
  cond.appendChild(cg);basic.appendChild(cond);
 
@@ -193,14 +220,16 @@ function enhanceEditor(){
  if(actions){actions.classList.add('dfe-actions');card.appendChild(actions)}
  const saved=card.nextElementSibling;if(saved?.classList.contains('saved-panel'))saved.style.display='none';
 
+ wireEventInputs(card,s);
  card.classList.add('dfe-card','dfe-ready');
 }
 function commitPending(){
- if(!pendingSaveFile)return;
+ if(!pendingSaveFile&&pendingCompletionEvents===null)return;
  const s=read(),id=String(s?.draft?.scene||'');
  if(!id||!(s.dialogues||[]).some(x=>String(x.id)===id))return;
- s.dialogueFileMap=s.dialogueFileMap&&typeof s.dialogueFileMap==='object'?s.dialogueFileMap:{};
- s.dialogueFileMap[id]=pendingSaveFile;write(s,'dialogue-file-map');pendingSaveFile='';
+ if(pendingSaveFile){s.dialogueFileMap=s.dialogueFileMap&&typeof s.dialogueFileMap==='object'?s.dialogueFileMap:{};s.dialogueFileMap[id]=pendingSaveFile}
+ if(pendingCompletionEvents!==null){s.dialogueMeta=s.dialogueMeta&&typeof s.dialogueMeta==='object'&&!Array.isArray(s.dialogueMeta)?s.dialogueMeta:{};const meta=s.dialogueMeta[id]&&typeof s.dialogueMeta[id]==='object'?s.dialogueMeta[id]:{};meta.completionEvents=[...new Set(split(pendingCompletionEvents))];s.dialogueMeta[id]=meta}
+ write(s,'dialogue-file-map');pendingSaveFile='';pendingCompletionEvents=null;
 }
 function setText(el,text){if(el&&el.textContent!==text)el.textContent=text}
 function patchRuntime(){
@@ -244,7 +273,7 @@ document.addEventListener('click',e=>{
  if(file){e.preventDefault();e.stopImmediatePropagation();setSelected(file.dataset.dfeFile);const n=$('[data-new="scene"]');if(n)setTimeout(()=>n.click(),0);else schedule();return}
  if(t.closest('[data-dfe-new]')){e.preventDefault();e.stopImmediatePropagation();const n=$('[data-new="scene"]');if(n)n.click();return}
  const runtime=t.closest('[data-dialogue-file-runtime]');if(runtime)sessionStorage.setItem(RKEY,runtime.dataset.dialogueFileRuntime);
- if(t.closest('[data-save-scene]')){applyKind();pendingSaveFile=selected();for(let n=1;n<=3;n++)if($(`[data-dfe-flow-active="${n}"]`))updateFlow(n)}
+ if(t.closest('[data-save-scene]')){applyKind();pendingSaveFile=selected();pendingCompletionEvents=$('#dfeCompletionEvents')?.value??'';for(let n=1;n<=3;n++)if($(`[data-dfe-flow-active="${n}"]`))updateFlow(n)}
  const add=t.closest('[data-dfe-add-flow]');if(add){e.preventDefault();addFlow(Number(add.dataset.dfeAddFlow));return}
  const rem=t.closest('[data-dfe-remove-flow]');if(rem){e.preventDefault();removeFlow(Number(rem.dataset.dfeRemoveFlow));return}
  const addN=t.closest('[data-dfe-add-nested]');if(addN){e.preventDefault();addNested(Number(addN.dataset.dfeAddNested));return}

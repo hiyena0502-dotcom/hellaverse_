@@ -391,9 +391,9 @@ function pref(rel){
 function baseResponse(p,rel,key,vars){
  let bucket=rel==='OWN'?p.own:rel==='LOVE'||rel==='LIKE'?p.close:rel==='DISLIKE'||rel==='HATE'?p.bad:p.other;
  let text=fill(pick(bucket,key),vars);
- if(['LEGENDARY','MISTIC'].includes(vars.rarity)&&rel!=='HATE'){
+ if(['LEGENDARY','MISTIC'].includes(vars.rarity)&&!['DISLIKE','HATE'].includes(rel)){
   const extra=vars.rarity==='MISTIC'?' 이 정도 물건은 가볍게 넘길 수 없겠네.':' 희귀한 만큼 더 조심해서 둘게.';
-  if(text&&!/[.!?…]$/.test(text))text+='.';
+  if(text&&!/[.!?…””'\"]$/.test(text))text+='.';
   text+=extra;
  }
  return text;

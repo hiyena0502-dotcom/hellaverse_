@@ -1,9 +1,9 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V1__)return;
-window.__HELLAVERSE_AMBIENT100_RUNTIME_V1__=1;
+if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V2__)return;
+window.__HELLAVERSE_AMBIENT100_RUNTIME_V2__=1;
 
-const K='hellaverse_dialogue_state_v1',PACK='ambient100-v1';
+const K='hellaverse_dialogue_state_v1',PACK='ambient100-v2';
 const EXCLUDED=new Set(['eve','lilith-morningstar','speaker-of-god','michael','gabriel','azrael','saint-peter','st-peter','peter']);
 const $=(s,r=document)=>r.querySelector(s);
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -476,6 +476,31 @@ const QB=[
  '{topic} 얘기를 지금 꺼내도 괜찮은 이유가 있어?'
 ];
 const SUFFIX=[' 상대가 끼어들 틈을 남기며 말을 멈춘다.',' 이번에는 농담이나 격식으로 끝까지 숨기지 않는다.'];
+const ANGLES=['첫인상','습관','기준','변화','충돌','오해','설명','과거와 지금','신뢰','놓지 못하는 것'];
+const FOLLOW_A=[
+ '{topic}에서 네가 방금 가장 신경 쓴다고 한 부분, 실제로는 언제 제일 크게 느껴?',
+ '{topic} 얘기를 하다 멈춘 이유가 있다면 그 지점부터 말해줘.',
+ '{topic}에 대한 그 기준은 누구한테도 똑같이 적용해?',
+ '{topic} 때문에 생각이 달라진 순간을 하나 꼽는다면 언제야?',
+ '{topic}에서 누군가와 부딪힐 때 네가 먼저 물러나는 경우도 있어?',
+ '{topic}에 관해 사람들이 가장 자주 잘못 짚는 건 뭐야?',
+ '{topic}을 처음 듣는 사람에게 딱 하나만 알려준다면 뭘 고를 거야?',
+ '{topic}을 예전의 너한테 설명하면 그때도 납득할 것 같아?',
+ '{topic}에서는 누구에게까지 속내를 보여줄 수 있어?',
+ '{topic}을 아직도 놓지 못하는 이유를 한 문장으로 말하면 뭐야?'
+];
+const FOLLOW_B=[
+ '{topic}에서 반대로 네가 잘못 판단했던 부분도 있어?',
+ '{topic}을 굳이 말하지 않고 지나갈 때는 어떤 때야?',
+ '{topic}에서 네 기준보다 상대 쪽을 먼저 본 적도 있어?',
+ '{topic} 때문에 후회한 선택이 있다면 지금은 다르게 할 것 같아?',
+ '{topic}과 관련해서 화가 나도 참는 순간은 언제야?',
+ '{topic}에 대한 오해를 굳이 바로잡지 않을 때도 있어?',
+ '{topic}을 누군가 대신 설명하면 꼭 고쳐 말하고 싶은 부분이 있어?',
+ '{topic}을 지금 다시 시작한다면 가장 먼저 바꿀 건 뭐야?',
+ '{topic} 이야기를 편하게 할 수 있는 사람은 누구야?',
+ '{topic}을 내려놓게 된다면 제일 먼저 달라질 건 뭐라고 생각해?'
+];
 
 function fallback(c){
  const group=String(c?.group||'HELL').toUpperCase(),topics=(FallbackTopics[group]||FallbackTopics.HELL).slice();
@@ -498,39 +523,42 @@ function responseVariants(c,p,topic,offset=0){
 function eventId(cid,stage){return 'ambient100.'+cid+'.'+stage}
 function eventDef(cid,name,stage,desc){return{id:eventId(cid,stage),name:name+' · '+stage.toUpperCase(),description:desc,type:'MILESTONE',characterId:cid,namespace:'ambient100'}}
 function sceneFor(c,p,i){
- const topic=p.t[i]||('대화 주제 '+(i+1)),id='ambient100-'+c.id+'-'+String(i+1).padStart(2,'0'),node='start';
- const q1=QA[i%QA.length].replaceAll('{topic}',topic),q2=QB[i%QB.length].replaceAll('{topic}',topic);
- const follow=[2,5,8].includes(i),nextId=follow?'follow-'+(i+1):'';
- const c1={id:id+'-a',type:'speech',text:q1,playerLine:'',response:responseVariants(c,p,topic,0),affectionDelta:i%4===0?1:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.listened',removeFlags:'',addMemoryTitle:i===8?topic:'',addMemorySummary:i===8?responseVariants(c,p,topic,1).split('\n')[0]:'',addMemoryTags:i===8?'conversation, trust':'',moodChange:'',unlockItemId:'',nextNodeId:nextId,endConversation:!follow};
- const c2={id:id+'-b',type:'speech',text:q2,playerLine:'',response:responseVariants(c,p,topic,1),affectionDelta:i%5===4?-1:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:nextId,endConversation:!follow};
+ const topicBase=p.t[i%p.t.length]||('대화 주제 '+(i+1)),angle=Math.floor(i/Math.max(1,p.t.length))%10,angleLabel=ANGLES[angle]||('관점 '+(angle+1)),topic=topicBase,id='ambient100-'+c.id+'-'+String(i+1).padStart(3,'0'),node='start';
+ const q1=QA[angle%QA.length].replaceAll('{topic}',topic),q2=QB[(angle+i)%QB.length].replaceAll('{topic}',topic);
+ const follow=i%5===2,nextId=follow?'follow-'+(i+1):'';
+ const memoryBeat=i%20===18;
+ const c1={id:id+'-a',type:'speech',text:q1,playerLine:'',response:responseVariants(c,p,topic,angle),affectionDelta:i%9===0?1:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.listened',removeFlags:'',addMemoryTitle:memoryBeat?topicBase+' · '+angleLabel:'',addMemorySummary:memoryBeat?responseVariants(c,p,topic,angle+1).split('\n')[0]:'',addMemoryTags:memoryBeat?'conversation, trust':'',moodChange:'',unlockItemId:'',nextNodeId:nextId,endConversation:!follow};
+ const c2={id:id+'-b',type:'speech',text:q2,playerLine:'',response:responseVariants(c,p,topic,angle+1),affectionDelta:i%13===12?-1:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:nextId,endConversation:!follow};
  const nodes=[{id:node,speaker:'character',text:'',choices:[c1,c2]}];
  if(follow){
-  const ftopic='조금 더 개인적인 '+topic;
-  nodes.push({id:nextId,speaker:'character',text:responseVariants(c,p,ftopic,2).split('\n')[0]||'',choices:[
-   {id:id+'-f1',type:'speech',text:'그 부분은 네가 편한 만큼만 말해도 돼.',playerLine:'',response:responseVariants(c,p,ftopic,0),affectionDelta:1,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.safe',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true},
-   {id:id+'-f2',type:'speech',text:'그럼 다른 쪽에서 물어볼게. 지금 네가 원하는 건 뭐야?',playerLine:'',response:responseVariants(c,p,ftopic,1),affectionDelta:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true}
+  const ftopic=topicBase+' · '+angleLabel;
+  nodes.push({id:nextId,speaker:'character',text:responseVariants(c,p,ftopic,angle+2).split('\n')[0]||'',choices:[
+   {id:id+'-f1',type:'speech',text:FOLLOW_A[angle].replaceAll('{topic}',topicBase),playerLine:'',response:responseVariants(c,p,ftopic,angle),affectionDelta:1,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.safe',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true},
+   {id:id+'-f2',type:'speech',text:FOLLOW_B[angle].replaceAll('{topic}',topicBase),playerLine:'',response:responseVariants(c,p,ftopic,angle+1),affectionDelta:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true}
   ]});
  }
- const req=i===3?eventId(c.id,'opened'):i===6?eventId(c.id,'pattern'):i===9?eventId(c.id,'trust'):'';
- const aff=i===3?15:i===6?40:i===9?80:0;
- return{id,characterId:c.id,title:topic,kind:'TALK',sceneRole:'CONVERSATION',repeatable:true,requiredAffection:aff,maxAffection:100,requiredStage:'',requiredMood:'ANY',requiredFlags:req,blockedFlags:'',requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority:4,probability:i===9?45:75,opening:openingVariants(c,p,topic),openingType:'character',exitLine:'',after:'',used:false,nodes,openingNodeId:node,_hvAmbient100:true,contentPack:PACK,canonGrounding:'official-characterization-inspired fanmade original'};
+ const tier=i<25?0:i<50?1:i<75?2:3;
+ const req=tier===1?eventId(c.id,'opened'):tier===2?eventId(c.id,'pattern'):tier===3?eventId(c.id,'trust'):'';
+ const aff=tier===1?15:tier===2?40:tier===3?80:0;
+ const probability=tier===3?35:tier===2?55:tier===1?70:85;
+ return{id,characterId:c.id,title:topicBase+' · '+angleLabel+' '+String((i%p.t.length)+1).padStart(2,'0'),kind:'TALK',sceneRole:'CONVERSATION',repeatable:true,requiredAffection:aff,maxAffection:100,requiredStage:'',requiredMood:'ANY',requiredFlags:req,blockedFlags:'',requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority:tier===3?8:4,probability,opening:openingVariants(c,p,topicBase),openingType:'character',exitLine:'',after:'',used:false,nodes,openingNodeId:node,_hvAmbient100:true,contentPack:PACK,canonGrounding:'official-characterization-inspired fanmade original'};
 }
 function ensureForActive(){
  const s=read(),cid=String(s.active||''),c=(s.characters||[]).find(x=>String(x?.id||'')===cid);
  if(!c||EXCLUDED.has(cid)||c.hidden)return;
  const current=(s.dialogues||[]).filter(x=>x?._hvAmbient100);
- if(current.length===10&&current.every(x=>x.characterId===cid))return;
+ if(current.length===100&&current.every(x=>x.characterId===cid&&x.contentPack===PACK))return;
  s.dialogues=Array.isArray(s.dialogues)?s.dialogues.filter(x=>!x?._hvAmbient100):[];
  s.dialogueFileMap=s.dialogueFileMap&&typeof s.dialogueFileMap==='object'?s.dialogueFileMap:{};
  s.dialogueMeta=s.dialogueMeta&&typeof s.dialogueMeta==='object'&&!Array.isArray(s.dialogueMeta)?s.dialogueMeta:{};
  for(const id of Object.keys(s.dialogueFileMap))if(id.startsWith('ambient100-'))delete s.dialogueFileMap[id];
- const p=profile(c),scenes=Array.from({length:10},(_,i)=>sceneFor(c,p,i));
+ const p=profile(c),scenes=Array.from({length:100},(_,i)=>sceneFor(c,p,i));
  for(const sc of scenes){s.dialogues.push(sc);s.dialogueFileMap[sc.id]='CONVERSATION'}
  const milestones=[
-  ['opened',0,'처음으로 평소보다 조금 더 자기 이야기를 열었다.'],
-  ['pattern',3,'반복되는 습관과 판단 기준을 드러냈다.'],
-  ['trust',6,'상대가 신뢰할 수 있는 범위의 개인적인 이야기를 꺼냈다.'],
-  ['personal',9,'높은 신뢰가 필요한 개인적인 대화를 끝까지 이어갔다.']
+  ['opened',4,'처음으로 평소보다 조금 더 자기 이야기를 열었다.'],
+  ['pattern',29,'반복되는 습관과 판단 기준을 드러냈다.'],
+  ['trust',59,'상대가 신뢰할 수 있는 범위의 개인적인 이야기를 꺼냈다.'],
+  ['personal',89,'높은 신뢰가 필요한 개인적인 대화를 끝까지 이어갔다.']
  ];
  s.events=Array.isArray(s.events)?s.events:[];
  for(const [stage,idx,desc] of milestones){
@@ -550,5 +578,5 @@ window.addEventListener('hellaverse:state-updated',e=>{if(e.detail?.source!=='am
 new MutationObserver(()=>schedule(60)).observe(document.documentElement,{childList:true,subtree:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>schedule(0),{once:true});else schedule(0);
 window.addEventListener('load',()=>schedule(0));
-window.__HV_AMBIENT100_INFO__={pack:PACK,linesPerCharacter:100,scenesPerCharacter:10};
+window.__HV_AMBIENT100_INFO__={pack:PACK,linesPerCharacter:100,scenesPerCharacter:100,profiles:35};
 })();

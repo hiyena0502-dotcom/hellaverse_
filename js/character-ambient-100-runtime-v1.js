@@ -440,7 +440,7 @@ function sceneFor(c,p,i){
   ]});
  }
  const req=i===3?eventId(c.id,'opened'):i===6?eventId(c.id,'pattern'):i===9?eventId(c.id,'trust'):'';
- const aff=i===6?20:i===9?45:0;
+ const aff=i===3?15:i===6?40:i===9?80:0;
  return{id,characterId:c.id,title:topic,kind:'TALK',sceneRole:'CONVERSATION',repeatable:true,requiredAffection:aff,maxAffection:100,requiredStage:'',requiredMood:'ANY',requiredFlags:req,blockedFlags:'',requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority:4,probability:i===9?45:75,opening:openingVariants(c,p,topic),openingType:'character',exitLine:'',after:'',used:false,nodes,openingNodeId:node,_hvAmbient100:true,contentPack:PACK,canonGrounding:'official-characterization-inspired fanmade original'};
 }
 function ensureForActive(){

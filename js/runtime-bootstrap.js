@@ -96,7 +96,7 @@ await loadClassic('js/dialogue-continuity-controller-v6.js?v=4');
 await loadClassic('js/room-exit-transition.js?v=4');
 await loadStableCore();
 await loadClassic('js/event-progression-runtime-v1.js?v=2');
-await loadClassic('js/character-ambient-100-runtime-v1.js?v=4');
+await loadClassic('js/character-ambient-100-runtime-v1.js?v=5');
 
 try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}catch{}
 

@@ -1,0 +1,304 @@
+/* Mobile-only dialogue/room layout repair.
+   Keeps desktop untouched and targets the narrow phone layout shown in Safari/Chrome. */
+
+@media (max-width: 800px) {
+  html,
+  body,
+  #app,
+  .site-shell,
+  .page,
+  .character-room,
+  .room-stage,
+  .dialogue-stage {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  html,
+  body {
+    overflow-x: hidden !important;
+  }
+
+  .site-shell.page-life {
+    width: 100% !important;
+    max-width: 100vw !important;
+    padding: 8px 10px calc(12px + env(safe-area-inset-bottom)) !important;
+    overflow: hidden !important;
+  }
+
+  /* Room HUD: stop the character/status/nav row from pushing the page sideways. */
+  .site-shell.page-life .room-hud {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-auto-rows: minmax(30px, auto);
+    align-items: center;
+    gap: 4px 10px;
+    padding: 2px 0 8px;
+    overflow: hidden;
+  }
+
+  .site-shell.page-life .room-hud > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .site-shell.page-life .room-hud > button,
+  .site-shell.page-life .room-hud > a {
+    white-space: nowrap;
+    font-size: .66rem;
+    letter-spacing: .10em;
+    padding: 6px 0;
+  }
+
+  .site-shell.page-life .room-hud > button:first-child {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .site-shell.page-life .room-hud > strong {
+    grid-column: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .92rem;
+    line-height: 1.15;
+  }
+
+  .site-shell.page-life .room-hud > span {
+    grid-column: 3;
+    margin-left: 0 !important;
+    white-space: nowrap;
+    font-size: .72rem;
+  }
+
+  /* Any extra room-HUD controls flow onto safe rows instead of overflowing. */
+  .site-shell.page-life .room-hud > button:not(:first-child),
+  .site-shell.page-life .room-hud > a {
+    justify-self: start;
+  }
+
+  .character-room {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: calc(100vh - 108px) !important;
+    min-height: calc(100dvh - 108px) !important;
+    overflow: hidden !important;
+    background-position: center top !important;
+  }
+
+  .character-room .dialogue-stage,
+  .character-room .room-stage {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: calc(100vh - 108px) !important;
+    min-height: calc(100dvh - 108px) !important;
+    overflow: hidden !important;
+  }
+
+  .character-room .drawer-button {
+    top: 10px;
+    left: 10px;
+    max-width: calc(100% - 20px);
+    font-size: .64rem;
+    letter-spacing: .12em;
+  }
+
+  /* Keep the character art/background in the upper half instead of letting it
+     dictate the dialogue layout. */
+  .character-room .room-character {
+    inset: 0;
+    place-items: start center;
+    padding: 18px 0 0 !important;
+    overflow: hidden;
+  }
+
+  .character-room .room-character img {
+    width: auto;
+    max-width: 94vw !important;
+    max-height: 43dvh !important;
+    object-fit: contain;
+  }
+
+  .character-room .room-character.silhouette {
+    min-height: 0 !important;
+    padding-top: 44px !important;
+    font-size: clamp(2.6rem, 15vw, 4.6rem) !important;
+  }
+
+  /* Dialogue panel: compact enough for phones, but still large enough for
+     multi-line Korean dialogue. */
+  .character-room .dialogue-box {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 220px !important;
+    max-height: 48dvh !important;
+    padding: 16px 16px calc(18px + env(safe-area-inset-bottom)) !important;
+    overflow: hidden !important;
+  }
+
+  .character-room .dialogue-page,
+  .character-room .dialogue-page-text,
+  .character-room .dialogue-lines {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .character-room .dialogue-page-text,
+  .character-room .dialogue-lines {
+    max-height: 26dvh !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding-right: 2px !important;
+  }
+
+  .character-room .dialogue-line p,
+  .character-room .dialogue-current,
+  .character-room .narration {
+    max-width: 100% !important;
+    font-size: clamp(1rem, 4.25vw, 1.14rem) !important;
+    line-height: 1.62 !important;
+    overflow-wrap: break-word;
+    word-break: keep-all;
+  }
+
+  .character-room .dialogue-line strong,
+  .character-room .speaker {
+    font-size: .72rem !important;
+    letter-spacing: .13em !important;
+  }
+
+  /* Mood badge was artificially capped to 100%-120px and wrapped Lucifer's
+     name into several lines on phones. */
+  .character-room .dialogue-mood-indicator {
+    width: max-content !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex-wrap: nowrap !important;
+    gap: 7px !important;
+    margin-bottom: 10px !important;
+    padding: 7px 9px !important;
+    font-size: .61rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .character-room .dialogue-mood-indicator > * {
+    white-space: nowrap !important;
+  }
+
+  /* Forward control stays reachable without being pushed outside the viewport. */
+  .character-room .dialogue-box .dialogue-next,
+  .character-room .dialogue-box [data-single-beat-next],
+  .character-room .dialogue-box [data-vn-next],
+  .character-room .dialogue-box .hv-next-control {
+    min-width: 78px !important;
+    min-height: 44px;
+    margin-top: auto !important;
+    padding: 10px 0 4px !important;
+    font-size: 1.02rem !important;
+    letter-spacing: .12em !important;
+    touch-action: manipulation;
+  }
+
+  .hv-ask-panel,
+  .hv-action-panel {
+    inset: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 14px !important;
+  }
+
+  .hv-ask-list,
+  .hv-action-list {
+    max-height: 36dvh !important;
+  }
+}
+
+/* Phone-width action bar: two large tap rows instead of one overflowing line. */
+@media (max-width: 600px) {
+  .hv-room-action-bar {
+    left: 10px !important;
+    right: 10px !important;
+    bottom: calc(var(--hv-dialogue-box-height, 220px) + 8px) !important;
+    width: auto !important;
+    max-width: none !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+    border-top: 1px solid rgba(201,166,107,.18);
+    border-bottom: 1px solid rgba(201,166,107,.18);
+    background: rgba(11,8,10,.82) !important;
+    backdrop-filter: blur(8px);
+  }
+
+  .hv-room-action-bar button {
+    min-width: 0 !important;
+    min-height: 42px;
+    padding: 10px 8px !important;
+    text-align: center;
+    font-size: .68rem !important;
+    letter-spacing: .11em !important;
+    white-space: nowrap;
+    touch-action: manipulation;
+  }
+
+  .hv-room-action-bar button:nth-child(odd) {
+    border-right: 1px solid rgba(255,255,255,.07);
+  }
+
+  .hv-room-action-bar button:nth-child(-n+2) {
+    border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+
+  .character-room .dialogue-box {
+    min-height: 210px !important;
+    max-height: 46dvh !important;
+  }
+
+  .character-room .dialogue-page-text,
+  .character-room .dialogue-lines {
+    max-height: 24dvh !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .site-shell.page-life {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .site-shell.page-life .room-hud {
+    gap: 3px 8px;
+  }
+
+  .site-shell.page-life .room-hud > button,
+  .site-shell.page-life .room-hud > a {
+    font-size: .62rem;
+  }
+
+  .site-shell.page-life .room-hud > strong {
+    font-size: .84rem;
+  }
+
+  .site-shell.page-life .room-hud > span {
+    font-size: .67rem;
+  }
+
+  .character-room .dialogue-box {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .hv-room-action-bar {
+    left: 8px !important;
+    right: 8px !important;
+  }
+}

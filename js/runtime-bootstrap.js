@@ -99,7 +99,7 @@ try{localStorage.setItem('hellaverse_dialogue_episode_common_migration_v1','1')}
 const scripts=[
   ['classic','js/dialogue-token-renderer.js?v=4'],
   ['module','js/event-manager.js?v=50'],
-  ['module','js/thought-archive.js?v=54'],
+  ['module','js/thought-archive.js?v=55'],
   ['module','js/relationship-editor.js?v=51'],
   ['classic','js/relationship-render-bridge.js?v=1'],
   ['classic','js/item-inventory-migration.js?v=1'],
@@ -121,7 +121,7 @@ const scripts=[
   ['classic','js/collection-gacha-editor.js?v=4'],
   ['classic','js/collection-reveal-line-bridge.js?v=1'],
   ['classic','js/collection-emoji-corrections.js?v=2'],
-  ['classic','js/ux/runtime-diagnostics.js?v=7'],
+  ['classic','js/ux/runtime-diagnostics.js?v=8'],
   ['classic','js/final-ux-cleanup.js?v=15'],
   ['classic','js/dialogue-interaction-engine-v2.js?v=1'],
   ['classic','js/dialogue-room-controller-v3.js?v=4']

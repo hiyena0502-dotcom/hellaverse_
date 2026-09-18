@@ -9,7 +9,8 @@ const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{r
 const clean=v=>String(v??'').trim();
 const GENERIC_PROMPTS=new Set([
   '조금 더 듣는다','다른 쪽으로 물어본다','마지막으로 한마디 더 듣는다','여기까지 듣는다',
-  '조금 더 물어본다','다른 각도에서 다시 묻는다','반응을 더 지켜본다','말을 건다'
+  '조금 더 물어본다','다른 각도에서 다시 묻는다','반응을 더 지켜본다','말을 건다',
+  '그 얘기 더 해줘요.','그렇게 생각한 이유가 있어요?'
 ]);
 
 function roleOf(sc,map){

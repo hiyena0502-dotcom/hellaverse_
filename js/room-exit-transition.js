@@ -26,7 +26,7 @@ function eligibleExit(scene,s,m,cid){
 function pickExit(){const s=state(),m=meta(),cid=String(s.active||'');if(!cid)return null;const rows=(s.dialogues||[]).filter(sc=>eligibleExit(sc,s,m,cid));if(!rows.length)return null;const best=Math.max(...rows.map(sc=>Number(sc.priority||0))),pool=rows.filter(sc=>Number(sc.priority||0)>=best-1);return pool[Math.floor(Math.random()*pool.length)]||rows[0]}
 function clearAuto(){clearTimeout(autoTimer);autoTimer=null;autoTarget=null}
 function beginPending(){
-  if(pending)return;pending=true;exitStarted=false;sawExitBox=false;document.body.classList.add('hv-room-exiting');window.__HV_STOP_CONVERSATION_CHAIN__?.();clearTimeout(forceTimer);clearTimeout(fallbackTimer);clearAuto();
+  if(pending)return;pending=true;exitStarted=false;sawExitBox=false;document.body.classList.add('hv-room-exiting');try{window.__HV_STOP_CONVERSATION_CHAIN__?.()}catch(error){console.warn('Conversation chain cleanup failed during exit.',error)}clearTimeout(forceTimer);clearTimeout(fallbackTimer);clearAuto();
   forceTimer=setTimeout(forceExitIfNeeded,180);fallbackTimer=setTimeout(()=>{if(pending&&!exitStarted)navigateCharacters()},1100);
 }
 function syntheticLeave(){const host=$('.character-room')||$('#app');if(!host)return;const b=document.createElement('button');b.type='button';b.hidden=true;b.dataset.vnLeave='';b.dataset.hvExitBridge='1';host.appendChild(b);bridge=true;try{b.click()}finally{bridge=false;b.remove()}}

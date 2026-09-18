@@ -450,27 +450,27 @@ function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
   if(String(cid)===String(ownerId)){
    return[
     row('motif-why',`「${item}」에서 ${O(motif.name)} 이렇게 표현한 이유를 묻는다.`,q(`이 「${item}」, ${O(motif.name)} 이렇게 오리로 만든 이유가 뭐야?`,`이 「${item}」, ${O(motif.name)} 이렇게 오리로 만든 이유가 뭐예요?`),response,plus),
-    row('motif-show',`${motif.name}에게 「${item}」을 보여준 적 있는지 묻는다.`,q(`${motif.name}한테 이 「${item}」도 보여준 적 있어?`,`${motif.name}한테 이 「${item}」도 보여주신 적 있으세요?`),context,delta),
+    row('motif-show',`${motif.name}에게 ${O('「'+item+'」')} 보여준 적 있는지 묻는다.`,q(`${motif.name}한테 이 「${item}」도 보여준 적 있어?`,`${motif.name}한테 이 「${item}」도 보여주신 적 있으세요?`),context,delta),
     row('motif-detail',`「${item}」에서 ${motif.name}답게 만든 디테일을 살펴본다.`,`「${item}」의 ${motif.name} 모티브를 하나씩 살펴보며 건넨다.`,silent,quiet,'action')
    ]
   }
   if(motif.id&&String(cid)===String(motif.id)){
    return[
-    row('motif-self',`「${item}」이 본인을 닮았는지 묻는다.`,q(`이 「${item}」, 직접 보니까 너랑 좀 닮은 것 같아?`,`이 「${item}」, 직접 보시면 본인하고 좀 닮았다고 생각하세요?`),response,plus),
-    row('motif-maker',`${owner}가 자신을 이렇게 표현한 게 어떤지 묻는다.`,q(`${S(owner)} 너를 이렇게 만든 거, 마음에 들어?`,`${S(owner)} 이렇게 표현한 거, 마음에 드세요?`),context,delta),
+    row('motif-self',`${S('「'+item+'」')} 본인을 닮았는지 묻는다.`,q(`이 「${item}」, 직접 보니까 너랑 좀 닮은 것 같아?`,`이 「${item}」, 직접 보시면 본인하고 좀 닮았다고 생각하세요?`),response,plus),
+    row('motif-maker',`${S(owner)} 자신을 이렇게 표현한 게 어떤지 묻는다.`,q(`${S(owner)} 너를 이렇게 만든 거, 마음에 들어?`,`${S(owner)} 이렇게 표현한 거, 마음에 드세요?`),context,delta),
     row('motif-compare',`「${item}」에서 실제 모습과 닮은 부분을 찾아본다.`,`「${item}」과 실제 모습을 번갈아 보며 조심스럽게 건넨다.`,silent,quiet,'action')
    ]
   }
   return[
    row('motif-reminds',`${O('「'+item+'」')} 보면 ${S(motif.name)} 먼저 떠오르는지 묻는다.`,q(`이 「${item}」 보면 ${motif.name} 생각부터 나?`,`이 ${O('「'+item+'」')} 보면 ${motif.name} 생각부터 나세요?`),response,plus),
    row('motif-fit',`${motif.name} 모티브가 잘 어울리는지 묻는다.`,q(`${S(owner)} ${O(motif.name)} 이렇게 표현한 거, 잘 어울린다고 생각해?`,`${S(owner)} ${O(motif.name)} 이렇게 표현한 거, 잘 어울린다고 생각하세요?`),context,delta),
-   row('motif-hand',`「${item}」의 ${motif.name} 모티브를 보여주며 건넨다.`,`「${item}」에서 ${motif.name}을 본뜬 부분을 보여주며 건넨다.`,silent,quiet,'action')
+   row('motif-hand',`「${item}」의 ${motif.name} 모티브를 보여주며 건넨다.`,`「${item}」에서 ${O(motif.name)} 본뜬 부분을 보여주며 건넨다.`,silent,quiet,'action')
   ]
  }
  if(theme==='photo')return[
   row('photo-first',`「${item}」에서 제일 먼저 눈에 들어오는 걸 묻는다.`,q(`이 「${item}」에서 제일 먼저 눈에 들어오는 게 뭐야?`,`이 「${item}」에서 제일 먼저 눈에 들어오는 게 뭐예요?`),response,plus),
   row('photo-memory',`${O('「'+item+'」')} 보면 떠오르는 기억을 묻는다.`,q(`이 사진 보면 제일 먼저 떠오르는 기억 있어?`,`이 사진을 보면 제일 먼저 떠오르는 기억이 있으세요?`),context,delta),
-  row('photo-hand',`「${item}」의 모서리를 잡아 조심스럽게 건넨다.`,`「${item}」이 구겨지지 않게 가장자리를 잡아 건넨다.`,silent,quiet,'action')
+  row('photo-hand',`「${item}」의 모서리를 잡아 조심스럽게 건넨다.`,`${S('「'+item+'」')} 구겨지지 않게 가장자리를 잡아 건넨다.`,silent,quiet,'action')
  ];
  if(theme==='letter')return[
   row('letter-kept',`${O('「'+item+'」')} 아직 남겨둔 이유를 묻는다.`,q(`이 「${item}」, 아직 남겨둔 이유가 있어?`,`이 「${item}」, 아직 남겨두신 이유가 있으세요?`),response,plus),
@@ -485,7 +485,7 @@ function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
  if(theme==='heaven')return[
   row('heaven-link',`「${item}」과 과거의 연결을 묻는다.`,q(`이 「${item}」, 예전 이야기랑 이어져 있는 물건이지?`,`이 「${item}」, 예전 이야기와 이어져 있는 물건이죠?`),response,plus),
   row('heaven-kept',`${O('「'+item+'」')} 지금도 간직하는 이유를 묻는다.`,q(`이걸 지금도 가지고 있는 이유 물어봐도 돼?`,`이걸 지금도 가지고 계신 이유를 여쭤봐도 돼요?`),context,delta),
-  row('heaven-hand',`「${item}」을 말없이 한 번 바라본 뒤 건넨다.`,`「${item}」을 함부로 만지지 않고 손바닥 위에 올려 건넨다.`,silent,quiet,'action')
+  row('heaven-hand',`${O('「'+item+'」')} 말없이 한 번 바라본 뒤 건넨다.`,`${O('「'+item+'」')} 함부로 만지지 않고 손바닥 위에 올려 건넨다.`,silent,quiet,'action')
  ];
  if(theme==='music')return[
   row('music-sound',`「${item}」과 연결된 소리를 묻는다.`,q(`이 「${item}」 보면 제일 먼저 어떤 소리가 생각나?`,`이 ${O('「'+item+'」')} 보면 제일 먼저 어떤 소리가 생각나세요?`),response,plus),
@@ -500,7 +500,7 @@ function buildApproaches(s,i,cid,rel,delta,p,vars,response,context,silent){
  return[
   row('item-why',`${O('「'+item+'」')} 따로 남겨둔 이유를 묻는다.`,q(`이 「${item}」, 따로 남겨둔 이유가 있어?`,`이 「${item}」, 따로 남겨두신 이유가 있으세요?`),response,plus),
   row('item-point',`「${item}」에서 가장 마음에 드는 부분을 묻는다.`,q(`이 물건에서 제일 마음에 드는 부분이 뭐야?`,`이 물건에서 제일 마음에 드는 부분이 뭐예요?`),context,delta),
-  row('item-hand',`「${item}」의 모양과 흔적을 살펴보며 건넨다.`,`「${item}」을 한 번 자세히 살펴본 뒤 조심스럽게 건넨다.`,silent,quiet,'action')
+  row('item-hand',`「${item}」의 모양과 흔적을 살펴보며 건넨다.`,`${O('「'+item+'」')} 한 번 자세히 살펴본 뒤 조심스럽게 건넨다.`,silent,quiet,'action')
  ];
 }
 
@@ -511,10 +511,10 @@ function build(s,i,cid){
  const personal=fill(p.personal,vars),context=fill(p.context,vars),silent=fill(p.silent,vars);
  return{
   preference,affectionDelta:delta,
-  opening:`${i?.symbol||'🎁'}「${item}」을 ${who}에게 건넨다.`,
+  opening:`${i?.symbol||'🎁'}${O('「'+item+'」')} ${who}에게 건넨다.`,
   response,
   afterEvent:'',setFlags:'',removeFlags:'',moodChange:rel==='HATE'?'ANNOYED':rel==='LOVE'||rel==='OWN'?'GOOD':'',
-  memoryTitle:`GIFT: ${item}`,memorySummary:`${who}에게 「${item}」을 선물했다.`,memoryTags:`gift, collection, ${String(i?.id||'')}, ${String(cid)}`,
+  memoryTitle:`GIFT: ${item}`,memorySummary:`${who}에게 ${O('「'+item+'」')} 선물했다.`,memoryTags:`gift, collection, ${String(i?.id||'')}, ${String(cid)}`,
   approaches:buildApproaches(s,i,String(cid),rel,delta,p,vars,response,context,silent)
  };
 }

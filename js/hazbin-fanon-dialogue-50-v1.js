@@ -14,7 +14,11 @@ const ANGLES=[
  {k:'mundane',title:'아무 일 없는 날',q:'{topic}이 별일 없는 날엔 어떤 식으로 남아?',qf:'{topic}이 별일 없는 날엔 어떤 식으로 남아 있나요?',r:'남한테 들키면 조금 민망한 사소한 버릇도 있어?',rf:'남에게 들키면 조금 민망한 사소한 버릇도 있으세요?'}
 ];
 const escText=v=>String(v||'').replace(/\s+/g,' ').trim();
-const fill=(v,vars)=>String(v||'').replace(/\{(\w+)\}/g,(_,k)=>vars[k]??'');
+function hasBatchim(v){const s=String(v||'').trim(),ch=s.charCodeAt(s.length-1);return ch>=0xAC00&&ch<=0xD7A3?((ch-0xAC00)%28)!==0:false}
+function fill(v,vars){
+ const pairs={은:['은','는'],는:['은','는'],이:['이','가'],가:['이','가'],을:['을','를'],를:['을','를'],과:['과','와'],와:['과','와']};
+ return String(v||'').replace(/\{(\w+)\}(은|는|이|가|을|를|과|와)/g,(_,k,j)=>{const w=String(vars[k]??'');const p=pairs[j]||[j,j];return w+(hasBatchim(w)?p[0]:p[1])}).replace(/\{(\w+)\}/g,(_,k)=>vars[k]??'');
+}
 const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};
 function choice(id,text,response){
  return{id,type:'speech',text,playerLine:'',response,affectionDelta:0,requiredAffection:0,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true};

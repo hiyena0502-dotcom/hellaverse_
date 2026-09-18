@@ -21,20 +21,20 @@ function fixCharlieRibbon(s){
  const items=Array.isArray(s.collectionItems)?s.collectionItems:(Array.isArray(s.items)?s.items:[]);
  for(const i of items){
   const text=clean((i.name||i.title||'')+' '+(i.desc||i.description||''));
-  if(!/(찰리.*어린.*리본|어린시절.*리본|어릴.*리본|charlie.*childhood.*ribbon|childhood.*ribbon)/i.test(text))continue;
+  if(!/(찰리의 첫 리본|첫 리본|charlie.*first.*ribbon|first.*ribbon)/i.test(text))continue;
   i.characterId='charlie-morningstar';
-  i.desc='찰리가 어린 시절 머리에 묶곤 했던 붉은 리본. 오래되어 가장자리가 조금 해졌지만, 가족사진 속 모습과 같은 색이 남아 있다.';
+  i.desc='찰리가 아주 어릴 때 처음으로 자기 물건이라고 아끼기 시작한 붉은 리본. 오래된 가족사진 속에서도 같은 리본을 볼 수 있다.';
   i.description=i.desc;
-  i.revealLine='찰리가 리본을 손끝에 조심스럽게 감아 본다. “이거 어릴 때 쓰던 거야. 혼자 묶겠다고 우기면 늘 삐뚤어졌는데… 이상하게 그때는 그게 엄청 중요한 일이었어.”';
+  i.revealLine='찰리가 리본을 두 손가락 사이에 걸어 보고는 조금 민망하게 웃는다. “이게 내가 처음 진짜 좋아했던 리본이야. 어릴 땐 매일 비슷하게 묶는 것도 엄청 중요한 일처럼 느껴졌거든.”';
   i.claimLine=i.revealLine;
-  i.condition='찰리와의 가족·어린 시절 대화에서 획득 가능';
+  i.condition='찰리와 어린 시절·가족 이야기를 충분히 나눈 뒤 획득 가능';
   i.dialogueSourceCharacterId='charlie-morningstar';
   const id=String(i.id||'');if(!id)continue;
   for(const sc of s.dialogues||[])for(const n of sc.nodes||[])for(const ch of n.choices||[])if(ch?.unlockItemId===id&&sc.characterId!=='charlie-morningstar')ch.unlockItemId='';
   const flag='collection.charlie.'+safeId(id)+'.received';
   putEvent(s,{id:flag,name:'Charlie · '+(i.name||'어린 시절 리본')+' 획득',description:'찰리와 관련된 개인적인 물건을 찰리에게 직접 받았다.',type:'MILESTONE',characterId:'charlie-morningstar',namespace:'collection.charlie'});
-  const scid='collection-charlie-childhood-ribbon-'+safeId(id);
-  putScene(s,{id:scid,characterId:'charlie-morningstar',title:'어릴 적 리본 이야기',kind:'TALK',sceneRole:'CONVERSATION',repeatable:true,requiredAffection:35,maxAffection:100,requiredStage:'',requiredMood:'ANY',requiredFlags:'ambient100.charlie-morningstar.opened',blockedFlags:flag,requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority:12,probability:35,opening:'찰리가 오래된 상자에서 붉은 리본을 하나 꺼낸다. 사진 속 어린 시절의 자신을 확인하듯 잠깐 바라본다.\n찰리는 낡은 리본을 펴다가 작게 웃는다. “이거 아직 있었네.”',openingType:'character',exitLine:'',after:'',used:false,nodes:[{id:'start',speaker:'character',text:'',choices:[
+  const scid='collection-charlie-first-ribbon-'+safeId(id);
+  putScene(s,{id:scid,characterId:'charlie-morningstar',title:'찰리의 첫 리본 이야기',kind:'TALK',sceneRole:'CONVERSATION',repeatable:true,requiredAffection:35,maxAffection:100,requiredStage:'',requiredMood:'ANY',requiredFlags:'ambient100.charlie-morningstar.opened',blockedFlags:flag,requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority:12,probability:35,opening:'찰리가 오래된 상자에서 붉은 리본을 하나 꺼낸다. 사진 속 어린 시절의 자신을 확인하듯 잠깐 바라본다.\n찰리는 낡은 리본을 펴다가 작게 웃는다. “이거 아직 있었네.”',openingType:'character',exitLine:'',after:'',used:false,nodes:[{id:'start',speaker:'character',text:'',choices:[
    {id:scid+'-take',type:'speech',text:'소중한 거라면 내가 잘 보관할게.',playerLine:'',response:i.revealLine,affectionDelta:1,requiredAffection:0,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:flag,removeFlags:'',addMemoryTitle:'Charlie의 어린 시절 리본',addMemorySummary:'찰리가 어린 시절 쓰던 리본을 직접 건넸다.',addMemoryTags:'charlie, family, childhood, collection',moodChange:'',unlockItemId:id,nextNodeId:'',endConversation:true},
    {id:scid+'-ask',type:'speech',text:'사진 속에서 자주 보이던 리본이 이거야?',playerLine:'',response:'찰리가 고개를 끄덕인다. “응. 지금 보면 그냥 리본인데, 그땐 이거 하나 제대로 묶는 것도 큰일이었거든.”',affectionDelta:0,requiredAffection:0,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true}
   ]}],openingNodeId:'start',contentPack:PACK});

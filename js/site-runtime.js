@@ -391,7 +391,7 @@ function asksForCharacter(charId,source=state){
   return source.asks.filter(a=>a.characterId===charId&&a.enabled);
 }
 function itemsForCharacter(charId,source=state){
-  return source.items.filter(i=>i.characterId===charId&&i.enabled);
+  return source.items.filter(i=>i.enabled&&(i.collectionCharacterId===charId||i.reactions.some(r=>r.characterId===charId)));
 }
 
 function conditionPasses(c){

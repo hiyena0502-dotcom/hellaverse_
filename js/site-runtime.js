@@ -1762,20 +1762,48 @@ function interactionFlowEditor(entries,scope,ownerId,itemId="",flowKey="entries"
   const attrs=flowData(scope,ownerId,itemId,flowKey);
   return '<section class="mini-flow-editor"><div class="mini-flow-title"><div><strong>'+esc(title)+'</strong><small>대사 · 지문 · 선택지를 원하는 순서로 구성합니다.</small></div><div class="mini-add-row"><button class="small-button" type="button" data-action="mini-add-entry" data-type="dialogue" '+attrs+'>+ 대사</button><button class="small-button" type="button" data-action="mini-add-entry" data-type="narration" '+attrs+'>+ 지문</button><button class="small-button" type="button" data-action="mini-add-entry" data-type="choice" '+attrs+'>+ 선택지</button></div></div>'+renderInteractionFlow(entries,scope,ownerId,itemId,0,flowKey)+'</section>';
 }
+function renderAskUnlockEditor(a){
+  const vc=a.unlockCondition||{variableId:"",operator:"==",value:""};
+  const ic=a.unlockItemCondition||{itemId:"",operator:">=",value:1};
+  const qc=a.unlockAskCondition||{askId:"",status:"asked"};
+  const ec=a.unlockEmotionCondition||{characterId:"",state:"",intensityOperator:">=",intensityValue:0};
+  const asked=(editorDraft.askedAskIds||[]).includes(a.id);
+  const unlocked=!a.startLocked||(editorDraft.unlockedAskIds||[]).includes(a.id);
+  const status=asked?"ASKED":unlocked?"UNLOCKED":"LOCKED";
+  return '<details class="ask-unlock-editor"><summary>해금 조건 · '+status+'</summary><div class="ask-unlock-grid">'+
+    '<label class="checkline"><input type="checkbox" data-ask-bind="startLocked" '+(a.startLocked?"checked":"")+'> 처음에는 LOCKED</label>'+
+    '<label class="field"><span>해금 최소 호감도</span><input type="number" min="0" max="100" data-ask-bind="unlockMinAffection" value="'+a.unlockMinAffection+'"></label>'+
+    '<label class="field"><span>변수</span><select data-ask-unlock-var-field="variableId">'+variableOptions(vc.variableId)+'</select></label>'+
+    '<label class="field"><span>변수 비교</span><select data-ask-unlock-var-field="operator">'+conditionOperatorOptions(vc.operator)+'</select></label>'+
+    '<label class="field"><span>변수 값</span><input data-ask-unlock-var-field="value" value="'+esc(vc.value)+'"></label>'+
+    '<label class="field"><span>필요 아이템</span><select data-ask-unlock-item-field="itemId">'+itemOptions(ic.itemId)+'</select></label>'+
+    '<label class="field"><span>보유 비교</span><select data-ask-unlock-item-field="operator">'+numberOperatorOptions(ic.operator)+'</select></label>'+
+    '<label class="field"><span>필요 개수</span><input type="number" min="0" data-ask-unlock-item-field="value" value="'+ic.value+'"></label>'+
+    '<label class="field"><span>다른 ASK</span><select data-ask-unlock-ask-field="askId">'+askOptions(qc.askId)+'</select></label>'+
+    '<label class="field"><span>ASK 상태</span><select data-ask-unlock-ask-field="status"><option value="asked" '+(qc.status==="asked"?"selected":"")+'>ASKED</option><option value="not-asked" '+(qc.status==="not-asked"?"selected":"")+'>NOT ASKED</option><option value="unlocked" '+(qc.status==="unlocked"?"selected":"")+'>UNLOCKED</option><option value="locked" '+(qc.status==="locked"?"selected":"")+'>LOCKED</option></select></label>'+
+    '<label class="field"><span>감정 대상</span><select data-ask-unlock-emo-field="characterId">'+charOptions(ec.characterId,"감정 무관")+'</select></label>'+
+    '<label class="field"><span>감정</span><select data-ask-unlock-emo-field="state"><option value="">감정 무관</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(ec.state===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
+    '<label class="field"><span>강도 비교</span><select data-ask-unlock-emo-field="intensityOperator">'+numberOperatorOptions(ec.intensityOperator,true)+'</select></label>'+
+    '<label class="field"><span>최소 강도</span><input type="number" min="0" max="100" data-ask-unlock-emo-field="intensityValue" value="'+ec.intensityValue+'"></label>'+
+  '</div></details>';
+}
 function renderAskEditor(){
-  editorBody.innerHTML=editorHead("ASK","ASK 설정","질문마다 호감도·감정 변화와 대사/지문/선택지 흐름을 직접 구성합니다.",'<button class="small-button" data-action="new-ask">+ 질문</button>')+
+  editorBody.innerHTML=editorHead("ASK","ASK 설정","질문은 LOCKED → NEW → ASKED 상태를 가지며, 해금 조건과 반응 FLOW를 따로 관리합니다.",'<button class="small-button" data-action="new-ask">+ 질문</button>')+
     '<div class="ask-editor-grid">'+
     (editorDraft.asks.length?editorDraft.asks.map(a=>'<div class="ask-row interaction-editor-row" data-ask-id="'+esc(a.id)+'">'+
       '<select data-ask-bind="characterId">'+charOptions(a.characterId,"질문 대상")+'</select>'+
       '<input data-ask-bind="label" value="'+esc(a.label)+'" placeholder="질문 문구">'+
-      '<label class="field"><span>최소 호감도</span><input type="number" min="0" max="100" data-ask-bind="minAffection" value="'+a.minAffection+'"></label>'+
+      '<label class="field"><span>사용 최소 호감도</span><input type="number" min="0" max="100" data-ask-bind="minAffection" value="'+a.minAffection+'"></label>'+
       '<label class="checkline"><input type="checkbox" data-ask-bind="enabled" '+(a.enabled?"checked":"")+'> 사용</label>'+
       '<button class="danger-button" data-action="delete-ask">×</button>'+
-      '<div class="full-row interaction-response-editor"><div class="interaction-effect-grid">'+
-        '<label class="field"><span>상호작용 호감도 변화</span><input type="number" min="-100" max="100" data-ask-bind="affectionDelta" value="'+a.affectionDelta+'"></label>'+
-        '<label class="field"><span>감정 변화</span><select data-ask-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(a.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
-        '<label class="field"><span>감정 강도</span><input type="number" min="0" max="100" data-ask-bind="emotionIntensity" value="'+a.emotionIntensity+'"></label>'+
-      '</div>'+interactionFlowEditor(a.entries,"ask",a.id)+'</div>'+
+      '<div class="full-row interaction-response-editor">'+
+        renderAskUnlockEditor(a)+
+        '<div class="interaction-effect-grid">'+
+          '<label class="field"><span>질문 실행 시 호감도 변화</span><input type="number" min="-100" max="100" data-ask-bind="affectionDelta" value="'+a.affectionDelta+'"></label>'+
+          '<label class="field"><span>감정 변화</span><select data-ask-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(a.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
+          '<label class="field"><span>감정 강도</span><input type="number" min="0" max="100" data-ask-bind="emotionIntensity" value="'+a.emotionIntensity+'"></label>'+
+        '</div>'+interactionFlowEditor(a.entries,"ask",a.id)+
+      '</div>'+
     '</div>').join(""):'<div class="editor-note">등록된 ASK가 없습니다.</div>')+
     '</div>';
 }
@@ -2315,14 +2343,36 @@ function handleEditorField(e){
   }
   if(t.dataset.rarity){editorDraft.gacha.rarityWeights[t.dataset.rarity]=Math.max(0,Number(t.value)||0);return}
   const ar=t.closest("[data-ask-id]");
-  if(ar&&t.dataset.askBind){
+  if(ar){
     const ask=editorDraft.asks.find(x=>x.id===ar.dataset.askId);if(!ask)return;
-    const k=t.dataset.askBind;
-    if(t.type==="checkbox")ask[k]=t.checked;
-    else if(k==="minAffection"||k==="emotionIntensity")ask[k]=clamp(t.value,0,100,0);
-    else if(k==="affectionDelta")ask[k]=clamp(t.value,-100,100,0);
-    else ask[k]=t.value;
-    return;
+    if(t.dataset.askUnlockVarField){
+      if(t.dataset.askUnlockVarField==="variableId"&&!t.value){ask.unlockCondition=null;return}
+      ask.unlockCondition ||= {variableId:"",operator:"==",value:""};
+      ask.unlockCondition[t.dataset.askUnlockVarField]=t.value;return;
+    }
+    if(t.dataset.askUnlockItemField){
+      if(t.dataset.askUnlockItemField==="itemId"&&!t.value){ask.unlockItemCondition=null;return}
+      ask.unlockItemCondition ||= {itemId:"",operator:">=",value:1};
+      ask.unlockItemCondition[t.dataset.askUnlockItemField]=t.dataset.askUnlockItemField==="value"?Math.max(0,Number(t.value)||0):t.value;return;
+    }
+    if(t.dataset.askUnlockAskField){
+      if(t.dataset.askUnlockAskField==="askId"&&!t.value){ask.unlockAskCondition=null;return}
+      ask.unlockAskCondition ||= {askId:"",status:"asked"};
+      ask.unlockAskCondition[t.dataset.askUnlockAskField]=t.value;return;
+    }
+    if(t.dataset.askUnlockEmoField){
+      if(t.dataset.askUnlockEmoField==="characterId"&&!t.value){ask.unlockEmotionCondition=null;return}
+      ask.unlockEmotionCondition ||= {characterId:"",state:"",intensityOperator:">=",intensityValue:0};
+      ask.unlockEmotionCondition[t.dataset.askUnlockEmoField]=t.dataset.askUnlockEmoField==="intensityValue"?clamp(t.value,0,100,0):t.value;return;
+    }
+    if(t.dataset.askBind){
+      const k=t.dataset.askBind;
+      if(t.type==="checkbox")ask[k]=t.checked;
+      else if(k==="minAffection"||k==="unlockMinAffection"||k==="emotionIntensity")ask[k]=clamp(t.value,0,100,0);
+      else if(k==="affectionDelta")ask[k]=clamp(t.value,-100,100,0);
+      else ask[k]=t.value;
+      return;
+    }
   }
   const tr=t.closest("[data-thought-id]");
   if(tr&&t.dataset.thoughtBind){

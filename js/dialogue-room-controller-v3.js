@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V7__)return;
-window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V7__=1;
+if(window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V8__)return;
+window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V8__=1;
 
 const K='hellaverse_dialogue_state_v1',META='hellaverse_dialogue_render_meta_v1';
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -38,11 +38,11 @@ function askHtml(){const rows=conceptualQuestions();return `<section class="hv-a
 function closeAsk(){$$('[data-hv-ask-panel]').forEach(x=>x.remove());$$('.dialogue-box.hv-ask-open').forEach(x=>x.classList.remove('hv-ask-open'))}
 function openAsk(){const box=$('.character-room .dialogue-box');if(!box){toast('대화가 시작된 뒤 질문할 수 있어요.');return}closeAsk();$$('[data-hv-action-panel]').forEach(x=>x.remove());box.classList.add('hv-ask-open');box.insertAdjacentHTML('beforeend',askHtml())}
 
-function makeBar(){const bar=document.createElement('div');bar.className='hv-room-action-bar';bar.dataset.hvRoomActionBar='7';bar.innerHTML='<button type="button" data-hv-room-command="ASK">ASK</button><button type="button" data-hv-room-command="ACTION">ACTION</button><button type="button" data-hv-room-command="INVENTORY">INVENTORY</button><button type="button" data-hv-room-command="LEAVE">LEAVE ROOM</button>';return bar}
+function makeBar(){const bar=document.createElement('div');bar.className='hv-room-action-bar';bar.dataset.hvRoomActionBar='8';bar.innerHTML='<button type="button" data-hv-room-command="ASK">ASK</button><button type="button" data-hv-room-command="ACTION">ACTION</button><button type="button" data-hv-room-command="INVENTORY">INVENTORY</button><button type="button" data-hv-room-command="LEAVE">LEAVE ROOM</button>';return bar}
 function cleanLegacy(box){for(const utility of $$('.dialogue-utility',box))$$('[data-vn-ask],[data-hv-action],[data-inventory-open],[data-vn-leave],[data-runtime-leave],[data-vn-gift]',utility).forEach(b=>b.remove())}
 function ensureBar(){
   const room=$('.character-room'),box=$('.character-room .dialogue-box'),stage=box?.closest('.dialogue-stage');
-  if(!room||document.body.classList.contains('hv-room-exiting')){$('[data-hv-room-action-bar]').forEach(x=>x.remove());return}
+  if(!room||document.body.classList.contains('hv-room-exiting')){document.querySelectorAll('[data-hv-room-action-bar]').forEach(x=>x.remove());return}
   if(box)cleanLegacy(box);
   const host=stage||room;
   let bar=$('[data-hv-room-action-bar]',room);

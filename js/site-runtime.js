@@ -706,7 +706,7 @@ function renderCollection(){
     .filter(ch=>collectionFilter==="ALL"||collectionFilter===ch.id)
     .map(ch=>({
       character:ch,
-      items:state.items.filter(i=>i.enabled&&i.characterId===ch.id)
+      items:state.items.filter(i=>i.enabled&&i.collectionCharacterId===ch.id)
         .filter(i=>state.collectionSettings.showLocked||itemCount(i.id)>0)
     }))
     .filter(g=>g.items.length || collectionFilter!=="ALL");
@@ -1039,13 +1039,13 @@ function drawGacha(count){
   state.gacha.history=state.gacha.history.slice(-50);saveState();
   renderGacha();
   const box=$("#gachaResult");
-  if(box)box.innerHTML=results.map(i=>'<div class="gacha-result-card rarity-'+esc(i.rarity)+'"><span>'+esc(i.rarity)+'</span><strong>'+esc(i.name)+'</strong><small>'+esc(getCharacter(i.characterId)?.name||"UNKNOWN")+'</small></div>').join("");
+  if(box)box.innerHTML=results.map(i=>'<div class="gacha-result-card rarity-'+esc(i.rarity)+'"><span>'+esc(i.rarity)+'</span><strong>'+esc(i.name)+'</strong><small>'+esc(getCharacter(i.collectionCharacterId)?.name||"UNKNOWN")+'</small></div>').join("");
 }
 function collectionDetail(id){
   const i=itemById(id);if(!i)return;
   const count=itemCount(i.id);
   const unlocked=count>0;
-  openModal(unlocked?i.name:"LOCKED",unlocked?'<p class="label">'+esc(i.rarity)+' · '+esc(i.category)+'</p><p style="line-height:1.7">'+esc(i.description||"설명 없음")+'</p><p class="muted">'+esc(getCharacter(i.characterId)?.name||"캐릭터 미지정")+(state.collectionSettings.showOwnedCount?' · OWNED ×'+count:'')+'</p>':'<p class="muted">아직 가챠에서 획득하지 않은 아이템입니다.</p>');
+  openModal(unlocked?i.name:"LOCKED",unlocked?'<p class="label">'+esc(i.rarity)+' · '+esc(i.category)+'</p><p style="line-height:1.7">'+esc(i.description||"설명 없음")+'</p><p class="muted">'+esc(getCharacter(i.collectionCharacterId)?.name||"캐릭터 미지정")+(state.collectionSettings.showOwnedCount?' · OWNED ×'+count:'')+'</p>':'<p class="muted">아직 가챠에서 획득하지 않은 아이템입니다.</p>');
 }
 
 /* EDITOR */
@@ -1272,7 +1272,7 @@ function renderGachaEditor(){
   '<div class="settings-grid"><section class="settings-card"><h3>BASIC</h3><div class="form-grid"><label class="checkline"><input type="checkbox" data-gacha-bind="enabled" '+(editorDraft.gacha.enabled?"checked":"")+'> 가챠 사용</label><label class="field"><span>재화 이름</span><input data-gacha-bind="currencyName" value="'+esc(editorDraft.gacha.currencyName)+'"></label><label class="field"><span>현재 재화</span><input type="number" min="0" data-gacha-bind="balance" value="'+editorDraft.gacha.balance+'"></label><label class="field"><span>1회 비용</span><input type="number" min="0" data-gacha-bind="singleCost" value="'+editorDraft.gacha.singleCost+'"></label><label class="field"><span>10회 비용</span><input type="number" min="0" data-gacha-bind="tenCost" value="'+editorDraft.gacha.tenCost+'"></label></div></section>'+
   '<section class="settings-card"><h3>RARITY WEIGHT</h3><div class="rarity-editor">'+RARITIES.map(r=>'<label class="rarity-edit-row"><span>'+r+' · '+((editorDraft.gacha.rarityWeights[r]/total)*100).toFixed(1)+'%</span><input type="number" min="0" step="1" data-rarity="'+r+'" value="'+editorDraft.gacha.rarityWeights[r]+'"></label>').join("")+'</div></section></div>'+
   '<div class="settings-card" style="margin-top:14px"><h3>ITEM POOL</h3><p class="muted">아이템 설정에서 “가챠 포함”을 켠 항목입니다.</p><div class="table-editor">'+
-  (pool.length?pool.map(i=>'<div class="table-row"><span>'+esc(i.name)+'</span><span>'+esc(i.rarity)+'</span><span>WEIGHT '+i.weight+'</span><span>'+esc(getCharacterDraft(i.characterId)?.name||"캐릭터 미지정")+'</span><span></span></div>').join(""):'<div class="editor-note">현재 가챠 풀에 등록된 아이템이 없습니다.</div>')+'</div></div>';
+  (pool.length?pool.map(i=>'<div class="table-row"><span>'+esc(i.name)+'</span><span>'+esc(i.rarity)+'</span><span>WEIGHT '+i.weight+'</span><span>'+esc(getCharacterDraft(i.collectionCharacterId)?.name||"캐릭터 미지정")+'</span><span></span></div>').join(""):'<div class="editor-note">현재 가챠 풀에 등록된 아이템이 없습니다.</div>')+'</div></div>';
 }
 function renderThoughtEditor(){
   editorBody.innerHTML=editorHead("THOUGHT","Thought 설정","캐릭터별 생각, 카테고리, 등장 빈도를 관리합니다.",'<button class="small-button" data-action="new-thought">+ Thought</button>')+
@@ -1285,7 +1285,7 @@ function renderCollectionEditor(){
     '<div class="settings-grid"><section class="settings-card"><h3>DISPLAY</h3><label class="checkline"><input type="checkbox" data-collection-setting="showLocked" '+(editorDraft.collectionSettings.showLocked?"checked":"")+'> 미획득 아이템도 LOCKED로 표시</label><label class="checkline"><input type="checkbox" data-collection-setting="showOwnedCount" '+(editorDraft.collectionSettings.showOwnedCount?"checked":"")+'> 보유 개수 표시</label></section>'+
     '<section class="settings-card"><h3>SUMMARY</h3><p class="muted">아이템 추가·희귀도·가챠 여부는 “아이템 설정”에서 관리합니다.</p><p>'+editorDraft.items.length+' ITEMS · '+Object.values(editorDraft.inventoryCounts).filter(n=>Number(n)>0).length+' DISCOVERED</p></section></div>'+
     (chars.length?chars.map(ch=>'<section class="collection-preview-group"><h3>'+esc(ch.name)+'</h3><div class="collection-preview-items">'+
-      (editorDraft.items.filter(i=>i.characterId===ch.id).length?editorDraft.items.filter(i=>i.characterId===ch.id).map(i=>'<div class="collection-preview-item"><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+'</small><div>현재 보유 '+itemCount(i.id,editorDraft)+'</div></div>').join(""):'<div class="editor-note">이 캐릭터의 아이템이 없습니다.</div>')+
+      (editorDraft.items.filter(i=>i.collectionCharacterId===ch.id).length?editorDraft.items.filter(i=>i.collectionCharacterId===ch.id).map(i=>'<div class="collection-preview-item"><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+'</small><div>현재 보유 '+itemCount(i.id,editorDraft)+'</div></div>').join(""):'<div class="editor-note">이 캐릭터의 아이템이 없습니다.</div>')+
       '</div></section>').join(""):'<div class="editor-note">캐릭터가 없습니다.</div>');
 }
 

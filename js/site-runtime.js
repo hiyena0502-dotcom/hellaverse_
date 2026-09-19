@@ -16,6 +16,11 @@ const EMOTIONS = [
 ];
 const FREQUENCIES = [["common","Common"],["normal","Normal"],["rare","Rare"]];
 const DEFAULT_CATEGORIES = ["일상","관계","과거","천국","지옥","비밀"];
+const DEFAULT_ITEM_CATEGORIES = ["개인 소지품","음식","장신구","편지·문서","장난감","수제품","기념품","열쇠·도구","기타"];
+const GIFT_PREFERENCES = [
+  ["LOVED",5],["LIKED",3],["NEUTRAL",1],["DISLIKED",-2],["HATED",-4]
+];
+const RARITY_ORDER = {COMMON:0,UNCOMMON:1,RARE:2,EPIC:3,LEGENDARY:4,MISTIC:5};
 
 const $ = (q, root=document) => root.querySelector(q);
 const $$ = (q, root=document) => [...root.querySelectorAll(q)];
@@ -40,8 +45,11 @@ function defaultState(){
     variables:[],
     asks:[],
     items:[],
+    itemCategories:[...DEFAULT_ITEM_CATEGORIES],
     inventoryCounts:{},
-    collectionSettings:{showLocked:true,showOwnedCount:true},
+    newItemIds:[],
+    itemHistory:[],
+    collectionSettings:{showLocked:true,showOwnedCount:true,view:"grouped",sort:"recent"},
     thoughts:[],
     thoughtSettings:{categories:[...DEFAULT_CATEGORIES]},
     gacha:{
@@ -81,6 +89,13 @@ function normalizeEffects(arr){
     id:x.id||uid("fx"),variableId:x.variableId||"",operation:x.operation||"set",value:x.value??""
   })) : [];
 }
+function normalizeItemEffects(arr){
+  return Array.isArray(arr) ? arr.map(x=>({
+    id:x.id||uid("itemfx"),
+    itemId:x.itemId||"",
+    amount:Math.max(1,Number(x.amount)||1)
+  })) : [];
+}
 function normalizeAffectionCondition(c){
   if(!c || typeof c!=="object") return null;
   return {characterId:c.characterId||c.targetId||"",operator:c.operator||">=",value:clamp(c.value,0,100,0)};
@@ -114,6 +129,7 @@ function normalizeEntry(entry={}){
     type:["dialogue","narration","choice"].includes(entry.type)?entry.type:"dialogue",
     condition:normalizeCondition(entry.condition),
     effects:normalizeEffects(entry.effects),
+    itemEffects:normalizeItemEffects(entry.itemEffects),
     affectionCondition:normalizeAffectionCondition(entry.affectionCondition),
     affectionEffects:normalizeAffectionEffects(entry.affectionEffects),
     emotionCondition:normalizeEmotionCondition(entry.emotionCondition),
@@ -130,6 +146,7 @@ function normalizeEntry(entry={}){
         entries:Array.isArray(o.entries)?o.entries.map(normalizeEntry):[],
         condition:normalizeCondition(o.condition),
         effects:normalizeEffects(o.effects),
+        itemEffects:normalizeItemEffects(o.itemEffects),
         affectionCondition:normalizeAffectionCondition(o.affectionCondition),
         affectionEffects:normalizeAffectionEffects(o.affectionEffects),
         emotionCondition:normalizeEmotionCondition(o.emotionCondition),
@@ -197,6 +214,11 @@ function normalizeItemReaction(r={},fallbackCharacterId=""){
   return {
     id:r.id||uid("item-reaction"),
     characterId:r.characterId||fallbackCharacterId||"",
+    preference:GIFT_PREFERENCES.some(x=>x[0]===r.preference)?r.preference:
+      ((Number(r.affectionDelta??r.giftAffectionDelta)||0)>=5?"LOVED":
+       (Number(r.affectionDelta??r.giftAffectionDelta)||0)>=3?"LIKED":
+       (Number(r.affectionDelta??r.giftAffectionDelta)||0)<-2?"HATED":
+       (Number(r.affectionDelta??r.giftAffectionDelta)||0)<0?"DISLIKED":"NEUTRAL"),
     affectionDelta:clamp(r.affectionDelta ?? r.giftAffectionDelta,-100,100,0),
     emotionState:EMOTIONS.some(x=>x[0]===r.emotionState) ? r.emotionState : "",
     emotionIntensity:clamp(r.emotionIntensity ?? r.giftEmotionIntensity,0,100,0),
@@ -223,6 +245,7 @@ function normalizeItem(i={}){
     rarity:RARITIES.includes(i.rarity)?i.rarity:"COMMON",
     collectionCharacterId,
     description:i.description||"",
+    acquisitionMode:i.acquisitionMode==="unique"?"unique":"repeatable",
     gachaEnabled:i.gachaEnabled!==false,
     enabled:i.enabled!==false,
     weight:Math.max(.01,Number(i.weight)||1),
@@ -266,10 +289,17 @@ function normalizeState(raw){
     variables:Array.isArray(s.variables)?s.variables.map(normalizeVariable):[],
     asks:Array.isArray(s.asks)?s.asks.map(normalizeAsk):[],
     items,
+    itemCategories:Array.isArray(s.itemCategories)&&s.itemCategories.length
+      ? [...new Set(s.itemCategories.map(String).map(x=>x.trim()).filter(Boolean))]
+      : d.itemCategories,
     inventoryCounts:Object.fromEntries(Object.entries(inventoryCounts).map(([id,n])=>[id,Math.max(0,Number(n)||0)])),
+    newItemIds:Array.isArray(s.newItemIds)?[...new Set(s.newItemIds.map(String))]:[],
+    itemHistory:Array.isArray(s.itemHistory)?s.itemHistory.slice(-500):[],
     collectionSettings:{
       showLocked:s.collectionSettings?.showLocked!==false,
-      showOwnedCount:s.collectionSettings?.showOwnedCount!==false
+      showOwnedCount:s.collectionSettings?.showOwnedCount!==false,
+      view:s.collectionSettings?.view==="all"?"all":"grouped",
+      sort:["recent","rarity","name","count"].includes(s.collectionSettings?.sort)?s.collectionSettings.sort:"recent"
     },
     thoughts:Array.isArray(s.thoughts)?s.thoughts.map(normalizeThought):[],
     thoughtSettings:{
@@ -308,6 +338,11 @@ let selectedCharacterId="";
 let homeIndex=0;
 let thoughtFilter="ALL";
 let collectionFilter="ALL";
+let collectionRarity="ALL";
+let collectionCategory="ALL";
+let collectionStatus="ALL";
+let collectionSource="ALL";
+let collectionQuery="";
 let pendingOrigin=state.profile.origin || "";
 let roomMode="talk";
 let activeInteractionReaction=null;
@@ -322,6 +357,10 @@ let selectedEntryId="";
 let selectedThoughtId="";
 let selectedAskId="";
 let selectedItemId="";
+let editorItemQuery="";
+let editorItemCharacterFilter="ALL";
+let editorItemRarityFilter="ALL";
+let editorItemCategoryFilter="ALL";
 
 let session=createSession();
 let playback=null;

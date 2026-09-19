@@ -1749,7 +1749,7 @@ function renderItemEditor(){
         '<button class="danger-button" data-action="delete-item">×</button>'+
         '<div class="full-row item-meta-strip"><span>'+esc(itemSourceLabel(i,editorDraft))+'</span><span>'+configured+' / '+editorDraft.characters.length+' REACTIONS</span><span>OWNED ×'+itemCount(i.id,editorDraft)+'</span></div>'+
         '<div class="full-row interaction-response-editor">'+
-          '<div class="inline-grid"><label class="checkline"><input type="checkbox" data-item-bind="gachaEnabled" '+(i.gachaEnabled?"checked":"")+'> 가챠 포함</label><label class="checkline"><input type="checkbox" data-item-bind="enabled" '+(i.enabled?"checked":"")+'> 사용</label><label class="field"><span>가챠 가중치</span><input type="number" min=".01" step=".01" data-item-bind="weight" value="'+i.weight+'"></label></div>'+
+          '<div class="inline-grid"><label class="checkline"><input type="checkbox" data-item-bind="gachaEnabled" '+(i.gachaEnabled?"checked":"")+'> 가챠 포함</label><label class="checkline"><input type="checkbox" data-item-bind="enabled" '+(i.enabled?"checked":"")+'> 사용</label><label class="checkline"><input type="checkbox" data-item-bind="secret" '+(i.secret?"checked":"")+'> SECRET</label><label class="field"><span>선물 시 처리</span><select data-item-bind="giftUseMode"><option value="keep" '+(i.giftUseMode==="keep"?"selected":"")+'>KEEP · 유지</option><option value="consume" '+(i.giftUseMode==="consume"?"selected":"")+'>CONSUMABLE · 1개 소비</option></select></label><label class="field"><span>가챠 가중치</span><input type="number" min=".01" step=".01" data-item-bind="weight" value="'+i.weight+'"></label></div>'+
           '<label class="field full"><span>아이템 설명</span><textarea data-item-bind="description">'+esc(i.description)+'</textarea></label>'+
           '<div class="reaction-manager"><div class="manager-list-head"><div><strong>CHARACTER REACTIONS</strong><p class="muted">같은 아이템을 여러 캐릭터에게 줄 수 있습니다. 취향은 기본 호감도 변화값을 자동 제안합니다.</p></div><button class="small-button" type="button" data-action="new-item-reaction" data-item-id="'+esc(i.id)+'">+ 캐릭터 반응</button></div>'+
           (i.reactions.length?i.reactions.map(r=>'<article class="item-reaction-card" data-item-id="'+esc(i.id)+'" data-reaction-id="'+esc(r.id)+'"><div class="item-reaction-head">'+
@@ -1759,7 +1759,11 @@ function renderItemEditor(){
             '<label class="field"><span>감정</span><select data-reaction-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(r.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
             '<label class="field"><span>강도</span><input type="number" min="0" max="100" data-reaction-bind="emotionIntensity" value="'+r.emotionIntensity+'"></label>'+
             '<button class="danger-button" type="button" data-action="delete-item-reaction">×</button></div>'+
-            interactionFlowEditor(r.entries,"item-reaction",r.id,i.id)+'</article>').join(""):'<div class="editor-note">캐릭터별 반응이 없습니다. 설정하지 않은 캐릭터에게도 줄 수 있지만 기본 무반응 지문이 나옵니다.</div>')+
+            '<div class="special-reaction-rule"><label class="field"><span>SPECIAL 최소 호감도</span><input type="number" min="0" max="100" data-reaction-bind="specialMinAffection" value="'+r.specialMinAffection+'"></label><label class="field"><span>SPECIAL 감정</span><select data-reaction-bind="specialEmotionState"><option value="">감정 조건 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(r.specialEmotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label><label class="field"><span>SPECIAL 최소 강도</span><input type="number" min="0" max="100" data-reaction-bind="specialEmotionIntensity" value="'+r.specialEmotionIntensity+'"></label></div>'+
+            interactionFlowEditor(r.firstEntries,"item-reaction",r.id,i.id,"firstEntries","FIRST GIFT")+
+            interactionFlowEditor(r.repeatEntries,"item-reaction",r.id,i.id,"repeatEntries","REPEAT GIFT")+
+            interactionFlowEditor(r.specialEntries,"item-reaction",r.id,i.id,"specialEntries","SPECIAL")+
+          '</article>').join(""):'<div class="editor-note">캐릭터별 반응이 없습니다. 설정하지 않은 캐릭터에게도 줄 수 있지만 기본 무반응 지문이 나옵니다.</div>')+
           '</div>'+
         '</div>'+
       '</div>';
@@ -2149,7 +2153,7 @@ function handleEditorField(e){
       return;
     }
     if(k==="affectionDelta")reaction[k]=clamp(t.value,-100,100,0);
-    else if(k==="emotionIntensity")reaction[k]=clamp(t.value,0,100,0);
+    else if(k==="emotionIntensity"||k==="specialMinAffection"||k==="specialEmotionIntensity")reaction[k]=clamp(t.value,0,100,0);
     else reaction[k]=t.value;
     return;
   }

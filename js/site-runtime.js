@@ -156,38 +156,77 @@ function normalizeVariable(v={}){
   const type=["number","boolean","string"].includes(v.type)?v.type:"number";
   return {id:v.id||uid("var"),name:v.name||"새 변수",type,defaultValue:v.defaultValue??(type==="boolean"?"false":"0")};
 }
+function legacyInteractionEntry(type,text){
+  if(!text)return null;
+  return normalizeEntry({
+    type:type==="narration"?"narration":"dialogue",
+    speaker:"",
+    text:String(text),
+    condition:null,
+    effects:[],
+    affectionCondition:null,
+    affectionEffects:[],
+    emotionCondition:null,
+    emotionEffects:[]
+  });
+}
 function normalizeAsk(a={}){
+  let entries=Array.isArray(a.entries)?a.entries.map(normalizeEntry):[];
+  if(!entries.length&&a.reactionText){
+    const legacy=legacyInteractionEntry(a.reactionType,a.reactionText);
+    if(legacy)entries=[legacy];
+  }
   return {
     id:a.id||uid("ask"),
     characterId:a.characterId||"",
     label:a.label||a.question||"새 질문",
-    eventId:a.eventId||"",
     minAffection:clamp(a.minAffection,0,100,0),
     affectionDelta:clamp(a.affectionDelta ?? a.reactionAffectionDelta,-100,100,0),
     emotionState:EMOTIONS.some(x=>x[0]===a.emotionState) ? a.emotionState : "",
     emotionIntensity:clamp(a.emotionIntensity ?? a.reactionEmotionIntensity,0,100,0),
-    reactionType:a.reactionType==="narration" ? "narration" : "dialogue",
-    reactionText:String(a.reactionText||""),
+    entries,
     enabled:a.enabled!==false
   };
 }
+function normalizeItemReaction(r={},fallbackCharacterId=""){
+  let entries=Array.isArray(r.entries)?r.entries.map(normalizeEntry):[];
+  if(!entries.length&&r.reactionText){
+    const legacy=legacyInteractionEntry(r.reactionType,r.reactionText);
+    if(legacy)entries=[legacy];
+  }
+  return {
+    id:r.id||uid("item-reaction"),
+    characterId:r.characterId||fallbackCharacterId||"",
+    affectionDelta:clamp(r.affectionDelta ?? r.giftAffectionDelta,-100,100,0),
+    emotionState:EMOTIONS.some(x=>x[0]===r.emotionState) ? r.emotionState : "",
+    emotionIntensity:clamp(r.emotionIntensity ?? r.giftEmotionIntensity,0,100,0),
+    entries
+  };
+}
 function normalizeItem(i={}){
+  const collectionCharacterId=i.collectionCharacterId||i.ownerCharacterId||i.characterId||"";
+  let reactions=Array.isArray(i.reactions)?i.reactions.map(r=>normalizeItemReaction(r)):[];
+  if(!reactions.length&&(i.reactionText||i.affectionDelta||i.emotionState)){
+    reactions=[normalizeItemReaction({
+      characterId:i.characterId||collectionCharacterId,
+      affectionDelta:i.affectionDelta,
+      emotionState:i.emotionState,
+      emotionIntensity:i.emotionIntensity,
+      reactionType:i.reactionType,
+      reactionText:i.reactionText
+    },i.characterId||collectionCharacterId)];
+  }
   return {
     id:i.id||uid("item"),
     name:i.name||"새 아이템",
     category:i.category||"기타",
     rarity:RARITIES.includes(i.rarity)?i.rarity:"COMMON",
-    characterId:i.characterId||"",
+    collectionCharacterId,
     description:i.description||"",
     gachaEnabled:i.gachaEnabled!==false,
-    inventoryEventId:i.inventoryEventId||i.eventId||"",
-    affectionDelta:clamp(i.affectionDelta ?? i.giftAffectionDelta,-100,100,0),
-    emotionState:EMOTIONS.some(x=>x[0]===i.emotionState) ? i.emotionState : "",
-    emotionIntensity:clamp(i.emotionIntensity ?? i.giftEmotionIntensity,0,100,0),
-    reactionType:i.reactionType==="narration" ? "narration" : "dialogue",
-    reactionText:String(i.reactionText||""),
     enabled:i.enabled!==false,
     weight:Math.max(.01,Number(i.weight)||1),
+    reactions,
     legacyOwned:Math.max(0,Number(i.owned)||0),
     legacyUnlocked:Boolean(i.unlocked)
   };

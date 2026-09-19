@@ -1091,6 +1091,16 @@ function renderStage() {
     return;
   }
 
+  if (!initialEvent.entries.length) {
+    renderEventSelect();
+    el.eventTitle.textContent = initialEvent.name || "";
+    hideAllStageCards();
+    el.emptyState.hidden = false;
+    el.eventBadge.textContent = "EMPTY";
+    clearPlaybackTimers();
+    return;
+  }
+
   const playable = settlePlayback();
   const event = getRuntimeEvent();
 

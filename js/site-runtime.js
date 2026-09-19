@@ -459,6 +459,28 @@ function eventsForCharacter(charId, source=state){return source.events.filter(e=
 function variableById(id,source=state){return source.variables.find(v=>v.id===id)||null}
 function itemById(id,source=state){return source.items.find(i=>i.id===id)||null}
 function itemCount(id,source=state){return Math.max(0,Number(source.inventoryCounts?.[id])||0)}
+function hasEverAcquired(id,source=state){
+  return itemCount(id,source)>0 || (source.itemHistory||[]).some(h=>h?.itemId===id&&Number(h.amount)>0);
+}
+function giftReactionKey(itemId,characterId){return itemId+"::"+characterId}
+function giftInteractionCount(itemId,characterId,source=state){
+  return Math.max(0,Number(source.giftInteractionCounts?.[giftReactionKey(itemId,characterId)])||0);
+}
+function isGiftPreferenceDiscovered(itemId,characterId,source=state){
+  return (source.discoveredGiftReactionKeys||[]).includes(giftReactionKey(itemId,characterId));
+}
+function discoverGiftPreference(itemId,characterId,source=state){
+  source.discoveredGiftReactionKeys ||= [];
+  const key=giftReactionKey(itemId,characterId);
+  if(!source.discoveredGiftReactionKeys.includes(key))source.discoveredGiftReactionKeys.push(key);
+}
+function consumeInventoryItem(id,count=1,source=state){
+  source.inventoryCounts ||= {};
+  const current=itemCount(id,source);
+  const next=Math.max(0,current-Math.max(1,Number(count)||1));
+  source.inventoryCounts[id]=next;
+  return next;
+}
 function itemLastAcquiredAt(id,source=state){
   for(let i=source.itemHistory.length-1;i>=0;i--){
     if(source.itemHistory[i]?.itemId===id)return Number(source.itemHistory[i].at)||0;
@@ -486,7 +508,7 @@ function acquireItem(id,count=1,sourceType="BASIC",source=state,{notify=true}={}
   const before=itemCount(id,source);
   let gain=Math.max(0,Number(count)||0);
   if(item.acquisitionMode==="unique"){
-    gain=before>0?0:Math.min(1,gain);
+    gain=hasEverAcquired(id,source)?0:Math.min(1,gain);
   }
   const after=before+gain;
   source.inventoryCounts[id]=after;
@@ -535,7 +557,7 @@ function itemSourceTypes(item,source=state){
   if(!dialogue){
     for(const it of source.items||[]){
       for(const reaction of it.reactions||[]){
-        if(flowHasItemGrant(reaction.entries,item.id)){dialogue=true;break}
+        if(flowHasItemGrant(reaction.firstEntries,item.id)||flowHasItemGrant(reaction.repeatEntries,item.id)||flowHasItemGrant(reaction.specialEntries,item.id)){dialogue=true;break}
       }
       if(dialogue)break;
     }
@@ -560,6 +582,64 @@ function conditionPasses(c){
     case"truthy":return Boolean(cur);case"falsy":return !cur;default:return cur===exp;
   }
 }
+function itemConditionPasses(c){
+  if(!c?.itemId)return true;
+  const x=itemCount(c.itemId),y=Math.max(0,Number(c.value)||0);
+  switch(c.operator){case">":return x>y;case"<":return x<y;case"<=":return x<=y;case"==":return x===y;case"!=":return x!==y;default:return x>=y}
+}
+function isAskUnlocked(ask,source=state){
+  if(!ask)return false;
+  return !ask.startLocked || (source.unlockedAskIds||[]).includes(ask.id);
+}
+function askConditionPasses(c){
+  if(!c?.askId)return true;
+  const ask=state.asks.find(a=>a.id===c.askId);
+  if(!ask)return true;
+  const asked=(state.askedAskIds||[]).includes(ask.id);
+  const unlocked=isAskUnlocked(ask);
+  if(c.status==="not-asked")return !asked;
+  if(c.status==="unlocked")return unlocked;
+  if(c.status==="locked")return !unlocked;
+  return asked;
+}
+function askUnlockPasses(ask){
+  const ch=getCharacter(ask.characterId);
+  const affection=ch?Number(session.affection[ch.id]??ch.affectionStart):0;
+  return conditionPasses(ask.unlockCondition)
+    && affection>=Number(ask.unlockMinAffection||0)
+    && itemConditionPasses(ask.unlockItemCondition)
+    && askConditionPasses(ask.unlockAskCondition)
+    && emotionConditionPasses(ask.unlockEmotionCondition);
+}
+function syncAskUnlocks(characterId){
+  state.unlockedAskIds ||= [];
+  const newly=[];
+  state.asks.filter(a=>a.enabled&&a.characterId===characterId&&a.startLocked).forEach(ask=>{
+    if(!state.unlockedAskIds.includes(ask.id)&&askUnlockPasses(ask)){
+      state.unlockedAskIds.push(ask.id);newly.push(ask);
+    }
+  });
+  if(newly.length){
+    saveState();
+    showToast(newly.length===1?"새 ASK가 해금되었습니다.":"새 ASK "+newly.length+"개가 해금되었습니다.");
+  }
+  return newly;
+}
+function recordInteraction(entry){
+  state.interactionHistory ||= [];
+  state.interactionHistory.push({id:uid("interaction"),at:Date.now(),...entry});
+  state.interactionHistory=state.interactionHistory.slice(-500);
+}
+function completeInteraction(meta){
+  if(!meta)return;
+  if(meta.kind==="ask"&&meta.askId){
+    state.askedAskIds ||= [];
+    if(!state.askedAskIds.includes(meta.askId))state.askedAskIds.push(meta.askId);
+    recordInteraction({kind:"ask",characterId:meta.characterId||"",askId:meta.askId,label:meta.label||""});
+    syncAskUnlocks(meta.characterId);
+  }
+  saveState();
+}
 function affectionConditionPasses(c){
   if(!c?.characterId)return true;
   const ch=getCharacter(c.characterId);if(!ch)return true;
@@ -574,7 +654,13 @@ function emotionConditionPasses(c){
   const x=Number(cur.intensity)||0,y=Number(c.intensityValue)||0;
   switch(c.intensityOperator){case">":return x>y;case"<":return x<y;case"<=":return x<=y;case"==":return x===y;case"!=":return x!==y;default:return x>=y}
 }
-function ownerPasses(o){return conditionPasses(o?.condition)&&affectionConditionPasses(o?.affectionCondition)&&emotionConditionPasses(o?.emotionCondition)}
+function ownerPasses(o){
+  return conditionPasses(o?.condition)
+    && itemConditionPasses(o?.itemCondition)
+    && askConditionPasses(o?.askCondition)
+    && affectionConditionPasses(o?.affectionCondition)
+    && emotionConditionPasses(o?.emotionCondition);
+}
 function applyEffects(arr){
   normalizeEffects(arr).forEach(f=>{
     const v=variableById(f.variableId);if(!v)return;
@@ -636,7 +722,7 @@ function applyInteractionEffects(source){
   }
   if(messages.length)showToast(messages.join(" · "));
 }
-function beginInteractionReaction(kind,source,entries,label=""){
+function beginInteractionReaction(kind,source,entries,label="",meta={}){
   const ch=getCharacter(source.characterId);if(!ch)return;
   if(!interactionContext){
     interactionContext={
@@ -652,6 +738,7 @@ function beginInteractionReaction(kind,source,entries,label=""){
   activeInteractionEvent={
     id:"__interaction__"+uid("flow"),
     name:(kind==="ask"?"ASK · ":"ITEM · ")+(label||"INTERACTION"),
+    interactionMeta:{kind,characterId:ch.id,label:label||"",...meta},
     characterId:ch.id,
     nextEventId:"",
     emotionExitMode:"keep",
@@ -997,6 +1084,7 @@ function jumpEvent(id){
 function finishEvent(){
   const ev=currentEvent();
   if(activeInteractionEvent&&ev?.id===activeInteractionEvent.id){
+    completeInteraction(activeInteractionEvent.interactionMeta);
     restoreInterruptedDialogue();
     return true;
   }
@@ -1120,18 +1208,28 @@ function renderAskPanel(){
   clearAuto();
   const dynamic=$("#roomDynamic");if(!dynamic)return;
   const ch=getCharacter(selectedCharacterId);if(!ch)return;
+  syncAskUnlocks(ch.id);
   const affection=Number(session.affection[ch.id]??ch.affectionStart);
-  const asks=asksForCharacter(ch.id).filter(a=>affection>=a.minAffection);
-  dynamic.innerHTML='<section class="ask-panel"><div class="inventory-character-head"><div><p class="page-kicker">ASK</p><h2>대화 중 무엇을 물어볼까?</h2></div><p>현재 대화는 그대로 유지됩니다.</p></div><div class="ask-list">'+
-    (asks.length?asks.map(a=>'<button class="ask-entry" type="button" data-action="ask-topic" data-id="'+esc(a.id)+'"><span>'+esc(a.label)+'</span><small>INTERRUPT</small></button>').join(""):'<div class="editor-note">현재 사용할 수 있는 질문이 없습니다.</div>')+
+  const asks=asksForCharacter(ch.id);
+  dynamic.innerHTML='<section class="ask-panel"><div class="inventory-character-head"><div><p class="page-kicker">ASK</p><h2>대화 중 무엇을 물어볼까?</h2></div><p>LOCKED → NEW → ASKED</p></div><div class="ask-list">'+
+    (asks.length?asks.map(a=>{
+      const unlocked=isAskUnlocked(a);
+      const asked=(state.askedAskIds||[]).includes(a.id);
+      const available=unlocked&&affection>=a.minAffection;
+      const status=!unlocked?"LOCKED":asked?"ASKED":"NEW";
+      const label=unlocked?a.label:"???";
+      return '<button class="ask-entry '+status.toLowerCase()+'" type="button" data-action="ask-topic" data-id="'+esc(a.id)+'" '+(!available?"disabled":"")+'><span>'+esc(label)+'</span><small>'+status+(unlocked&&!available?' · 호감도 '+a.minAffection:'')+'</small></button>';
+    }).join(""):'<div class="editor-note">등록된 질문이 없습니다.</div>')+
     '</div></section>';
 }
 function startAsk(id){
   const ask=state.asks.find(a=>a.id===id&&a.enabled);if(!ask)return;
   const ch=getCharacter(ask.characterId);if(!ch||selectedCharacterId!==ch.id)return;
+  syncAskUnlocks(ch.id);
+  if(!isAskUnlocked(ask)){showToast("아직 해금되지 않은 질문입니다.");return}
   const affection=Number(session.affection[ch.id]??ch.affectionStart);
   if(affection<ask.minAffection){showToast("아직 물어볼 수 없습니다.");return}
-  beginInteractionReaction("ask",ask,ask.entries,ask.label);
+  beginInteractionReaction("ask",ask,ask.entries,ask.label,{askId:ask.id});
 }
 function renderInventoryPanel(){
   if(!typing.done){
@@ -1146,26 +1244,45 @@ function renderInventoryPanel(){
   dynamic.innerHTML='<section class="inventory-panel"><div class="inventory-character-head"><div><p class="page-kicker">INVENTORY</p><h2>GIVE ITEM</h2></div><p>'+esc(ch.name)+'에게 보유 아이템을 건넬 수 있습니다.</p></div><div class="inventory-list">'+
     (items.length?items.map(i=>{
       const reaction=i.reactions.find(r=>r.characterId===ch.id);
-      const reactionLabel=reaction?(reaction.preference+' · REACTION'):'DEFAULT';
-      return '<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+' · '+esc(reactionLabel)+'</small></span><span class="count">GIVE · ×'+itemCount(i.id)+'</span></button>';
+      const discovered=isGiftPreferenceDiscovered(i.id,ch.id);
+      const reactionLabel=discovered?(reaction?reaction.preference:"NO SPECIAL REACTION"):"???";
+      return '<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+' · '+esc(reactionLabel)+' · '+esc(i.giftUseMode.toUpperCase())+'</small></span><span class="count">GIVE · ×'+itemCount(i.id)+'</span></button>';
     }).join(""):'<div class="editor-note">보유 아이템이 없습니다.</div>')+
     '</div></section>';
 }
 function useInventoryItem(id){
   const item=itemById(id);if(!item||itemCount(id)<=0)return;
-  const reaction=item.reactions.find(r=>r.characterId===selectedCharacterId) || {
-    id:uid("item-reaction"),
-    characterId:selectedCharacterId,
+  const ch=getCharacter(selectedCharacterId);if(!ch)return;
+  const key=giftReactionKey(item.id,ch.id);
+  const reaction=item.reactions.find(r=>r.characterId===ch.id) || normalizeItemReaction({
+    characterId:ch.id,
+    preference:"NEUTRAL",
     affectionDelta:0,
-    emotionState:"",
-    emotionIntensity:0,
-    entries:[normalizeEntry({
-      type:"narration",
-      text:"상대는 아이템을 받아 들였지만 특별한 반응은 보이지 않았다.",
-      condition:null,effects:[],affectionCondition:null,affectionEffects:[],emotionCondition:null,emotionEffects:[]
-    })]
-  };
-  beginInteractionReaction("item",reaction,reaction.entries,item.name);
+    firstEntries:[normalizeEntry({type:"narration",text:"상대는 아이템을 받아 들였지만 특별한 반응은 보이지 않았다."})],
+    repeatEntries:[normalizeEntry({type:"narration",text:"상대는 익숙한 듯 아이템을 받아 들었다."})]
+  },ch.id);
+
+  const currentCount=giftInteractionCount(item.id,ch.id);
+  const emotion=session.emotions[ch.id]||{state:ch.emotionDefault,intensity:ch.emotionIntensity};
+  const affection=Number(session.affection[ch.id]??ch.affectionStart);
+  const hasSpecialRule=Number(reaction.specialMinAffection)>0||Boolean(reaction.specialEmotionState);
+  const specialPass=hasSpecialRule
+    && affection>=Number(reaction.specialMinAffection||0)
+    && (!reaction.specialEmotionState||(emotion.state===reaction.specialEmotionState&&emotion.intensity>=Number(reaction.specialEmotionIntensity||0)))
+    && reaction.specialEntries.length>0;
+
+  let flowType=specialPass?"SPECIAL":currentCount===0?"FIRST":"REPEAT";
+  let entries=specialPass?reaction.specialEntries:(currentCount===0?reaction.firstEntries:reaction.repeatEntries);
+  if(!entries?.length)entries=reaction.firstEntries?.length?reaction.firstEntries:reaction.repeatEntries;
+
+  discoverGiftPreference(item.id,ch.id);
+  state.giftInteractionCounts ||= {};
+  state.giftInteractionCounts[key]=currentCount+1;
+  if(item.giftUseMode==="consume")consumeInventoryItem(item.id,1,state);
+  recordInteraction({kind:"gift",characterId:ch.id,itemId:item.id,label:item.name,preference:reaction.preference,flowType});
+  saveState();
+
+  beginInteractionReaction("item",reaction,entries,item.name,{itemId:item.id,preference:reaction.preference,flowType});
 }
 function chName(id){return getCharacter(id)?.name||"UNKNOWN"}
 function advanceDialogue(fromAuto=false){

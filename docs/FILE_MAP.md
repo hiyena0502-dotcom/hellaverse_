@@ -70,4 +70,4 @@ HUD tools:
 
 ## Cache version
 
-현재 active asset query version: `v=217`.
+현재 active asset query version: `v=218`.

@@ -1,13 +1,15 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V8__)return;
-window.__HELLAVERSE_DIALOGUE_CONTINUITY_V8__=1;
+if(window.__HELLAVERSE_DIALOGUE_CONTINUITY_V9__)return;
+window.__HELLAVERSE_DIALOGUE_CONTINUITY_V9__=1;
 
 const K='hellaverse_dialogue_state_v1',META='hellaverse_dialogue_render_meta_v1';
 const $=(s,r=document)=>r.querySelector(s);
 const up=v=>String(v||'').trim().toUpperCase();
 const list=v=>Array.isArray(v)?v.map(String).map(x=>x.trim()).filter(Boolean):String(v||'').split(/[\n,;/|]+/).map(x=>x.trim()).filter(Boolean);
-let bridge=false,starting=false;
+
+let bridge=false,starting=false,chainActive=false,chainCid='',currentSceneId='',lastSceneId='';
+let playedIds=new Set();
 
 function read(key=K,f={}){try{return JSON.parse(localStorage.getItem(key)||'')||f}catch{return f}}
 function state(){return read(K,{})}
@@ -18,6 +20,9 @@ function role(sc,s,m){
   const k=up(sc?.kind||'TALK');return k==='TALK'?'CONVERSATION':k;
 }
 function sceneMeta(sc,m){return m?.[sc?.id]||{}}
+function topics(sc,m){return list(sceneMeta(sc,m).topics||sc?.topics||[])}
+function followTopics(sc,m){return list(sceneMeta(sc,m).followUpTopics||sc?.followUpTopics||topics(sc,m))}
+function followIds(sc,m){return list(sceneMeta(sc,m).followUpSceneIds||sc?.followUpSceneIds||[])}
 function stage(s,cid){
   const h=Math.max(0,Math.min(100,Number(s.affection?.[cid]?.value||0))),a=s.affection?.[cid]||{};
   if(Array.isArray(a.stageTable)){const row=a.stageTable.find(x=>h>=Number(x?.min)&&h<=Number(x?.max));if(row?.name)return String(row.name)}
@@ -50,11 +55,40 @@ function eligible(sc,s,m,cid){
 function historyIds(s,cid){
   return (s.conversationHistory||[]).filter(x=>x?.characterId===cid).map(x=>String(x.sceneId||'')).filter(Boolean);
 }
+function resetChain(cid=''){
+  chainCid=String(cid||'');
+  currentSceneId='';
+  lastSceneId='';
+  playedIds=new Set();
+}
+function stopChain(clear=true){
+  chainActive=false;
+  starting=false;
+  currentSceneId='';
+  if(clear)resetChain('');
+  try{document.body.classList.remove('hv-conversation-chain','hv-dialogue-chain-transition')}catch{}
+}
 function pickConversation(){
   const s=state(),m=meta(),cid=String(s.active||'');
   if(!cid)return null;
-  let rows=(s.dialogues||[]).filter(sc=>eligible(sc,s,m,cid));
+  if(chainCid&&chainCid!==cid)resetChain(cid);
+
+  let rows=(s.dialogues||[]).filter(sc=>eligible(sc,s,m,cid)&&!playedIds.has(String(sc.id||'')));
   if(!rows.length)return null;
+
+  const prev=(s.dialogues||[]).find(sc=>String(sc?.id||'')===String(lastSceneId||''))||null;
+  if(prev){
+    const explicit=new Set(followIds(prev,m));
+    const forced=rows.filter(sc=>explicit.has(String(sc.id||'')));
+    if(forced.length)rows=forced;
+    else{
+      const wanted=new Set(followTopics(prev,m));
+      if(wanted.size){
+        const topical=rows.filter(sc=>topics(sc,m).some(t=>wanted.has(t)));
+        if(topical.length)rows=topical;
+      }
+    }
+  }
 
   const history=historyIds(s,cid),seen=new Set(history),recent=new Set(history.slice(0,8));
   const unseen=rows.filter(sc=>!seen.has(String(sc.id||''))&&!sc.used);
@@ -78,31 +112,84 @@ function pickConversation(){
 function syntheticScene(sc){
   if(!sc||starting)return false;
   const host=$('.character-room')||$('#app')||document.body,b=document.createElement('button');
-  b.type='button';b.hidden=true;b.dataset.scene=String(sc.id);b.dataset.hvConversationBridge='8';host.appendChild(b);
-  starting=true;bridge=true;
-  try{b.click()}finally{bridge=false;if(b.isConnected)b.remove();setTimeout(()=>{starting=false},120)}
+  b.type='button';b.hidden=true;b.dataset.scene=String(sc.id);b.dataset.hvConversationBridge='9';host.appendChild(b);
+
+  starting=true;
+  currentSceneId=String(sc.id||'');
+  lastSceneId=currentSceneId;
+  playedIds.add(currentSceneId);
+  document.body.classList.add('hv-conversation-chain');
+
+  bridge=true;
+  try{b.click()}finally{
+    bridge=false;
+    if(b.isConnected)b.remove();
+    setTimeout(()=>{starting=false},120);
+  }
   return true;
 }
-function startConversation(){
+function startConversation({fresh=false}={}){
   if(starting)return false;
+  const cid=String(state().active||'');
+  if(!cid)return false;
+  if(fresh||!chainActive||chainCid!==cid)resetChain(cid);
+  chainActive=true;
   const sc=pickConversation();
-  return sc?syntheticScene(sc):false;
+  if(!sc){stopChain(false);return false}
+  return syntheticScene(sc);
 }
-function cleanupLegacyChain(){
-  try{document.body.classList.remove('hv-conversation-chain','hv-dialogue-chain-transition')}catch{}
+function continueAfterCompletedScene(){
+  if(!chainActive||starting)return;
+  const endedId=currentSceneId;
+  if(!endedId)return;
+  currentSceneId='';
+
+  let tries=0;
+  const wait=()=>{
+    if(!chainActive)return;
+    if(!$('.character-room')){stopChain();return}
+    if($('.character-room .dialogue-box')){
+      if(++tries<60){setTimeout(wait,20);return}
+      return;
+    }
+    if(!startConversation({fresh:false}))stopChain(false);
+  };
+  setTimeout(wait,0);
 }
 
-cleanupLegacyChain();
+stopChain();
 window.addEventListener('click',e=>{
   if(bridge)return;
   const t=e.target instanceof Element?e.target:null;if(!t)return;
-  if(t.closest('[data-vn-leave],[data-runtime-leave],[data-page="characters"],.room-back,[data-room]'))cleanupLegacyChain();
+
+  const cmd=t.closest('[data-hv-room-command]')?.dataset.hvRoomCommand;
+  if(cmd==='ASK'||cmd==='ACTION'||cmd==='INVENTORY'||cmd==='LEAVE')stopChain();
+
+  if(t.closest('[data-vn-leave],[data-runtime-leave],[data-page="characters"],.room-back,[data-room]'))stopChain();
 },true);
 
-window.__HV_START_CONVERSATION__=()=>startConversation();
-window.__HV_STOP_CONVERSATION_CHAIN__=()=>cleanupLegacyChain();
-window.__HV_CONVERSATION_CHAIN_ACTIVE__=()=>false;
+document.addEventListener('click',e=>{
+  if(bridge)return;
+  const t=e.target instanceof Element?e.target:null;if(!t)return;
 
-document.addEventListener('DOMContentLoaded',cleanupLegacyChain);
-window.addEventListener('load',cleanupLegacyChain);
+  const sceneButton=t.closest('[data-scene]');
+  if(sceneButton&&!String(sceneButton.dataset.hvConversationBridge||'')){
+    const s=state(),sc=(s.dialogues||[]).find(x=>String(x?.id||'')===String(sceneButton.dataset.scene||'')),r=sc?role(sc,s,meta()):'';
+    if(r!=='CONVERSATION')stopChain();
+  }
+
+  const end=t.closest('.character-room .dialogue-box [data-end]');
+  if(end&&chainActive&&currentSceneId){
+    // At this point the core has already marked the current Scene done.
+    // Do not intercept the end click; let the core close it, then start another Scene.
+    continueAfterCompletedScene();
+  }
+},false);
+
+window.__HV_START_CONVERSATION__=(o={})=>startConversation({fresh:o?.fresh!==false});
+window.__HV_STOP_CONVERSATION_CHAIN__=()=>stopChain();
+window.__HV_CONVERSATION_CHAIN_ACTIVE__=()=>chainActive;
+
+document.addEventListener('DOMContentLoaded',()=>stopChain());
+window.addEventListener('load',()=>{try{document.body.classList.remove('hv-dialogue-chain-transition')}catch{}});
 })();

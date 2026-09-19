@@ -1563,48 +1563,67 @@ function renderOptionCard(choice,o,index){
 function renderAdvanced(owner,kind){
   return '<details class="advanced"><summary>고급 · 조건 / 호감도 / 감정 / 변수 / 아이템</summary>'+renderConditions(owner,kind)+renderQuickEffects(owner,kind)+renderVariableEffects(owner,kind)+renderItemEffects(owner,kind)+'</details>';
 }
-function renderConditions(o,kind){
-  const c=o.condition||{variableId:"",operator:"==",value:""};
-  const a=o.affectionCondition||{characterId:"",operator:">=",value:0};
-  const m=o.emotionCondition||{characterId:"",state:"",intensityOperator:">=",intensityValue:0};
-  return '<div class="editor-block"><h4>표시 조건</h4><div class="condition-grid"><select data-cond-kind="'+kind+'" data-cond-field="variableId">'+variableOptions(c.variableId)+'</select><select data-cond-kind="'+kind+'" data-cond-field="operator">'+conditionOperatorOptions(c.operator)+'</select><input data-cond-kind="'+kind+'" data-cond-field="value" value="'+esc(c.value)+'"><span></span></div>'+
-  '<div class="condition-grid"><select data-affcond-kind="'+kind+'" data-affcond-field="characterId">'+charOptions(cnv(a.characterId),"호감도 무관")+'</select><select data-affcond-kind="'+kind+'" data-affcond-field="operator">'+numberOperatorOptions(a.operator)+'</select><input type="number" min="0" max="100" data-affcond-kind="'+kind+'" data-affcond-field="value" value="'+a.value+'"><span></span></div>'+
-  '<div class="condition-grid"><select data-emocond-kind="'+kind+'" data-emocond-field="characterId">'+charOptions(cnv(m.characterId),"감정 무관")+'</select><select data-emocond-kind="'+kind+'" data-emocond-field="state"><option value="">감정 무관</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(m.state===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select><select data-emocond-kind="'+kind+'" data-emocond-field="intensityOperator">'+numberOperatorOptions(m.intensityOperator,true)+'</select><input type="number" min="0" max="100" data-emocond-kind="'+kind+'" data-emocond-field="intensityValue" value="'+m.intensityValue+'"></div></div>';
+function renderConditions(o,kind,attrs=""){
+  const vc=o.condition||{variableId:"",operator:"==",value:""};
+  const ic=o.itemCondition||{itemId:"",operator:">=",value:1};
+  const qc=o.askCondition||{askId:"",status:"asked"};
+  const ac=o.affectionCondition||{characterId:"",operator:">=",value:0};
+  const ec=o.emotionCondition||{characterId:"",state:"",intensityOperator:">=",intensityValue:0};
+  return '<div class="editor-block"><h4>표시 조건</h4>'+
+  '<div class="condition-grid"><select '+attrs+' data-cond-kind="'+kind+'" data-cond-field="variableId">'+variableOptions(vc.variableId)+'</select><select '+attrs+' data-cond-kind="'+kind+'" data-cond-field="operator">'+conditionOperatorOptions(vc.operator)+'</select><input '+attrs+' data-cond-kind="'+kind+'" data-cond-field="value" value="'+esc(vc.value)+'"><span></span></div>'+
+  '<div class="condition-grid"><select '+attrs+' data-itemcond-kind="'+kind+'" data-itemcond-field="itemId">'+itemOptions(ic.itemId)+'</select><select '+attrs+' data-itemcond-kind="'+kind+'" data-itemcond-field="operator">'+numberOperatorOptions(ic.operator)+'</select><input '+attrs+' type="number" min="0" data-itemcond-kind="'+kind+'" data-itemcond-field="value" value="'+ic.value+'"><span></span></div>'+
+  '<div class="condition-grid"><select '+attrs+' data-askcond-kind="'+kind+'" data-askcond-field="askId">'+askOptions(qc.askId)+'</select><select '+attrs+' data-askcond-kind="'+kind+'" data-askcond-field="status"><option value="asked" '+(qc.status==="asked"?"selected":"")+'>ASKED</option><option value="not-asked" '+(qc.status==="not-asked"?"selected":"")+'>NOT ASKED</option><option value="unlocked" '+(qc.status==="unlocked"?"selected":"")+'>UNLOCKED</option><option value="locked" '+(qc.status==="locked"?"selected":"")+'>LOCKED</option></select><span></span><span></span></div>'+
+  '<div class="condition-grid"><select '+attrs+' data-affcond-kind="'+kind+'" data-affcond-field="characterId">'+charOptions(cnv(ac.characterId),"호감도 무관")+'</select><select '+attrs+' data-affcond-kind="'+kind+'" data-affcond-field="operator">'+numberOperatorOptions(ac.operator)+'</select><input '+attrs+' type="number" min="0" max="100" data-affcond-kind="'+kind+'" data-affcond-field="value" value="'+ac.value+'"><span></span></div>'+
+  '<div class="condition-grid"><select '+attrs+' data-emocond-kind="'+kind+'" data-emocond-field="characterId">'+charOptions(cnv(ec.characterId),"감정 무관")+'</select><select '+attrs+' data-emocond-kind="'+kind+'" data-emocond-field="state"><option value="">감정 무관</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(ec.state===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select><select '+attrs+' data-emocond-kind="'+kind+'" data-emocond-field="intensityOperator">'+numberOperatorOptions(ec.intensityOperator,true)+'</select><input '+attrs+' type="number" min="0" max="100" data-emocond-kind="'+kind+'" data-emocond-field="intensityValue" value="'+ec.intensityValue+'"></div></div>';
 }
 function cnv(v){return v||""}
 function variableOptions(sel){return'<option value="">변수 무관</option>'+editorDraft.variables.map(v=>'<option value="'+esc(v.id)+'" '+(v.id===sel?"selected":"")+'>'+esc(v.name)+'</option>').join("")}
+function askOptions(sel){return '<option value="">ASK 무관</option>'+editorDraft.asks.map(a=>'<option value="'+esc(a.id)+'" '+(a.id===sel?"selected":"")+'>'+esc(a.label)+'</option>').join("")}
+
 function conditionOperatorOptions(sel){return[["==","="],["!=","≠"],[">",">"],[">=","≥"],["<","<"],["<=","≤"],["truthy","참"],["falsy","거짓"]].map(x=>'<option value="'+x[0]+'" '+(sel===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")}
 function numberOperatorOptions(sel,prefix=false){return[[">=","≥"],[">",">"],["==","="],["!=","≠"],["<=","≤"],["<","<"]].map(x=>'<option value="'+x[0]+'" '+(sel===x[0]?"selected":"")+'>'+(prefix?"강도 ":"")+x[1]+'</option>').join("")}
-function renderQuickEffects(o,kind){
+function renderQuickEffects(o,kind,attrs=""){
+  const aff=o.affectionEffects||[],emo=o.emotionEffects||[];
   return '<div class="editor-block"><h4>호감도 변화</h4><div class="effect-stack">'+
-    (o.affectionEffects.length?o.affectionEffects.map(x=>'<div class="effect-row" data-afffx-id="'+esc(x.id)+'"><select data-afffx-kind="'+kind+'" data-afffx-field="characterId">'+charOptions(x.characterId,"대상 선택")+'</select><input type="number" min="-100" max="100" data-afffx-kind="'+kind+'" data-afffx-field="amount" value="'+x.amount+'"><span></span><button class="icon-button" data-action="delete-afffx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">변화 없음</div>')+
-    '<button class="small-button" data-action="add-afffx" data-kind="'+kind+'">+ 호감도 변화</button></div></div>'+
+    (aff.length?aff.map(x=>'<div class="effect-row" data-afffx-id="'+esc(x.id)+'"><select '+attrs+' data-afffx-kind="'+kind+'" data-afffx-field="characterId">'+charOptions(x.characterId,"대상 선택")+'</select><input '+attrs+' type="number" min="-100" max="100" data-afffx-kind="'+kind+'" data-afffx-field="amount" value="'+x.amount+'"><span></span><button '+attrs+' class="icon-button" data-action="delete-afffx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">변화 없음</div>')+
+    '<button '+attrs+' class="small-button" data-action="add-afffx" data-kind="'+kind+'">+ 호감도 변화</button></div></div>'+
     '<div class="editor-block"><h4>감정 변화</h4><div class="effect-stack">'+
-    (o.emotionEffects.length?o.emotionEffects.map(x=>'<div class="effect-row" data-emofx-id="'+esc(x.id)+'"><select data-emofx-kind="'+kind+'" data-emofx-field="characterId">'+charOptions(x.characterId,"대상 선택")+'</select><select data-emofx-kind="'+kind+'" data-emofx-field="state">'+EMOTIONS.map(y=>'<option value="'+y[0]+'" '+(x.state===y[0]?"selected":"")+'>'+y[1]+'</option>').join("")+'</select><input type="number" min="0" max="100" data-emofx-kind="'+kind+'" data-emofx-field="intensity" value="'+x.intensity+'"><button class="icon-button" data-action="delete-emofx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">변화 없음</div>')+
-    '<button class="small-button" data-action="add-emofx" data-kind="'+kind+'">+ 감정 변화</button></div></div>';
+    (emo.length?emo.map(x=>'<div class="effect-row" data-emofx-id="'+esc(x.id)+'"><select '+attrs+' data-emofx-kind="'+kind+'" data-emofx-field="characterId">'+charOptions(x.characterId,"대상 선택")+'</select><select '+attrs+' data-emofx-kind="'+kind+'" data-emofx-field="state">'+EMOTIONS.map(y=>'<option value="'+y[0]+'" '+(x.state===y[0]?"selected":"")+'> '+y[1]+'</option>').join("")+'</select><input '+attrs+' type="number" min="0" max="100" data-emofx-kind="'+kind+'" data-emofx-field="intensity" value="'+x.intensity+'"><button '+attrs+' class="icon-button" data-action="delete-emofx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">변화 없음</div>')+
+    '<button '+attrs+' class="small-button" data-action="add-emofx" data-kind="'+kind+'">+ 감정 변화</button></div></div>';
 }
-function renderVariableEffects(o,kind){
+function renderVariableEffects(o,kind,attrs=""){
+  const list=o.effects||[];
   return '<div class="editor-block"><h4>변수 효과</h4><div class="effect-stack">'+
-  (o.effects.length?o.effects.map(x=>'<div class="effect-row" data-fx-id="'+esc(x.id)+'"><select data-fx-kind="'+kind+'" data-fx-field="variableId">'+variableOptions(x.variableId)+'</select><select data-fx-kind="'+kind+'" data-fx-field="operation"><option value="set" '+(x.operation==="set"?"selected":"")+'>대입</option><option value="add" '+(x.operation==="add"?"selected":"")+'>더하기</option><option value="subtract" '+(x.operation==="subtract"?"selected":"")+'>빼기</option><option value="toggle" '+(x.operation==="toggle"?"selected":"")+'>토글</option></select><input data-fx-kind="'+kind+'" data-fx-field="value" value="'+esc(x.value)+'"><button class="icon-button" data-action="delete-fx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">효과 없음</div>')+
-  '<button class="small-button" data-action="add-fx" data-kind="'+kind+'">+ 변수 효과</button></div></div>';
+  (list.length?list.map(x=>'<div class="effect-row" data-fx-id="'+esc(x.id)+'"><select '+attrs+' data-fx-kind="'+kind+'" data-fx-field="variableId">'+variableOptions(x.variableId)+'</select><select '+attrs+' data-fx-kind="'+kind+'" data-fx-field="operation"><option value="set" '+(x.operation==="set"?"selected":"")+'>대입</option><option value="add" '+(x.operation==="add"?"selected":"")+'>더하기</option><option value="subtract" '+(x.operation==="subtract"?"selected":"")+'>빼기</option><option value="toggle" '+(x.operation==="toggle"?"selected":"")+'>토글</option></select><input '+attrs+' data-fx-kind="'+kind+'" data-fx-field="value" value="'+esc(x.value)+'"><button '+attrs+' class="icon-button" data-action="delete-fx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">효과 없음</div>')+
+  '<button '+attrs+' class="small-button" data-action="add-fx" data-kind="'+kind+'">+ 변수 효과</button></div></div>';
 }
 function itemOptions(selected=""){
   return '<option value="">아이템 선택</option>'+editorDraft.items.map(i=>
     '<option value="'+esc(i.id)+'" '+(i.id===selected?"selected":"")+'>'+esc(i.name)+' · '+esc(i.rarity)+'</option>'
   ).join("");
 }
-function renderItemEffects(o,kind){
+function renderItemEffects(o,kind,attrs=""){
   const list=o.itemEffects||[];
   return '<div class="editor-block"><h4>아이템 지급</h4><div class="effect-stack">'+
-    (list.length?list.map(x=>'<div class="effect-row" data-itemfx-id="'+esc(x.id)+'"><select data-itemfx-kind="'+kind+'" data-itemfx-field="itemId">'+itemOptions(x.itemId)+'</select><input type="number" min="1" step="1" data-itemfx-kind="'+kind+'" data-itemfx-field="amount" value="'+x.amount+'"><span class="muted">'+esc(itemById(x.itemId,editorDraft)?.acquisitionMode==="unique"?"UNIQUE":"REPEATABLE")+'</span><button class="icon-button" data-action="delete-itemfx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">지급 없음</div>')+
-    '<button class="small-button" data-action="add-itemfx" data-kind="'+kind+'">+ 아이템 지급</button></div></div>';
+    (list.length?list.map(x=>'<div class="effect-row" data-itemfx-id="'+esc(x.id)+'"><select '+attrs+' data-itemfx-kind="'+kind+'" data-itemfx-field="itemId">'+itemOptions(x.itemId)+'</select><input '+attrs+' type="number" min="1" step="1" data-itemfx-kind="'+kind+'" data-itemfx-field="amount" value="'+x.amount+'"><span class="muted">'+esc(itemById(x.itemId,editorDraft)?.acquisitionMode==="unique"?"UNIQUE":"REPEATABLE")+'</span><button '+attrs+' class="icon-button" data-action="delete-itemfx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">지급 없음</div>')+
+    '<button '+attrs+' class="small-button" data-action="add-itemfx" data-kind="'+kind+'">+ 아이템 지급</button></div></div>';
 }
 
 function getSelectedOwner(kind,element){
   if(kind==="entry")return findEntryContext(selectedEntryId)?.entry||null;
-  const card=element.closest("[data-option-id]");if(!card)return null;
-  const choice=findEntryContext(selectedEntryId)?.entry;
-  return choice?.type==="choice"?choice.options.find(o=>o.id===card.dataset.optionId)||null:null;
+  if(kind==="option"){
+    const card=element.closest("[data-option-id]");if(!card)return null;
+    const choice=findEntryContext(selectedEntryId)?.entry;
+    return choice?.type==="choice"?choice.options.find(o=>o.id===card.dataset.optionId)||null:null;
+  }
+  if(kind==="mini-entry"||kind==="mini-option"){
+    const list=getInteractionFlowList(element.dataset.flowScope,element.dataset.flowOwnerId,element.dataset.flowItemId,element.dataset.flowKey);
+    if(!list)return null;
+    return kind==="mini-entry"
+      ? findFlowEntryContext(list,element.dataset.miniOwnerId)?.entry||null
+      : findFlowOption(list,element.dataset.miniOwnerId)||null;
+  }
+  return null;
 }
 
 

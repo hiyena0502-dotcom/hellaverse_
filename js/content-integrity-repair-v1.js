@@ -132,7 +132,7 @@ function run(){
    }else if(current&&!valid.has(current))push(warnings,'INVALID_ITEM_CHARACTER','collection',id||name,'존재하지 않는 characterId: '+current);
 
    const nameCue=ownerFromExplicitName(name,valid);
-   if(nameCue&&current&&nameCue!==current)push(warnings,'ITEM_NAME_MENTIONS_OTHER_CHARACTER','collection',id||name,'이름은 '+nameCue+'를 가리키지만 collection owner는 '+current+'입니다. 선물/관련 물건일 수 있어 자동 수정하지 않음.');
+   if(!byId&&nameCue&&current&&nameCue!==current)push(warnings,'ITEM_NAME_MENTIONS_OTHER_CHARACTER','collection',id||name,'이름은 '+nameCue+'를 가리키지만 collection owner는 '+current+'입니다. 선물/관련 물건일 수 있어 자동 수정하지 않음.');
 
    if(item.dialogueSourceCharacterId&&!valid.has(String(item.dialogueSourceCharacterId))){
     push(warnings,'INVALID_ITEM_DIALOGUE_SOURCE','collection',id||name,'존재하지 않는 dialogueSourceCharacterId: '+String(item.dialogueSourceCharacterId));

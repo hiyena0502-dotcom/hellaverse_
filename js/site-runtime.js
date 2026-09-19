@@ -801,18 +801,22 @@ function renderHome(){
     '</section>';
 }
 function renderGacha(){
-  const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled);
+  const availablePool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||itemCount(i.id)===0));
+  const hasRepeatable=availablePool.some(i=>i.acquisitionMode==="repeatable");
+  const canTen=hasRepeatable||availablePool.length>=10;
   const total=RARITIES.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1;
   const history=state.gacha.history.slice(-8).reverse();
-  const drawDisabled=gachaAnimating||!state.gacha.enabled||!pool.length;
+  const drawDisabled=gachaAnimating||!state.gacha.enabled||!availablePool.length;
 
   pageRoot.innerHTML=
-    '<section><div class="page-head"><div><p class="page-kicker">GACHA</p><h1>ARCHIVE DRAW</h1></div><p>아이템 설정에서 가챠 포함으로 지정한 아이템을 추첨합니다. 획득한 아이템은 컬렉션과 인벤토리에 기록됩니다.</p></div>'+
+    '<section><div class="page-head"><div><p class="page-kicker">GACHA</p><h1>ARCHIVE DRAW</h1></div><p>아이템 설정에서 가챠 포함으로 지정한 아이템을 추첨합니다. UNIQUE는 한 번 획득하면 풀에서 빠집니다.</p></div>'+
     '<div class="gacha-layout">'+
       '<div class="gacha-stage '+(gachaAnimating?'is-drawing':'')+'"><div class="gacha-core"><p class="gacha-balance">'+esc(state.gacha.currencyName)+' · '+state.gacha.balance+'</p><h2>DRAW THE ARCHIVE</h2>'+
-      '<p>'+pool.length+'개의 아이템이 현재 가챠 풀에 등록되어 있습니다.</p><div id="gachaResult" class="gacha-result-grid"></div>'+
+      '<p>'+availablePool.length+'개의 현재 획득 가능한 아이템이 있습니다.</p><div id="gachaResult" class="gacha-result-grid"></div>'+
       '<div class="draw-actions"><button class="gold-button" type="button" data-action="draw-gacha" data-count="1" '+(drawDisabled?"disabled":"")+'>1 DRAW · '+state.gacha.singleCost+'</button>'+
-      '<button class="gold-button" type="button" data-action="draw-gacha" data-count="10" '+(drawDisabled?"disabled":"")+'>10 DRAW · '+state.gacha.tenCost+'</button></div></div><div class="gacha-aura" aria-hidden="true"></div></div>'+
+      '<button class="gold-button" type="button" data-action="draw-gacha" data-count="10" '+(drawDisabled||!canTen?"disabled":"")+'>10 DRAW · '+state.gacha.tenCost+'</button></div>'+
+      (!canTen&&availablePool.length?'<p class="gacha-pool-note">REPEATABLE이 없고 UNIQUE 풀이 10개 미만이라 10회 뽑기가 잠겨 있습니다.</p>':'')+
+      '</div><div class="gacha-aura" aria-hidden="true"></div></div>'+
       '<aside class="gacha-side"><div class="info-card"><h3>RATES</h3>'+RARITIES.map(r=>'<div class="rate-row"><span>'+r+'</span><b>'+((state.gacha.rarityWeights[r]/total)*100).toFixed(1)+'%</b></div>').join("")+'</div>'+
       '<div class="info-card"><div class="info-card-head"><h3>RECENT</h3><button class="small-button history-clear" type="button" data-action="clear-gacha-history" '+(!history.length||gachaAnimating?"disabled":"")+'>CLEAR</button></div>'+
       (history.length?history.map(h=>'<div class="history-row"><span>'+esc(h.rarity)+'</span><b>'+esc(h.name)+'</b></div>').join(""):'<p class="muted">아직 기록이 없습니다.</p>')+'</div></aside>'+
@@ -1102,10 +1106,11 @@ function renderInventoryPanel(){
   const dynamic=$("#roomDynamic");if(!dynamic)return;
   const ch=getCharacter(selectedCharacterId);if(!ch)return;
   const items=state.items.filter(i=>i.enabled&&itemCount(i.id)>0);
-  dynamic.innerHTML='<section class="inventory-panel"><div class="inventory-character-head"><div><p class="page-kicker">INVENTORY</p><h2>'+esc(ch.name)+' ITEMS</h2></div><p>대화 중 아이템을 건네면 반응이 삽입됩니다.</p></div><div class="inventory-list">'+
+  dynamic.innerHTML='<section class="inventory-panel"><div class="inventory-character-head"><div><p class="page-kicker">INVENTORY</p><h2>GIVE ITEM</h2></div><p>'+esc(ch.name)+'에게 보유 아이템을 건넬 수 있습니다.</p></div><div class="inventory-list">'+
     (items.length?items.map(i=>{
-      const hasReaction=i.reactions.some(r=>r.characterId===ch.id);
-      return '<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+(hasReaction?' · REACTION':' · DEFAULT')+'</small></span><span class="count">GIVE · ×'+itemCount(i.id)+'</span></button>';
+      const reaction=i.reactions.find(r=>r.characterId===ch.id);
+      const reactionLabel=reaction?(reaction.preference+' · REACTION'):'DEFAULT';
+      return '<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+' · '+esc(reactionLabel)+'</small></span><span class="count">GIVE · ×'+itemCount(i.id)+'</span></button>';
     }).join(""):'<div class="editor-note">보유 아이템이 없습니다.</div>')+
     '</div></section>';
 }
@@ -1219,6 +1224,10 @@ function drawGacha(count){
   if(gachaAnimating)return;
   const initialPool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||itemCount(i.id)===0));
   if(!initialPool.length){showToast("현재 뽑을 수 있는 가챠 아이템이 없습니다.");return}
+  if(count===10&&!initialPool.some(i=>i.acquisitionMode==="repeatable")&&initialPool.length<10){
+    showToast("10회 뽑기에 필요한 획득 가능 아이템이 부족합니다.");
+    return;
+  }
   const cost=count===10?state.gacha.tenCost:state.gacha.singleCost;
   if(state.gacha.balance<cost){showToast(state.gacha.currencyName+"이 부족합니다.");return}
   state.gacha.balance-=cost;
@@ -1231,7 +1240,6 @@ function drawGacha(count){
     const candidates=pool.filter(x=>x.rarity===rarity);
     const item=chooseWeighted(candidates.length?candidates:pool,x=>x.weight);
     if(!item)continue;
-
     const acquired=acquireItem(item.id,1,"GACHA",state,{notify:false});
     if(!acquired.gained)continue;
     results.push({item,isNew:acquired.isNew,count:acquired.count});

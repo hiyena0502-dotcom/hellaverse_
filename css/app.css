@@ -1237,3 +1237,29 @@ details.advanced summary{cursor:pointer;color:var(--gold);font-size:.72rem}
   .ask-row,.item-row{grid-template-columns:1fr}
   .ask-row .full-row,.item-row .full-row{grid-column:auto}
 }
+
+/* DIRECT ASK / ITEM REACTIONS */
+.interaction-response-editor{
+  display:grid;
+  gap:10px;
+  padding:12px;
+  border-top:1px solid var(--line);
+  background:rgba(201,166,107,.025)
+}
+.interaction-effect-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px
+}
+.interaction-reaction{
+  border-top-color:rgba(201,166,107,.52)
+}
+.interaction-editor-row{
+  overflow:hidden
+}
+@media(max-width:980px){
+  .interaction-effect-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:640px){
+  .interaction-effect-grid{grid-template-columns:1fr}
+}

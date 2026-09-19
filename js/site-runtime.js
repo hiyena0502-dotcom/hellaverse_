@@ -670,6 +670,12 @@ let prefs=readPrefs();
 let currentPage="home";
 let selectedCharacterId="";
 let homeIndex=0;
+let worldRing="pride";
+let characterQuery="";
+let characterRealmFilter="ALL";
+let characterRingFilter="ALL";
+let characterFavoritesOnly=false;
+let roomToolsOpen=false;
 let thoughtFilter="ALL";
 let collectionFilter="ALL";
 let collectionRarity="ALL";
@@ -1062,6 +1068,7 @@ function beginInteractionReaction(kind,source,entries,label="",meta={}){
     })]
   };
   selectedCharacterId=ch.id;
+  roomToolsOpen=false;
   roomMode="talk";
   playback={
     characterId:ch.id,
@@ -1202,6 +1209,8 @@ function setPage(page){
 }
 function renderPage(){
   if(currentPage==="home")renderHome();
+  else if(currentPage==="world")renderWorld();
+  else if(currentPage==="characters")renderCharacters();
   else if(currentPage==="gacha")renderGacha();
   else if(currentPage==="thought")renderThought();
   else if(currentPage==="collection")renderCollection();
@@ -1237,11 +1246,60 @@ function renderHome(){
       '</div>'+
     '</section>';
 }
+function renderWorld(){
+  const ring=RINGS.find(r=>r.id===worldRing)||RINGS[0];
+  const ringChars=enabledCharacters().filter(ch=>ch.ring===ring.id);
+  const locations=RING_LOCATIONS[ring.id]||[];
+  pageRoot.innerHTML=
+    '<section class="world-page">'+
+      '<div class="page-head world-head"><div><p class="page-kicker">HELL LIFE</p><h1>SEVEN RINGS</h1></div><p>링과 지역을 둘러보고 그곳에 배치된 캐릭터의 ROOM으로 바로 이동합니다.</p></div>'+
+      '<div class="ring-tabs">'+RINGS.map(r=>'<button class="ring-tab '+(r.id===ring.id?"active":"")+'" type="button" data-action="world-ring" data-ring="'+r.id+'"><span>'+r.name+'</span><small>'+r.ko+'</small></button>').join("")+'</div>'+
+      '<section class="world-stage ring-'+ring.id+'">'+
+        '<div class="world-scene-art" aria-hidden="true"><span class="world-moon"></span><span class="world-structure a"></span><span class="world-structure b"></span><span class="world-ground"></span></div>'+
+        '<div class="world-stage-copy"><p class="page-kicker">'+ring.name+' RING</p><h2>'+esc(ring.subtitle)+'</h2><p>'+esc(ring.note)+'</p><span>'+ringChars.length+' CHARACTERS</span></div>'+
+      '</section>'+
+      '<div class="world-location-grid">'+locations.map((loc,i)=>'<article class="world-location-card"><span>'+String(i+1).padStart(2,"0")+'</span><div><strong>'+esc(loc[0])+'</strong><p>'+esc(loc[1])+'</p></div></article>').join("")+'</div>'+
+      '<section class="world-cast"><div class="world-cast-head"><div><p class="page-kicker">LOCAL CAST</p><h2>'+ring.name+' CHARACTERS</h2></div><button class="small-button" type="button" data-action="open-characters-page">ALL CHARACTERS</button></div>'+
+      (ringChars.length?'<div class="world-cast-grid">'+ringChars.map(ch=>{
+        const art=ch.image?'<img src="'+esc(ch.image)+'" alt="">':'<span class="mini-silhouette">'+esc(ch.name.slice(0,2).toUpperCase())+'</span>';
+        return '<button class="world-character-card" type="button" data-action="world-character" data-id="'+esc(ch.id)+'"><span class="world-character-art">'+art+'</span><span><small>'+esc(ch.role||ring.name)+'</small><strong>'+esc(ch.name)+'</strong></span><b>ENTER →</b></button>';
+      }).join("")+'</div>':'<div class="empty-panel compact"><div><h2>이 링에 연결된 캐릭터가 없습니다.</h2><p>EDITOR의 캐릭터 설정에서 RING을 지정할 수 있습니다.</p></div></div>')+
+      '</section>'+
+    '</section>';
+}
+function renderCharacters(){
+  const chars=enabledCharacters();
+  const favs=new Set(state.favoriteCharacterIds||[]);
+  const query=characterQuery.trim().toLowerCase();
+  const visible=chars.filter(ch=>{
+    if(characterFavoritesOnly&&!favs.has(ch.id))return false;
+    if(characterRealmFilter!=="ALL"&&originRealm(ch.origin)!==characterRealmFilter)return false;
+    if(characterRingFilter!=="ALL"&&ch.ring!==characterRingFilter)return false;
+    if(query&&![ch.name,ch.role,ch.quote,ringLabel(ch.ring),originLabel(ch.origin)].join(" ").toLowerCase().includes(query))return false;
+    return true;
+  });
+  pageRoot.innerHTML=
+    '<section class="characters-page"><div class="page-head"><div><p class="page-kicker">CHARACTERS</p><h1>CAST DIRECTORY</h1></div><p>검색, 출신, 링, 즐겨찾기로 캐릭터를 빠르게 찾습니다.</p></div>'+
+    '<div class="character-browser-toolbar">'+
+      '<input data-character-control="query" value="'+esc(characterQuery)+'" placeholder="캐릭터 검색">'+
+      '<select data-character-control="realm"><option value="ALL">모든 출신</option><option value="hell" '+(characterRealmFilter==="hell"?"selected":"")+'>HELL</option><option value="heaven" '+(characterRealmFilter==="heaven"?"selected":"")+'>HEAVEN</option></select>'+
+      '<select data-character-control="ring"><option value="ALL">모든 링</option>'+RINGS.map(r=>'<option value="'+r.id+'" '+(characterRingFilter===r.id?"selected":"")+'>'+r.name+'</option>').join("")+'</select>'+
+      '<button class="filter-chip '+(characterFavoritesOnly?"active":"")+'" type="button" data-action="character-favorites">★ FAVORITES</button>'+
+      '<span>'+visible.length+' / '+chars.length+'</span>'+
+    '</div>'+
+    (visible.length?'<div class="character-directory-grid">'+visible.map(ch=>{
+      const favorite=favs.has(ch.id);
+      const art=ch.image?'<img src="'+esc(ch.image)+'" alt="'+esc(ch.name)+'">':'<span class="directory-silhouette">'+esc(ch.name.slice(0,2).toUpperCase())+'</span>';
+      return '<article class="character-directory-card '+(favorite?"favorite":"")+'"><button class="character-favorite" type="button" data-action="character-favorite" data-id="'+esc(ch.id)+'" aria-label="즐겨찾기">'+(favorite?"★":"☆")+'</button><button class="character-open" type="button" data-action="character-open" data-id="'+esc(ch.id)+'"><span class="directory-art">'+art+'</span><span class="directory-copy"><small>'+esc(originLabel(ch.origin))+(ch.ring?' · '+esc(ringLabel(ch.ring)):'')+'</small><strong>'+esc(ch.name)+'</strong><p>'+esc(ch.role||ch.quote||"")+'</p><b>ROOM →</b></span></button></article>';
+    }).join("")+'</div>':'<div class="empty-panel"><div><h2>조건에 맞는 캐릭터가 없습니다.</h2><p>검색어나 필터를 바꿔보세요.</p></div></div>')+
+    '</section>';
+}
 function renderGacha(){
   const availablePool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||!hasEverAcquired(i.id)));
   const hasRepeatable=availablePool.some(i=>i.acquisitionMode==="repeatable");
   const canTen=hasRepeatable||availablePool.length>=10;
-  const total=RARITIES.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1;
+  const activeRarities=RARITIES.filter(r=>availablePool.some(i=>i.rarity===r)&&Number(state.gacha.rarityWeights[r]||0)>0);
+  const total=activeRarities.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1;
   const history=state.gacha.history.slice(-8).reverse();
   const drawDisabled=gachaAnimating||!state.gacha.enabled||!availablePool.length;
 
@@ -1254,7 +1312,7 @@ function renderGacha(){
       '<button class="gold-button" type="button" data-action="draw-gacha" data-count="10" '+(drawDisabled||!canTen?"disabled":"")+'>10 DRAW · '+state.gacha.tenCost+'</button></div>'+
       (!canTen&&availablePool.length?'<p class="gacha-pool-note">REPEATABLE이 없고 UNIQUE 풀이 10개 미만이라 10회 뽑기가 잠겨 있습니다.</p>':'')+
       '</div><div class="gacha-aura" aria-hidden="true"></div></div>'+
-      '<aside class="gacha-side"><div class="info-card"><h3>RATES</h3>'+RARITIES.map(r=>'<div class="rate-row"><span>'+r+'</span><b>'+((state.gacha.rarityWeights[r]/total)*100).toFixed(1)+'%</b></div>').join("")+'</div>'+
+      '<aside class="gacha-side"><div class="info-card"><h3>RATES</h3>'+RARITIES.map(r=>'<div class="rate-row '+(activeRarities.includes(r)?"":"inactive")+'"><span>'+r+'</span><b>'+(activeRarities.includes(r)?((state.gacha.rarityWeights[r]/total)*100).toFixed(1):"0.0")+'%</b></div>').join("")+'<p class="gacha-rate-note">현재 획득 가능한 희귀도만 기준으로 실제 확률을 재분배합니다.</p></div>'+
       '<div class="info-card"><div class="info-card-head"><h3>RECENT</h3><button class="small-button history-clear" type="button" data-action="clear-gacha-history" '+(!history.length||gachaAnimating?"disabled":"")+'>CLEAR</button></div>'+
       (history.length?history.map(h=>'<div class="history-row"><span>'+esc(h.rarity)+'</span><b>'+esc(h.name)+'</b></div>').join(""):'<p class="muted">아직 기록이 없습니다.</p>')+'</div></aside>'+
     '</div></section>';
@@ -1472,7 +1530,7 @@ function renderRoom(){
     '<button class="room-mode-button '+(roomMode==="ask"?"active":"")+'" type="button" data-action="room-mode" data-mode="ask" '+(interactionLocked?"disabled":"")+'>ASK</button>'+
     '<button class="room-mode-button '+(roomMode==="inventory"?"active":"")+'" type="button" data-action="room-mode" data-mode="inventory" '+(interactionLocked?"disabled":"")+'>INVENTORY</button></div>'+
     (roomMode==="talk"&&eventOptions.length&&!interactionLocked?'<select id="roomEventSelect" style="width:auto;min-width:190px">'+eventOptions.map(e=>'<option value="'+esc(e.id)+'" '+(ev?.id===e.id?"selected":"")+'>'+esc(e.name)+'</option>').join("")+'</select>':'')+
-    '<div class="room-actions"><button class="text-link" type="button" data-action="show-log">LOG</button><button class="text-link" type="button" data-action="show-history">HISTORY</button><button class="text-link" type="button" data-action="show-affection">AFFECTION</button><button class="text-link" type="button" data-action="show-emotion">EMOTION</button></div></div>'+
+    '<button class="room-more-button" type="button" data-action="toggle-room-tools" aria-label="추가 메뉴">•••</button><div class="room-actions '+(roomToolsOpen?"open":"")+'"><button class="text-link" type="button" data-action="show-log">LOG</button><button class="text-link" type="button" data-action="show-history">HISTORY</button><button class="text-link" type="button" data-action="show-affection">AFFECTION</button><button class="text-link" type="button" data-action="show-emotion">EMOTION</button><button class="text-link mobile-set" type="button" data-action="open-play-settings">SET</button></div></div>'+
     '<div class="room-stage"><div class="room-art">'+art+'</div><div id="roomDynamic"></div>'+
     (roomMode==="talk"&&!activeInteractionReaction?'<div class="room-control-bar"><button type="button" data-action="toggle-auto" class="'+(autoMode?"active":"")+'">AUTO</button><button type="button" data-action="open-play-settings">SET</button></div>':'')+
     '</div></section>';
@@ -1718,9 +1776,10 @@ function drawGacha(count){
   for(let n=0;n<count;n++){
     const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||!hasEverAcquired(i.id)));
     if(!pool.length)break;
-    const rarity=chooseWeighted(RARITIES,r=>state.gacha.rarityWeights[r])||"COMMON";
+    const rarities=RARITIES.filter(r=>pool.some(x=>x.rarity===r)&&Number(state.gacha.rarityWeights[r]||0)>0);
+    const rarity=chooseWeighted(rarities,r=>state.gacha.rarityWeights[r])||rarities[0];
     const candidates=pool.filter(x=>x.rarity===rarity);
-    const item=chooseWeighted(candidates.length?candidates:pool,x=>x.weight);
+    const item=chooseWeighted(candidates,x=>x.weight);
     if(!item)continue;
     const acquired=acquireItem(item.id,1,"GACHA",state,{notify:false});
     if(!acquired.gained)continue;
@@ -1828,6 +1887,7 @@ function characterForm(c){
   return '<div class="form-grid">'+
     '<label class="field"><span>이름</span><input data-bind="char-name" value="'+esc(c.name)+'"></label>'+
     '<label class="field"><span>출신 분류</span><select data-bind="char-origin">'+ORIGINS.map(o=>'<option value="'+o[0]+'" '+(c.origin===o[0]?"selected":"")+'>'+o[1]+'</option>').join("")+'</select></label>'+
+    '<label class="field"><span>HELL RING</span><select data-bind="char-ring"><option value="">HEAVEN / 미지정</option>'+RINGS.map(r=>'<option value="'+r.id+'" '+(c.ring===r.id?"selected":"")+'>'+r.name+' · '+r.ko+'</option>').join("")+'</select></label>'+
     '<label class="field"><span>역할 / 설명</span><input data-bind="char-role" value="'+esc(c.role)+'" placeholder="예: 호텔 관리자"></label>'+
     '<label class="field"><span>이미지 URL</span><input data-bind="char-image" value="'+esc(c.image)+'" placeholder="https://..."></label>'+
     '<label class="field full"><span>HOME 소개 문구</span><textarea data-bind="char-quote">'+esc(c.quote)+'</textarea></label>'+
@@ -2394,12 +2454,30 @@ pageRoot.addEventListener("click",e=>{
   const b=e.target.closest("[data-action]");if(!b)return;
   const a=b.dataset.action;
   if(a==="open-editor")openEditor();
+  else if(a==="world-ring"){worldRing=b.dataset.ring||"pride";renderWorld()}
+  else if(a==="world-character"||a==="character-open"){
+    const id=b.dataset.id;
+    const chars=enabledCharacters();
+    const index=chars.findIndex(ch=>ch.id===id);
+    if(index>=0)homeIndex=index;
+    startDialogue(id);
+  }
+  else if(a==="open-characters-page"){setPage("characters")}
+  else if(a==="character-favorite"){
+    const id=b.dataset.id;
+    state.favoriteCharacterIds ||= [];
+    state.favoriteCharacterIds=state.favoriteCharacterIds.includes(id)?state.favoriteCharacterIds.filter(x=>x!==id):[...state.favoriteCharacterIds,id];
+    saveState();renderCharacters();
+  }
+  else if(a==="character-favorites"){characterFavoritesOnly=!characterFavoritesOnly;renderCharacters()}
+  else if(a==="toggle-room-tools"){roomToolsOpen=!roomToolsOpen;renderRoom()}
   else if(a==="home-prev"){const n=enabledCharacters().length;homeIndex=(homeIndex-1+n)%n;renderHome()}
   else if(a==="home-next"){const n=enabledCharacters().length;homeIndex=(homeIndex+1)%n;renderHome()}
   else if(a==="talk")startDialogue(selectedCharacterId);
   else if(a==="room-mode"){
     if(activeInteractionReaction||interactionContext?.followupActive)return;
     roomMode=b.dataset.mode||"talk";
+    roomToolsOpen=false;
     autoMode=false;clearAuto();
     renderRoom();
   }
@@ -2429,6 +2507,13 @@ pageRoot.addEventListener("click",e=>{
 });
 pageRoot.addEventListener("input",e=>{
   const t=e.target;
+  if(t.dataset.characterControl==="query"){
+    characterQuery=t.value;
+    renderCharacters();
+    const input=$('[data-character-control="query"]',pageRoot);
+    if(input){input.focus();try{input.setSelectionRange(input.value.length,input.value.length)}catch{}}
+    return;
+  }
   if(t.dataset.collectionControl==="query"){
     collectionQuery=t.value;
     const pos=window.scrollY;
@@ -2440,6 +2525,12 @@ pageRoot.addEventListener("input",e=>{
 });
 pageRoot.addEventListener("change",e=>{
   const t=e.target;
+  if(t.dataset.characterControl){
+    if(t.dataset.characterControl==="realm")characterRealmFilter=t.value;
+    if(t.dataset.characterControl==="ring")characterRingFilter=t.value;
+    renderCharacters();
+    return;
+  }
   if(t.id==="roomEventSelect"){
     roomMode="talk";
     startDialogue(selectedCharacterId,t.value);
@@ -2710,7 +2801,7 @@ function handleEditorField(e){
   const ev=editorDraft?.events.find(x=>x.id===selectedEditorEventId);
   if(t.dataset.bind&&ch){
     const m={
-      "char-name":"name","char-origin":"origin","char-role":"role","char-image":"image","char-quote":"quote",
+      "char-name":"name","char-origin":"origin","char-ring":"ring","char-role":"role","char-image":"image","char-quote":"quote",
       "char-affection":"affectionStart","char-emotion":"emotionDefault","char-intensity":"emotionIntensity","char-enabled":"enabled"
     };
     const k=m[t.dataset.bind];if(k){ch[k]=t.type==="checkbox"?t.checked:(["affectionStart","emotionIntensity"].includes(k)?clamp(t.value,0,100,0):t.value);return}

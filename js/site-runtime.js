@@ -1250,6 +1250,21 @@ function findFlowOption(entries,id){
   }
   return null;
 }
+function removeFlowOption(entries,id){
+  for(const entry of entries){
+    if(entry.type!=="choice")continue;
+    const index=entry.options.findIndex(option=>option.id===id);
+    if(index>=0){entry.options.splice(index,1);return true}
+    for(const option of entry.options){
+      if(removeFlowOption(option.entries,id))return true;
+    }
+  }
+  return false;
+}
+function refreshInteractionEditor(scope){
+  if(scope==="ask")renderAskEditor();
+  else renderItemEditor();
+}
 function flowData(scope,ownerId,itemId=""){
   return ' data-flow-scope="'+esc(scope)+'" data-flow-owner-id="'+esc(ownerId)+'" data-flow-item-id="'+esc(itemId)+'"';
 }
@@ -1410,6 +1425,31 @@ pageRoot.addEventListener("click",e=>{
 editorBody.addEventListener("click",e=>{
   const b=e.target.closest("[data-action]");if(!b)return;
   const a=b.dataset.action;
+  if(a==="mini-add-entry"||a==="mini-add-branch"){
+    const owner=getInteractionFlowOwner(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId);
+    if(!owner)return;
+    const targetOption=b.dataset.parentOptionId?findFlowOption(owner.entries,b.dataset.parentOptionId):null;
+    const list=targetOption?targetOption.entries:owner.entries;
+    list.push(makeEntry(b.dataset.type||"dialogue"));
+    refreshInteractionEditor(b.dataset.flowScope);return;
+  }
+  if(a==="mini-delete-entry"){
+    const owner=getInteractionFlowOwner(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId);
+    const ctx=owner?findFlowEntryContext(owner.entries,b.dataset.miniEntryId):null;
+    if(ctx)ctx.list.splice(ctx.index,1);
+    refreshInteractionEditor(b.dataset.flowScope);return;
+  }
+  if(a==="mini-add-option"){
+    const owner=getInteractionFlowOwner(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId);
+    const ctx=owner?findFlowEntryContext(owner.entries,b.dataset.miniEntryId):null;
+    if(ctx?.entry.type==="choice")ctx.entry.options.push(makeOption("선택지 "+(ctx.entry.options.length+1)));
+    refreshInteractionEditor(b.dataset.flowScope);return;
+  }
+  if(a==="mini-delete-option"){
+    const owner=getInteractionFlowOwner(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId);
+    if(owner)removeFlowOption(owner.entries,b.dataset.miniOptionId);
+    refreshInteractionEditor(b.dataset.flowScope);return;
+  }
   if(a==="dialogue-subtab"){dialogueSubtab=b.dataset.id;renderDialogueEditor();return}
   if(a==="new-character"){
     const c=normalizeCharacter({id:uid("char"),name:"새 캐릭터"});editorDraft.characters.push(c);selectedEditorCharacterId=c.id;renderCharacterManager();return;
@@ -1420,7 +1460,10 @@ editorBody.addEventListener("click",e=>{
     editorDraft.events.forEach(ev=>{if(ev.characterId===id)ev.characterId=""});
     editorDraft.thoughts.forEach(t=>{if(t.characterId===id)t.characterId=""});
     editorDraft.asks.forEach(a=>{if(a.characterId===id)a.characterId=""});
-    editorDraft.items.forEach(i=>{if(i.characterId===id)i.characterId=""});
+    editorDraft.items.forEach(i=>{
+      if(i.collectionCharacterId===id)i.collectionCharacterId="";
+      i.reactions.forEach(r=>{if(r.characterId===id)r.characterId=""});
+    });
     selectedEditorCharacterId=editorDraft.characters[0]?.id||"";renderCharacterManager();return;
   }
   if(a==="new-variable"){editorDraft.variables.push(normalizeVariable({id:uid("var"),name:"새 변수"}));renderVariableManager();return}
@@ -1501,7 +1544,22 @@ editorBody.addEventListener("click",e=>{
     renderAskEditor();return;
   }
   if(a==="new-item"){
-    editorDraft.items.push(normalizeItem({id:uid("item"),characterId:editorDraft.characters[0]?.id||""}));
+    editorDraft.items.push(normalizeItem({id:uid("item"),collectionCharacterId:editorDraft.characters[0]?.id||""}));
+    renderItemEditor();return;
+  }
+  if(a==="new-item-reaction"){
+    const item=editorDraft.items.find(i=>i.id===b.dataset.itemId);if(!item)return;
+    item.reactions.push(normalizeItemReaction({
+      id:uid("item-reaction"),
+      characterId:editorDraft.characters[0]?.id||"",
+      entries:[]
+    }));
+    renderItemEditor();return;
+  }
+  if(a==="delete-item-reaction"){
+    const card=b.closest("[data-reaction-id]");
+    const item=editorDraft.items.find(i=>i.id===card?.dataset.itemId);if(!item)return;
+    item.reactions=item.reactions.filter(r=>r.id!==card.dataset.reactionId);
     renderItemEditor();return;
   }
   if(a==="delete-item"){
@@ -1524,6 +1582,35 @@ editorBody.addEventListener("input",handleEditorField);
 editorBody.addEventListener("change",handleEditorField);
 function handleEditorField(e){
   const t=e.target;
+
+  if(t.dataset.miniEntryField){
+    const owner=getInteractionFlowOwner(t.dataset.flowScope,t.dataset.flowOwnerId,t.dataset.flowItemId);
+    const ctx=owner?findFlowEntryContext(owner.entries,t.dataset.miniEntryId):null;
+    if(ctx)ctx.entry[t.dataset.miniEntryField]=t.value;
+    return;
+  }
+  if(t.dataset.miniOptionField){
+    const owner=getInteractionFlowOwner(t.dataset.flowScope,t.dataset.flowOwnerId,t.dataset.flowItemId);
+    const option=owner?findFlowOption(owner.entries,t.dataset.miniOptionId):null;
+    if(option){
+      if(t.dataset.miniOptionField==="exit")option.exitMode=t.value==="end"?"end":"continue";
+      else option[t.dataset.miniOptionField]=t.value;
+      option.targetEventId="";
+    }
+    return;
+  }
+  const reactionCard=t.closest("[data-reaction-id]");
+  if(reactionCard&&t.dataset.reactionBind){
+    const item=editorDraft.items.find(i=>i.id===reactionCard.dataset.itemId);
+    const reaction=item?.reactions.find(r=>r.id===reactionCard.dataset.reactionId);
+    if(!reaction)return;
+    const k=t.dataset.reactionBind;
+    if(k==="affectionDelta")reaction[k]=clamp(t.value,-100,100,0);
+    else if(k==="emotionIntensity")reaction[k]=clamp(t.value,0,100,0);
+    else reaction[k]=t.value;
+    return;
+  }
+
   const ch=editorDraft?.characters.find(x=>x.id===selectedEditorCharacterId);
   const ev=editorDraft?.events.find(x=>x.id===selectedEditorEventId);
   if(t.dataset.bind&&ch){
@@ -1613,8 +1700,6 @@ function handleEditorField(e){
     const k=t.dataset.itemBind;
     if(t.type==="checkbox")item[k]=t.checked;
     else if(k==="weight")item[k]=Math.max(.01,Number(t.value)||1);
-    else if(k==="emotionIntensity")item[k]=clamp(t.value,0,100,0);
-    else if(k==="affectionDelta")item[k]=clamp(t.value,-100,100,0);
     else item[k]=t.value;
     return;
   }

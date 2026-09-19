@@ -1301,8 +1301,11 @@ function renderGacha(){
   const availablePool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||!hasEverAcquired(i.id)));
   const hasRepeatable=availablePool.some(i=>i.acquisitionMode==="repeatable");
   const canTen=hasRepeatable||availablePool.length>=10;
-  const activeRarities=RARITIES.filter(r=>availablePool.some(i=>i.rarity===r)&&Number(state.gacha.rarityWeights[r]||0)>0);
-  const total=activeRarities.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1;
+  const representedRarities=RARITIES.filter(r=>availablePool.some(i=>i.rarity===r));
+  const weightedRarities=representedRarities.filter(r=>Number(state.gacha.rarityWeights[r]||0)>0);
+  const activeRarities=weightedRarities.length?weightedRarities:representedRarities;
+  const useEqualRates=!weightedRarities.length&&representedRarities.length>0;
+  const total=useEqualRates?activeRarities.length:(activeRarities.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1);
   const history=state.gacha.history.slice(-8).reverse();
   const drawDisabled=gachaAnimating||!state.gacha.enabled||!availablePool.length;
 
@@ -1315,7 +1318,7 @@ function renderGacha(){
       '<button class="gold-button" type="button" data-action="draw-gacha" data-count="10" '+(drawDisabled||!canTen?"disabled":"")+'>10 DRAW · '+state.gacha.tenCost+'</button></div>'+
       (!canTen&&availablePool.length?'<p class="gacha-pool-note">REPEATABLE이 없고 UNIQUE 풀이 10개 미만이라 10회 뽑기가 잠겨 있습니다.</p>':'')+
       '</div><div class="gacha-aura" aria-hidden="true"></div></div>'+
-      '<aside class="gacha-side"><div class="info-card"><h3>RATES</h3>'+RARITIES.map(r=>'<div class="rate-row '+(activeRarities.includes(r)?"":"inactive")+'"><span>'+r+'</span><b>'+(activeRarities.includes(r)?((state.gacha.rarityWeights[r]/total)*100).toFixed(1):"0.0")+'%</b></div>').join("")+'<p class="gacha-rate-note">현재 획득 가능한 희귀도만 기준으로 실제 확률을 재분배합니다.</p></div>'+
+      '<aside class="gacha-side"><div class="info-card"><h3>RATES</h3>'+RARITIES.map(r=>'<div class="rate-row '+(activeRarities.includes(r)?"":"inactive")+'"><span>'+r+'</span><b>'+(activeRarities.includes(r)?(((useEqualRates?1:Number(state.gacha.rarityWeights[r]||0))/total)*100).toFixed(1):"0.0")+'%</b></div>').join("")+'<p class="gacha-rate-note">'+(useEqualRates?"설정 가중치가 모두 0이라 현재 존재하는 희귀도에 균등 분배합니다.":"현재 획득 가능한 희귀도만 기준으로 실제 확률을 재분배합니다.")+'</p></div>'+
       '<div class="info-card"><div class="info-card-head"><h3>RECENT</h3><button class="small-button history-clear" type="button" data-action="clear-gacha-history" '+(!history.length||gachaAnimating?"disabled":"")+'>CLEAR</button></div>'+
       (history.length?history.map(h=>'<div class="history-row"><span>'+esc(h.rarity)+'</span><b>'+esc(h.name)+'</b></div>').join(""):'<p class="muted">아직 기록이 없습니다.</p>')+'</div></aside>'+
     '</div></section>';
@@ -1678,6 +1681,8 @@ function chooseOption(id){
   const option=entry.options.find(o=>o.id===id);if(!option||!ownerPasses(option))return;
   applyOwnerEffects(entry);applyOwnerEffects(option);
   session.log.push({kind:"choice",speaker:"CHOICE",text:(entry.prompt||"선택")+" → "+(option.label||""),eventName:currentEvent()?.name||""});
+  if(session.log.length>200)session.log.splice(0,session.log.length-200);
+  saveState();
   frame.index++;
   if(option.entries.length){
     playback.frames.push({sourceType:"option",sourceId:option.id,index:0,label:option.label||"분기",exitMode:option.exitMode,targetEventId:option.targetEventId||""});
@@ -1779,8 +1784,10 @@ function drawGacha(count){
   for(let n=0;n<count;n++){
     const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||!hasEverAcquired(i.id)));
     if(!pool.length)break;
-    const rarities=RARITIES.filter(r=>pool.some(x=>x.rarity===r)&&Number(state.gacha.rarityWeights[r]||0)>0);
-    const rarity=chooseWeighted(rarities,r=>state.gacha.rarityWeights[r])||rarities[0];
+    const represented=RARITIES.filter(r=>pool.some(x=>x.rarity===r));
+    const weighted=represented.filter(r=>Number(state.gacha.rarityWeights[r]||0)>0);
+    const rarities=weighted.length?weighted:represented;
+    const rarity=chooseWeighted(rarities,r=>weighted.length?state.gacha.rarityWeights[r]:1)||rarities[0];
     const candidates=pool.filter(x=>x.rarity===rarity);
     const item=chooseWeighted(candidates,x=>x.weight);
     if(!item)continue;
@@ -2663,6 +2670,7 @@ editorBody.addEventListener("click",e=>{
   if(a==="select-character"){selectedEditorCharacterId=b.dataset.id;renderCharacterManager();return}
   if(a==="delete-character"){
     const id=selectedEditorCharacterId;editorDraft.characters=editorDraft.characters.filter(c=>c.id!==id);
+    editorDraft.favoriteCharacterIds=(editorDraft.favoriteCharacterIds||[]).filter(x=>x!==id);
     cleanCharacterReference(id);
     editorDraft.events.forEach(ev=>{if(ev.characterId===id)ev.characterId=""});
     editorDraft.thoughts.forEach(t=>{if(t.characterId===id)t.characterId=""});
@@ -2892,7 +2900,16 @@ function handleEditorField(e){
       "char-name":"name","char-origin":"origin","char-ring":"ring","char-role":"role","char-image":"image","char-quote":"quote",
       "char-affection":"affectionStart","char-emotion":"emotionDefault","char-intensity":"emotionIntensity","char-enabled":"enabled"
     };
-    const k=m[t.dataset.bind];if(k){ch[k]=t.type==="checkbox"?t.checked:(["affectionStart","emotionIntensity"].includes(k)?clamp(t.value,0,100,0):t.value);return}
+    const k=m[t.dataset.bind];if(k){
+      ch[k]=t.type==="checkbox"?t.checked:(["affectionStart","emotionIntensity"].includes(k)?clamp(t.value,0,100,0):t.value);
+      if(k==="origin"){
+        ch.origin=normalizeOrigin(ch.origin);
+        if(originRealm(ch.origin)==="heaven")ch.ring="";
+        else if(!ch.ring)ch.ring=inferRing(ch);
+      }
+      if(k==="ring"&&!RING_IDS.includes(ch.ring))ch.ring="";
+      return
+    }
   }
   if(t.dataset.bind&&ev){
     if(t.dataset.bind==="event-name"){ev.name=t.value;return}

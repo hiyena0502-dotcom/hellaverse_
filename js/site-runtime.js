@@ -1908,28 +1908,28 @@ editorBody.addEventListener("click",e=>{
   const b=e.target.closest("[data-action]");if(!b)return;
   const a=b.dataset.action;
   if(a==="mini-add-entry"||a==="mini-add-branch"){
-    const owner=getInteractionFlowOwner(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId);
-    if(!owner)return;
-    const targetOption=b.dataset.parentOptionId?findFlowOption(owner.entries,b.dataset.parentOptionId):null;
-    const list=targetOption?targetOption.entries:owner.entries;
+    const rootList=getInteractionFlowList(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId,b.dataset.flowKey);
+    if(!rootList)return;
+    const targetOption=b.dataset.parentOptionId?findFlowOption(rootList,b.dataset.parentOptionId):null;
+    const list=targetOption?targetOption.entries:rootList;
     list.push(makeEntry(b.dataset.type||"dialogue"));
     refreshInteractionEditor(b.dataset.flowScope);return;
   }
   if(a==="mini-delete-entry"){
-    const owner=getInteractionFlowOwner(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId);
-    const ctx=owner?findFlowEntryContext(owner.entries,b.dataset.miniEntryId):null;
+    const rootList=getInteractionFlowList(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId,b.dataset.flowKey);
+    const ctx=rootList?findFlowEntryContext(rootList,b.dataset.miniEntryId):null;
     if(ctx)ctx.list.splice(ctx.index,1);
     refreshInteractionEditor(b.dataset.flowScope);return;
   }
   if(a==="mini-add-option"){
-    const owner=getInteractionFlowOwner(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId);
-    const ctx=owner?findFlowEntryContext(owner.entries,b.dataset.miniEntryId):null;
+    const rootList=getInteractionFlowList(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId,b.dataset.flowKey);
+    const ctx=rootList?findFlowEntryContext(rootList,b.dataset.miniEntryId):null;
     if(ctx?.entry.type==="choice")ctx.entry.options.push(makeOption("선택지 "+(ctx.entry.options.length+1)));
     refreshInteractionEditor(b.dataset.flowScope);return;
   }
   if(a==="mini-delete-option"){
-    const owner=getInteractionFlowOwner(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId);
-    if(owner)removeFlowOption(owner.entries,b.dataset.miniOptionId);
+    const rootList=getInteractionFlowList(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId,b.dataset.flowKey);
+    if(rootList)removeFlowOption(rootList,b.dataset.miniOptionId);
     refreshInteractionEditor(b.dataset.flowScope);return;
   }
   if(a==="dialogue-subtab"){dialogueSubtab=b.dataset.id;renderDialogueEditor();return}
@@ -2121,14 +2121,14 @@ function handleEditorField(e){
   }
 
   if(t.dataset.miniEntryField){
-    const owner=getInteractionFlowOwner(t.dataset.flowScope,t.dataset.flowOwnerId,t.dataset.flowItemId);
-    const ctx=owner?findFlowEntryContext(owner.entries,t.dataset.miniEntryId):null;
+    const rootList=getInteractionFlowList(t.dataset.flowScope,t.dataset.flowOwnerId,t.dataset.flowItemId,t.dataset.flowKey);
+    const ctx=rootList?findFlowEntryContext(rootList,t.dataset.miniEntryId):null;
     if(ctx)ctx.entry[t.dataset.miniEntryField]=t.value;
     return;
   }
   if(t.dataset.miniOptionField){
-    const owner=getInteractionFlowOwner(t.dataset.flowScope,t.dataset.flowOwnerId,t.dataset.flowItemId);
-    const option=owner?findFlowOption(owner.entries,t.dataset.miniOptionId):null;
+    const rootList=getInteractionFlowList(t.dataset.flowScope,t.dataset.flowOwnerId,t.dataset.flowItemId,t.dataset.flowKey);
+    const option=rootList?findFlowOption(rootList,t.dataset.miniOptionId):null;
     if(option){
       if(t.dataset.miniOptionField==="exit")option.exitMode=t.value==="end"?"end":"continue";
       else option[t.dataset.miniOptionField]=t.value;

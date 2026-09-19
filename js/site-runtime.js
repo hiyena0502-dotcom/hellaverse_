@@ -1040,7 +1040,10 @@ originChoice.addEventListener("click",e=>{
   const b=e.target.closest("[data-origin]");if(!b)return;
   pendingOrigin=b.dataset.origin;$$("[data-origin]",originChoice).forEach(x=>x.classList.toggle("active",x===b));startHint.textContent="";
 });
-enterGameButton.addEventListener("click",enterGame);
+startForm.addEventListener("submit",event=>{
+  event.preventDefault();
+  enterGame();
+});
 $("#changeProfileButton").addEventListener("click",renderStart);
 $("#brandButton").addEventListener("click",()=>setPage("home"));
 $("#editorButton").addEventListener("click",openEditor);
@@ -1065,6 +1068,13 @@ pageRoot.addEventListener("click",e=>{
   else if(a==="home-prev"){const n=enabledCharacters().length;homeIndex=(homeIndex-1+n)%n;renderHome()}
   else if(a==="home-next"){const n=enabledCharacters().length;homeIndex=(homeIndex+1)%n;renderHome()}
   else if(a==="talk")startDialogue(selectedCharacterId);
+  else if(a==="room-mode"){
+    roomMode=b.dataset.mode||"talk";
+    autoMode=false;clearAuto();
+    renderRoom();
+  }
+  else if(a==="ask-topic")startAsk(b.dataset.id);
+  else if(a==="inventory-item")useInventoryItem(b.dataset.id);
   else if(a==="back-home")setPage("home");
   else if(a==="random-thought")randomThought();
   else if(a==="show-affection")showAffection();
@@ -1080,10 +1090,13 @@ pageRoot.addEventListener("click",e=>{
   else if(a==="collection-detail")collectionDetail(b.dataset.id);
 });
 pageRoot.addEventListener("change",e=>{
-  if(e.target.id==="roomEventSelect")startDialogue(selectedCharacterId,e.target.value);
+  if(e.target.id==="roomEventSelect"){
+    roomMode="talk";
+    startDialogue(selectedCharacterId,e.target.value);
+  }
 });
 pageRoot.addEventListener("click",e=>{
-  if(currentPage!=="room"||!prefs.stageClick)return;
+  if(currentPage!=="room"||roomMode!=="talk"||!prefs.stageClick)return;
   if(e.target.closest("button,input,select,textarea"))return;
   const frame=playback?.frames?.at(-1),entry=frame?frameEntries(frame)[frame.index]:null;
   if(entry&&entry.type!=="choice")advanceDialogue(false);
@@ -1101,7 +1114,8 @@ editorBody.addEventListener("click",e=>{
     const id=selectedEditorCharacterId;editorDraft.characters=editorDraft.characters.filter(c=>c.id!==id);
     editorDraft.events.forEach(ev=>{if(ev.characterId===id)ev.characterId=""});
     editorDraft.thoughts.forEach(t=>{if(t.characterId===id)t.characterId=""});
-    editorDraft.collection.forEach(i=>{if(i.characterId===id)i.characterId=""});
+    editorDraft.asks.forEach(a=>{if(a.characterId===id)a.characterId=""});
+    editorDraft.items.forEach(i=>{if(i.characterId===id)i.characterId=""});
     selectedEditorCharacterId=editorDraft.characters[0]?.id||"";renderCharacterManager();return;
   }
   if(a==="new-variable"){editorDraft.variables.push(normalizeVariable({id:uid("var"),name:"새 변수"}));renderVariableManager();return}
@@ -1117,6 +1131,8 @@ editorBody.addEventListener("click",e=>{
   if(a==="delete-event"){
     const id=selectedEditorEventId;editorDraft.events=editorDraft.events.filter(x=>x.id!==id);
     editorDraft.events.forEach(x=>{if(x.nextEventId===id)x.nextEventId=""});
+    editorDraft.asks.forEach(a=>{if(a.eventId===id)a.eventId=""});
+    editorDraft.items.forEach(i=>{if(i.inventoryEventId===id)i.inventoryEventId=""});
     sanitizeOptionTargets(editorDraft.events,id);
     selectedEditorEventId=editorDraft.events[0]?.id||"";selectedEntryId="";renderEventManager();return;
   }
@@ -1170,12 +1186,29 @@ editorBody.addEventListener("click",e=>{
     if(er)owner.emotionEffects=owner.emotionEffects.filter(x=>x.id!==er.dataset.emofxId);
     renderEventManager();return;
   }
+  if(a==="new-ask"){
+    editorDraft.asks.push(normalizeAsk({id:uid("ask"),characterId:editorDraft.characters[0]?.id||""}));
+    renderAskEditor();return;
+  }
+  if(a==="delete-ask"){
+    const row=b.closest("[data-ask-id]");
+    editorDraft.asks=editorDraft.asks.filter(a=>a.id!==row?.dataset.askId);
+    renderAskEditor();return;
+  }
+  if(a==="new-item"){
+    editorDraft.items.push(normalizeItem({id:uid("item"),characterId:editorDraft.characters[0]?.id||""}));
+    renderItemEditor();return;
+  }
+  if(a==="delete-item"){
+    const row=b.closest("[data-item-id]");const id=row?.dataset.itemId;
+    editorDraft.items=editorDraft.items.filter(i=>i.id!==id);
+    if(id)delete editorDraft.inventoryCounts[id];
+    renderItemEditor();return;
+  }
   if(a==="new-thought"){const t=normalizeThought({id:uid("thought"),category:editorDraft.thoughtSettings.categories[0]||"일상"});editorDraft.thoughts.push(t);renderThoughtEditor();return}
   if(a==="delete-thought"){const row=b.closest("[data-thought-id]");editorDraft.thoughts=editorDraft.thoughts.filter(t=>t.id!==row?.dataset.thoughtId);renderThoughtEditor();return}
   if(a==="add-category"){const inp=$("#newCategoryInput",editorBody);const v=inp?.value.trim();if(v&&!editorDraft.thoughtSettings.categories.includes(v)){editorDraft.thoughtSettings.categories.push(v);renderThoughtEditor()}return}
   if(a==="delete-category"){const v=b.dataset.id;editorDraft.thoughtSettings.categories=editorDraft.thoughtSettings.categories.filter(c=>c!==v);editorDraft.thoughts.forEach(t=>{if(t.category===v)t.category=editorDraft.thoughtSettings.categories[0]||"일상"});renderThoughtEditor();return}
-  if(a==="new-collection"){editorDraft.collection.push(normalizeItem({id:uid("item")}));renderCollectionEditor();return}
-  if(a==="delete-collection"){const row=b.closest("[data-item-id]");editorDraft.collection=editorDraft.collection.filter(i=>i.id!==row?.dataset.itemId);renderCollectionEditor();return}
 });
 function sanitizeOptionTargets(events,removedId){
   function scan(entries){entries.forEach(e=>{if(e.type==="choice")e.options.forEach(o=>{if(o.targetEventId===removedId)o.targetEventId="";scan(o.entries)})})}
@@ -1254,6 +1287,13 @@ function handleEditorField(e){
     const k=t.dataset.gachaBind;editorDraft.gacha[k]=t.type==="checkbox"?t.checked:(["balance","singleCost","tenCost"].includes(k)?Math.max(0,Number(t.value)||0):t.value);return;
   }
   if(t.dataset.rarity){editorDraft.gacha.rarityWeights[t.dataset.rarity]=Math.max(0,Number(t.value)||0);return}
+  const ar=t.closest("[data-ask-id]");
+  if(ar&&t.dataset.askBind){
+    const ask=editorDraft.asks.find(x=>x.id===ar.dataset.askId);if(!ask)return;
+    const k=t.dataset.askBind;
+    ask[k]=t.type==="checkbox"?t.checked:(k==="minAffection"?clamp(t.value,0,100,0):t.value);
+    return;
+  }
   const tr=t.closest("[data-thought-id]");
   if(tr&&t.dataset.thoughtBind){
     const th=editorDraft.thoughts.find(x=>x.id===tr.dataset.thoughtId);if(!th)return;
@@ -1261,9 +1301,14 @@ function handleEditorField(e){
   }
   const ir=t.closest("[data-item-id]");
   if(ir&&t.dataset.itemBind){
-    const item=editorDraft.collection.find(x=>x.id===ir.dataset.itemId);if(!item)return;
+    const item=editorDraft.items.find(x=>x.id===ir.dataset.itemId);if(!item)return;
     const k=t.dataset.itemBind;
-    item[k]=t.type==="checkbox"?t.checked:(k==="weight"?Math.max(.01,Number(t.value)||1):t.value);return;
+    item[k]=t.type==="checkbox"?t.checked:(k==="weight"?Math.max(.01,Number(t.value)||1):t.value);
+    return;
+  }
+  if(t.dataset.collectionSetting){
+    editorDraft.collectionSettings[t.dataset.collectionSetting]=t.checked;
+    return;
   }
 }
 
@@ -1272,7 +1317,7 @@ document.addEventListener("keydown",e=>{
     if(modalRoot.innerHTML){closeModal();return}
     if(!editorOverlay.hidden){closeEditor();return}
   }
-  if(currentPage==="room"&&editorOverlay.hidden&&modalRoot.innerHTML===""){
+  if(currentPage==="room"&&roomMode==="talk"&&editorOverlay.hidden&&modalRoot.innerHTML===""){
     if((e.key===" "||e.key==="Enter")&&!e.target.matches("input,textarea,select,button")){
       const frame=playback?.frames?.at(-1),entry=frame?frameEntries(frame)[frame.index]:null;
       if(entry&&entry.type!=="choice"){e.preventDefault();advanceDialogue(false)}

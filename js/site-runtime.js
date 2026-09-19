@@ -191,9 +191,9 @@ function normalizeState(raw){
     gacha:{
       enabled:s.gacha?.enabled!==false,
       currencyName:String(s.gacha?.currencyName||"SOUL"),
-      balance:Math.max(0,Number(s.gacha?.balance) || 0),
-      singleCost:Math.max(0,Number(s.gacha?.singleCost) || 0),
-      tenCost:Math.max(0,Number(s.gacha?.tenCost) || 0),
+      balance:Math.max(0,Number(s.gacha?.balance ?? d.gacha.balance) || 0),
+      singleCost:Math.max(0,Number(s.gacha?.singleCost ?? d.gacha.singleCost) || 0),
+      tenCost:Math.max(0,Number(s.gacha?.tenCost ?? d.gacha.tenCost) || 0),
       rarityWeights:Object.fromEntries(RARITIES.map(r=>[r,Math.max(0,Number(s.gacha?.rarityWeights?.[r]) || d.gacha.rarityWeights[r])])),
       history:Array.isArray(s.gacha?.history)?s.gacha.history.slice(-50):[]
     },
@@ -585,6 +585,11 @@ function renderRoom(){
   renderRoomBeat();
 }
 function renderRoomBeat(){
+  if(playback?.characterId && playback.characterId!==selectedCharacterId){
+    selectedCharacterId=playback.characterId;
+    renderRoom();
+    return;
+  }
   const dynamic=$("#roomDynamic");if(!dynamic)return;
   if(!playback){
     dynamic.innerHTML='<div class="room-empty"><h2>등록된 이벤트가 없습니다.</h2><p>편집기에서 이 캐릭터의 이벤트를 추가하세요.</p></div>';return;
@@ -720,7 +725,10 @@ function closeEditor(){
 function saveEditor(){
   state=normalizeState(editorDraft);
   saveState();
-  syncSessionDefinitions();
+  session=createSession();
+  playback=null;
+  autoMode=false;
+  clearAuto();
   if(selectedCharacterId&&!getCharacter(selectedCharacterId))selectedCharacterId=enabledCharacters()[0]?.id||"";
   closeEditor();renderPage();
 }
@@ -845,15 +853,15 @@ function conditionOperatorOptions(sel){return[["==","="],["!=","≠"],[">",">"],
 function numberOperatorOptions(sel,prefix=false){return[[">=","≥"],[">",">"],["==","="],["!=","≠"],["<=","≤"],["<","<"]].map(x=>'<option value="'+x[0]+'" '+(sel===x[0]?"selected":"")+'>'+(prefix?"강도 ":"")+x[1]+'</option>').join("")}
 function renderQuickEffects(o,kind){
   return '<div class="editor-block"><h4>호감도 변화</h4><div class="effect-stack">'+
-    (o.affectionEffects.length?o.affectionEffects.map(x=>'<div class="effect-row" data-afffx-id="'+esc(x.id)+'"><select data-afffx-kind="'+kind+'" data-afffx-field="characterId">'+charOptions(x.characterId,"대상 선택")+'</select><input type="number" min="-100" max="100" data-afffx-kind="'+kind+'" data-afffx-field="amount" value="'+x.amount+'"><span></span><button class="icon-button" data-action="delete-afffx">×</button></div>').join(""):'<div class="editor-note">변화 없음</div>')+
+    (o.affectionEffects.length?o.affectionEffects.map(x=>'<div class="effect-row" data-afffx-id="'+esc(x.id)+'"><select data-afffx-kind="'+kind+'" data-afffx-field="characterId">'+charOptions(x.characterId,"대상 선택")+'</select><input type="number" min="-100" max="100" data-afffx-kind="'+kind+'" data-afffx-field="amount" value="'+x.amount+'"><span></span><button class="icon-button" data-action="delete-afffx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">변화 없음</div>')+
     '<button class="small-button" data-action="add-afffx" data-kind="'+kind+'">+ 호감도 변화</button></div></div>'+
     '<div class="editor-block"><h4>감정 변화</h4><div class="effect-stack">'+
-    (o.emotionEffects.length?o.emotionEffects.map(x=>'<div class="effect-row" data-emofx-id="'+esc(x.id)+'"><select data-emofx-kind="'+kind+'" data-emofx-field="characterId">'+charOptions(x.characterId,"대상 선택")+'</select><select data-emofx-kind="'+kind+'" data-emofx-field="state">'+EMOTIONS.map(y=>'<option value="'+y[0]+'" '+(x.state===y[0]?"selected":"")+'>'+y[1]+'</option>').join("")+'</select><input type="number" min="0" max="100" data-emofx-kind="'+kind+'" data-emofx-field="intensity" value="'+x.intensity+'"><button class="icon-button" data-action="delete-emofx">×</button></div>').join(""):'<div class="editor-note">변화 없음</div>')+
+    (o.emotionEffects.length?o.emotionEffects.map(x=>'<div class="effect-row" data-emofx-id="'+esc(x.id)+'"><select data-emofx-kind="'+kind+'" data-emofx-field="characterId">'+charOptions(x.characterId,"대상 선택")+'</select><select data-emofx-kind="'+kind+'" data-emofx-field="state">'+EMOTIONS.map(y=>'<option value="'+y[0]+'" '+(x.state===y[0]?"selected":"")+'>'+y[1]+'</option>').join("")+'</select><input type="number" min="0" max="100" data-emofx-kind="'+kind+'" data-emofx-field="intensity" value="'+x.intensity+'"><button class="icon-button" data-action="delete-emofx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">변화 없음</div>')+
     '<button class="small-button" data-action="add-emofx" data-kind="'+kind+'">+ 감정 변화</button></div></div>';
 }
 function renderVariableEffects(o,kind){
   return '<div class="editor-block"><h4>변수 효과</h4><div class="effect-stack">'+
-  (o.effects.length?o.effects.map(x=>'<div class="effect-row" data-fx-id="'+esc(x.id)+'"><select data-fx-kind="'+kind+'" data-fx-field="variableId">'+variableOptions(x.variableId)+'</select><select data-fx-kind="'+kind+'" data-fx-field="operation"><option value="set" '+(x.operation==="set"?"selected":"")+'>대입</option><option value="add" '+(x.operation==="add"?"selected":"")+'>더하기</option><option value="subtract" '+(x.operation==="subtract"?"selected":"")+'>빼기</option><option value="toggle" '+(x.operation==="toggle"?"selected":"")+'>토글</option></select><input data-fx-kind="'+kind+'" data-fx-field="value" value="'+esc(x.value)+'"><button class="icon-button" data-action="delete-fx">×</button></div>').join(""):'<div class="editor-note">효과 없음</div>')+
+  (o.effects.length?o.effects.map(x=>'<div class="effect-row" data-fx-id="'+esc(x.id)+'"><select data-fx-kind="'+kind+'" data-fx-field="variableId">'+variableOptions(x.variableId)+'</select><select data-fx-kind="'+kind+'" data-fx-field="operation"><option value="set" '+(x.operation==="set"?"selected":"")+'>대입</option><option value="add" '+(x.operation==="add"?"selected":"")+'>더하기</option><option value="subtract" '+(x.operation==="subtract"?"selected":"")+'>빼기</option><option value="toggle" '+(x.operation==="toggle"?"selected":"")+'>토글</option></select><input data-fx-kind="'+kind+'" data-fx-field="value" value="'+esc(x.value)+'"><button class="icon-button" data-action="delete-fx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">효과 없음</div>')+
   '<button class="small-button" data-action="add-fx" data-kind="'+kind+'">+ 변수 효과</button></div></div>';
 }
 function getSelectedOwner(kind,element){
@@ -1119,7 +1127,7 @@ document.addEventListener("keydown",e=>{
     if(modalRoot.innerHTML){closeModal();return}
     if(!editorOverlay.hidden){closeEditor();return}
   }
-  if(currentPage==="room"&&!editorOverlay.hidden===false&&modalRoot.innerHTML===""){
+  if(currentPage==="room"&&editorOverlay.hidden&&modalRoot.innerHTML===""){
     if((e.key===" "||e.key==="Enter")&&!e.target.matches("input,textarea,select,button")){
       const frame=playback?.frames?.at(-1),entry=frame?frameEntries(frame)[frame.index]:null;
       if(entry&&entry.type!=="choice"){e.preventDefault();advanceDialogue(false)}

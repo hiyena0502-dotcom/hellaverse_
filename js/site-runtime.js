@@ -234,7 +234,7 @@ function normalizeState(raw){
       balance:Math.max(0,Number(s.gacha?.balance ?? d.gacha.balance) || 0),
       singleCost:Math.max(0,Number(s.gacha?.singleCost ?? d.gacha.singleCost) || 0),
       tenCost:Math.max(0,Number(s.gacha?.tenCost ?? d.gacha.tenCost) || 0),
-      rarityWeights:Object.fromEntries(RARITIES.map(r=>[r,Math.max(0,Number(s.gacha?.rarityWeights?.[r]) || d.gacha.rarityWeights[r])])),
+      rarityWeights:Object.fromEntries(RARITIES.map(r=>[r,Math.max(0,Number(s.gacha?.rarityWeights?.[r] ?? d.gacha.rarityWeights[r]) || 0)])),
       history:Array.isArray(s.gacha?.history)?s.gacha.history.slice(-50):[]
     },
     discoveredThoughtIds:Array.isArray(s.discoveredThoughtIds)?[...new Set(s.discoveredThoughtIds)]:[]

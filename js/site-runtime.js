@@ -3,6 +3,9 @@
 
 const STATE_KEY = "hellaverse-studio-state-v2";
 const PREFS_KEY = "hellaverse-studio-prefs-v2";
+const LEGACY_STATE_KEY = "hellaverse_dialogue_state_v1";
+const DATA_BACKUP_KEY = "hellaverse-studio-backups-v2";
+const EDITOR_SNAPSHOT_KEY = "hellaverse-studio-editor-snapshot-v2";
 const RARITIES = ["COMMON","UNCOMMON","RARE","EPIC","LEGENDARY","MISTIC"];
 const ORIGINS = [
   ["sinner","죄인 · SINNER","hell"],
@@ -21,6 +24,53 @@ const GIFT_PREFERENCES = [
   ["LOVED",5],["LIKED",3],["NEUTRAL",1],["DISLIKED",-2],["HATED",-4]
 ];
 const RARITY_ORDER = {COMMON:0,UNCOMMON:1,RARE:2,EPIC:3,LEGENDARY:4,MISTIC:5};
+const RINGS = [
+  {id:"pride",name:"PRIDE",ko:"프라이드",subtitle:"PENTAGRAM CITY",note:"호텔, 오버로드, 왕가와 지옥의 중심부"},
+  {id:"wrath",name:"WRATH",ko:"래스",subtitle:"VOLCANIC OUTSKIRTS",note:"화산 지대, 거대한 관문, 목초지와 농장"},
+  {id:"greed",name:"GREED",ko:"그리드",subtitle:"MAMMON DISTRICT",note:"네온, 카지노, 공장과 거대한 쇼 비즈니스 지구"},
+  {id:"gluttony",name:"GLUTTONY",ko:"글러트니",subtitle:"BEE'S DISTRICT",note:"파티, 음식, 벌집 모티프가 가득한 축제 지구"},
+  {id:"lust",name:"LUST",ko:"러스트",subtitle:"OZZIE'S DISTRICT",note:"클럽, 공연장, 네온 간판이 이어지는 밤의 거리"},
+  {id:"envy",name:"ENVY",ko:"엔비",subtitle:"LEVIATHAN DISTRICT",note:"수중빛과 유리 구조물이 섞인 차가운 도심"},
+  {id:"sloth",name:"SLOTH",ko:"슬로스",subtitle:"BELPHEGOR WARD",note:"몽환적인 의료·휴식 시설이 모인 느린 지구"}
+];
+const RING_IDS = RINGS.map(r=>r.id);
+const RING_LOCATIONS = {
+  pride:[
+    ["HAZBIN HOTEL","호텔 로비와 객실, 왕가와 호텔 식구들이 모이는 중심 거점"],
+    ["PENTAGRAM CITY","오버로드와 죄인들이 뒤섞이는 프라이드의 대도시"],
+    ["I.M.P. OFFICE","서류, 포스터와 잡동사니가 쌓인 임프 사무실"]
+  ],
+  wrath:[
+    ["VOLCANIC GATE","화산과 거대한 관문이 맞닿아 있는 래스의 입구"],
+    ["HARVEST FIELDS","건초 더미와 목초지가 이어지는 외곽 농장 지대"],
+    ["WRATH TOWN","거친 목재와 붉은 흙이 이어지는 생활 구역"]
+  ],
+  greed:[
+    ["MAMMON PLAZA","광고판과 금빛 간판이 과하게 번쩍이는 중심 광장"],
+    ["LOO LOO DISTRICT","놀이시설과 상점이 몰린 시끄러운 상업 지구"],
+    ["VAULT ROW","금고, 계약서, 상품 창고가 이어지는 뒷골목"]
+  ],
+  gluttony:[
+    ["BEE'S PARTY","음식과 음악, 벌집 조명이 넘치는 파티 구역"],
+    ["HONEY STRIP","달콤한 네온과 바가 이어지는 거리"],
+    ["FEAST YARD","큰 테이블과 야외 무대가 놓인 축제 마당"]
+  ],
+  lust:[
+    ["OZZIE'S","공연 무대와 붉은 네온이 중심인 클럽"],
+    ["LUST BOULEVARD","극장과 라운지가 이어지는 화려한 거리"],
+    ["BACKSTAGE","의상, 포스터, 소품이 쌓인 공연장 뒤편"]
+  ],
+  envy:[
+    ["LEVIATHAN QUARTER","차갑고 푸른 조명과 유리 건물이 이어지는 도심"],
+    ["MIRROR CANAL","반사광이 흐르는 운하와 산책로"],
+    ["DEEP MARKET","희귀품과 장식품을 파는 어두운 시장"]
+  ],
+  sloth:[
+    ["BELPHEGOR WARD","구름빛 조명과 병원이 섞인 조용한 중심 구역"],
+    ["DREAM CLINIC","수면과 회복을 위한 느긋한 의료 시설"],
+    ["NAP GARDEN","쿠션과 식물이 놓인 몽환적인 휴식 정원"]
+  ]
+};
 
 const $ = (q, root=document) => root.querySelector(q);
 const $$ = (q, root=document) => [...root.querySelectorAll(q)];
@@ -36,10 +86,24 @@ const originLabel = id => ORIGINS.find(x=>x[0]===id)?.[1] || "헬본 · HELLBORN
 const originRealm = id => ORIGINS.find(x=>x[0]===id)?.[2] || "hell";
 const validOrigin = id => ORIGINS.some(x=>x[0]===id);
 const normalizeOrigin = id => id==="heaven" ? "angel" : validOrigin(id) ? id : "hellborn";
+const ringLabel = id => RINGS.find(r=>r.id===id)?.name || "UNASSIGNED";
+function inferRing(c={}){
+  if(originRealm(normalizeOrigin(c.origin))==="heaven")return "";
+  const key=[c.id,c.name,c.role].join(" ").toLowerCase();
+  if(/satan|wrath/.test(key))return "wrath";
+  if(/mammon|greed/.test(key))return "greed";
+  if(/beelzebub|queen bee|\bbee\b|gluttony/.test(key))return "gluttony";
+  if(/asmodeus|ozzie|lust/.test(key))return "lust";
+  if(/leviathan|envy/.test(key))return "envy";
+  if(/belphegor|sloth/.test(key))return "sloth";
+  return "pride";
+}
 
 function defaultState(){
   return {
     profile:{name:"",origin:""},
+    favoriteCharacterIds:[],
+    playState:{variables:{},affection:{},emotions:{},log:[]},
     characters:[],
     events:[],
     variables:[],
@@ -78,6 +142,7 @@ function normalizeCharacter(c={}){
     role:c.role || "",
     quote:c.quote || "",
     image:c.image || "",
+    ring:RING_IDS.includes(c.ring)?c.ring:inferRing(c),
     enabled:c.enabled !== false,
     affectionStart:clamp(c.affectionStart,0,100,0),
     emotionDefault:EMOTIONS.some(x=>x[0]===c.emotionDefault) ? c.emotionDefault : "calm",
@@ -295,6 +360,22 @@ function normalizeThought(t={}){
     enabled:t.enabled!==false
   };
 }
+function normalizePlayState(p={}){
+  return {
+    variables:p.variables&&typeof p.variables==="object"?{...p.variables}:{},
+    affection:p.affection&&typeof p.affection==="object"?Object.fromEntries(Object.entries(p.affection).map(([id,v])=>[id,clamp(v,0,100,0)])):{},
+    emotions:p.emotions&&typeof p.emotions==="object"?Object.fromEntries(Object.entries(p.emotions).map(([id,v])=>[id,{
+      state:EMOTIONS.some(x=>x[0]===v?.state)?v.state:"calm",
+      intensity:clamp(v?.intensity,0,100,0)
+    }])):{},
+    log:Array.isArray(p.log)?p.log.slice(-200).map(x=>({
+      kind:String(x?.kind||"dialogue"),
+      speaker:String(x?.speaker||""),
+      text:String(x?.text||""),
+      eventName:String(x?.eventName||"")
+    })):[]
+  };
+}
 function normalizeState(raw){
   const d=defaultState();
   const s=raw&&typeof raw==="object"?raw:{};
@@ -314,6 +395,8 @@ function normalizeState(raw){
       name:String(s.profile?.name||""),
       origin:rawOrigin ? normalizeOrigin(rawOrigin) : ""
     },
+    favoriteCharacterIds:Array.isArray(s.favoriteCharacterIds)?[...new Set(s.favoriteCharacterIds.map(String))]:[],
+    playState:normalizePlayState(s.playState),
     characters:Array.isArray(s.characters)?s.characters.map(normalizeCharacter):[],
     events:Array.isArray(s.events)?s.events.map(normalizeEvent):[],
     variables:Array.isArray(s.variables)?s.variables.map(normalizeVariable):[],
@@ -358,10 +441,110 @@ function normalizeState(raw){
     discoveredThoughtIds:Array.isArray(s.discoveredThoughtIds)?[...new Set(s.discoveredThoughtIds)]:[]
   };
 }
-function readState(){
-  try{return normalizeState(JSON.parse(localStorage.getItem(STATE_KEY)))}catch{return normalizeState(null)}
+function legacyMoodToEmotion(value){
+  const x=String(value||"").toLowerCase();
+  if(/good|happy|excited|joy/.test(x))return "joy";
+  if(/annoyed|angry/.test(x))return "angry";
+  if(/sad/.test(x))return "sad";
+  if(/tired|sleep/.test(x))return "calm";
+  return "calm";
 }
-function saveState(){localStorage.setItem(STATE_KEY,JSON.stringify(state))}
+function migrateLegacyState(raw){
+  const legacy=raw&&typeof raw==="object"?raw:{};
+  const next=defaultState();
+  next.profile={
+    name:String(legacy.player?.name||legacy.profile?.name||""),
+    origin:validOrigin(String(legacy.player?.origin||"").toLowerCase())?String(legacy.player.origin).toLowerCase():"hellborn"
+  };
+  const oldChars=Array.isArray(legacy.characters)?legacy.characters:[];
+  next.characters=oldChars.map(ch=>normalizeCharacter({
+    id:ch.id,
+    name:ch.name,
+    origin:String(ch.group||"").toUpperCase()==="HEAVEN"?"angel":"hellborn",
+    role:ch.label||ch.status||ch.group||"",
+    quote:ch.description||ch.personality||"",
+    image:ch.image||"",
+    affectionStart:Number(legacy.affection?.[ch.id]?.value??legacy.affection?.[ch.id]??0),
+    emotionDefault:legacyMoodToEmotion(legacy.moods?.[ch.id]),
+    emotionIntensity:legacy.moods?.[ch.id]?35:10
+  }));
+  const charName=id=>next.characters.find(c=>c.id===id)?.name||"";
+  const oldScenes=Array.isArray(legacy.dialogues)?legacy.dialogues:[];
+  next.events=oldScenes.map(scene=>{
+    const entries=[];
+    if(scene.opening)entries.push(normalizeEntry({type:"narration",text:String(scene.opening)}));
+    const nodes=Array.isArray(scene.nodes)?scene.nodes:[];
+    nodes.forEach(node=>{
+      if(node?.text)entries.push(normalizeEntry({type:"dialogue",speaker:charName(scene.characterId),text:String(node.text)}));
+      if(Array.isArray(node?.choices)&&node.choices.length){
+        entries.push(normalizeEntry({
+          type:"choice",
+          prompt:"어떻게 답할까?",
+          options:node.choices.map(choice=>({
+            id:choice.id,
+            label:choice.playerLine||choice.text||"선택",
+            entries:choice.response?[normalizeEntry({type:"dialogue",speaker:charName(scene.characterId),text:String(choice.response)})]:[],
+            affectionEffects:Number(choice.affectionDelta)?[{characterId:scene.characterId,amount:Number(choice.affectionDelta)}]:[],
+            exitMode:choice.endConversation===false?"continue":"end"
+          }))
+        }));
+      }
+    });
+    return normalizeEvent({id:scene.id,name:scene.title||scene.name||"Legacy Event",characterId:scene.characterId,entries});
+  });
+  const oldItems=Array.isArray(legacy.collectionItems)?legacy.collectionItems:[];
+  next.items=oldItems.map(item=>normalizeItem({
+    id:item.id,
+    name:item.name||item.title||"Legacy Item",
+    description:item.desc||item.description||"",
+    rarity:item.rarity,
+    category:"기념품",
+    collectionCharacterId:item.characterId||"",
+    acquisitionMode:"unique",
+    gachaEnabled:false,
+    secret:false,
+    enabled:true
+  }));
+  next.inventoryCounts=Object.fromEntries((Array.isArray(legacy.ownedItems)?legacy.ownedItems:[]).map(id=>[id,1]));
+  next.thoughts=(Array.isArray(legacy.thoughts)?legacy.thoughts:[]).map(t=>normalizeThought({
+    id:t.id,
+    characterId:t.characterId,
+    category:t.category||t.categories?.[0]||"일상",
+    frequency:t.frequency,
+    rarity:t.rarity,
+    text:t.text||t.variants?.[0]||"",
+    enabled:true
+  }));
+  next.playState.affection=Object.fromEntries(next.characters.map(ch=>[ch.id,ch.affectionStart]));
+  next.playState.emotions=Object.fromEntries(next.characters.map(ch=>[ch.id,{state:ch.emotionDefault,intensity:ch.emotionIntensity}]));
+  return normalizeState(next);
+}
+function readState(){
+  try{
+    const current=localStorage.getItem(STATE_KEY);
+    if(current)return normalizeState(JSON.parse(current));
+    const legacy=localStorage.getItem(LEGACY_STATE_KEY);
+    if(legacy){
+      const migrated=migrateLegacyState(JSON.parse(legacy));
+      localStorage.setItem(STATE_KEY,JSON.stringify(migrated));
+      return migrated;
+    }
+  }catch{}
+  return normalizeState(null);
+}
+function syncPlayStateFromSession(){
+  if(!session)return;
+  state.playState={
+    variables:clone(session.variables||{}),
+    affection:clone(session.affection||{}),
+    emotions:clone(session.emotions||{}),
+    log:Array.isArray(session.log)?session.log.slice(-200):[]
+  };
+}
+function saveState(){
+  syncPlayStateFromSession();
+  localStorage.setItem(STATE_KEY,JSON.stringify(state));
+}
 function readPrefs(){
   try{
     const p=JSON.parse(localStorage.getItem(PREFS_KEY)||"{}");
@@ -424,15 +607,17 @@ const editorOverlay=$("#editorOverlay");
 const editorBody=$("#editorBody");
 
 function createSession(){
+  const saved=normalizePlayState(state.playState);
   const variables={};
-  state.variables.forEach(v=>variables[v.id]=parseVariable(v,v.defaultValue));
+  state.variables.forEach(v=>variables[v.id]=v.id in saved.variables?parseVariable(v,saved.variables[v.id]):parseVariable(v,v.defaultValue));
   const affection={};
   const emotions={};
   state.characters.forEach(c=>{
-    affection[c.id]=c.affectionStart;
-    emotions[c.id]={state:c.emotionDefault,intensity:c.emotionIntensity};
+    affection[c.id]=c.id in saved.affection?clamp(saved.affection[c.id],0,100,c.affectionStart):c.affectionStart;
+    const emo=saved.emotions[c.id];
+    emotions[c.id]=emo?{state:emo.state,intensity:emo.intensity}:{state:c.emotionDefault,intensity:c.emotionIntensity};
   });
-  return {variables,affection,emotions,log:[]};
+  return {variables,affection,emotions,log:saved.log.slice(-200)};
 }
 function syncSessionDefinitions(){
   state.variables.forEach(v=>{
@@ -717,6 +902,7 @@ function applyOwnerEffects(o){
   applyItemEffects(o.itemEffects);
   applyAffectionEffects(o.affectionEffects);
   applyEmotionEffects(o.emotionEffects);
+  saveState();
 }
 function applyInteractionEffects(source){
   const ch=getCharacter(source.characterId);if(!ch)return;
@@ -735,6 +921,7 @@ function applyInteractionEffects(source){
     messages.push(ch.name+" 감정 → "+emotionLabel(source.emotionState)+" "+intensity);
   }
   if(messages.length)showToast(messages.join(" · "));
+  saveState();
 }
 function beginInteractionReaction(kind,source,entries,label="",meta={}){
   const ch=getCharacter(source.characterId);if(!ch)return;
@@ -1210,6 +1397,7 @@ function renderRoomBeat(){
   if(typing.token!==token){
     session.log.push({kind:entry.type,speaker,text:entry.text||"",eventName:currentEvent()?.name||""});
     if(session.log.length>200)session.log.splice(0,session.log.length-200);
+    saveState();
     startTyping(entry.text||"",token);
   }else{
     $("#dialogueText").textContent=typing.done?typing.full:typing.full.slice(0,typing.index);

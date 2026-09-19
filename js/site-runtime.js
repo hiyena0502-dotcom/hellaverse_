@@ -1141,7 +1141,7 @@ function getSelectedOwner(kind,element){
 
 
 function renderAskEditor(){
-  editorBody.innerHTML=editorHead("ASK","ASK 설정","질문을 했을 때의 호감도·감정·직접 반응을 설정합니다. 필요하면 그 뒤에 기존 대화 이벤트를 이어갈 수 있습니다.",'<button class="small-button" data-action="new-ask">+ 질문</button>')+
+  editorBody.innerHTML=editorHead("ASK","ASK 설정","질문을 했을 때의 호감도·감정·직접 반응을 설정합니다. 필요하면 별도 이벤트를 대화 중간에 삽입할 수 있으며, 끝나면 원래 대화 위치로 돌아옵니다.",'<button class="small-button" data-action="new-ask">+ 질문</button>')+
     '<div class="ask-editor-grid">'+
     (editorDraft.asks.length?editorDraft.asks.map(a=>'<div class="ask-row interaction-editor-row" data-ask-id="'+esc(a.id)+'">'+
       '<select data-ask-bind="characterId">'+charOptions(a.characterId,"캐릭터 선택")+'</select>'+
@@ -1157,13 +1157,13 @@ function renderAskEditor(){
           '<label class="field"><span>반응 형식</span><select data-ask-bind="reactionType"><option value="dialogue" '+(a.reactionType==="dialogue"?"selected":"")+'>캐릭터 대사</option><option value="narration" '+(a.reactionType==="narration"?"selected":"")+'>나레이션</option></select></label>'+
         '</div>'+
         '<label class="field"><span>직접 반응 문장</span><textarea data-ask-bind="reactionText" placeholder="질문 직후 나올 대사 또는 나레이션">'+esc(a.reactionText)+'</textarea></label>'+
-        '<label class="field"><span>반응 뒤 후속 이벤트 (선택)</span><select data-ask-bind="eventId">'+eventOptions(a.eventId,"후속 이벤트 없음",editorDraft)+'</select></label>'+
+        '<label class="field"><span>반응 뒤 삽입 이벤트 (선택 · 종료 후 기존 대화 복귀)</span><select data-ask-bind="eventId">'+eventOptions(a.eventId,"후속 이벤트 없음",editorDraft)+'</select></label>'+
       '</div>'+
     '</div>').join(""):'<div class="editor-note">등록된 ASK가 없습니다. 질문을 추가한 뒤 반응을 설정하세요.</div>')+
     '</div>';
 }
 function renderItemEditor(){
-  editorBody.innerHTML=editorHead("ITEM","아이템 설정","아이템을 캐릭터에게 줬을 때의 호감도·감정·직접 반응을 설정합니다. 필요하면 후속 대화 이벤트까지 이어집니다.",'<button class="small-button" data-action="new-item">+ 아이템</button>')+
+  editorBody.innerHTML=editorHead("ITEM","아이템 설정","아이템을 캐릭터에게 줬을 때의 호감도·감정·직접 반응을 설정합니다. 필요하면 별도 이벤트를 대화 중간에 삽입하고, 끝나면 원래 대화 위치로 돌아옵니다.",'<button class="small-button" data-action="new-item">+ 아이템</button>')+
     '<div class="item-editor-grid">'+
     (editorDraft.items.length?editorDraft.items.map(i=>'<div class="item-row interaction-editor-row" data-item-id="'+esc(i.id)+'">'+
       '<select data-item-bind="characterId">'+charOptions(i.characterId,"캐릭터 선택")+'</select>'+
@@ -1180,7 +1180,7 @@ function renderItemEditor(){
           '<label class="field"><span>반응 형식</span><select data-item-bind="reactionType"><option value="dialogue" '+(i.reactionType==="dialogue"?"selected":"")+'>캐릭터 대사</option><option value="narration" '+(i.reactionType==="narration"?"selected":"")+'>나레이션</option></select></label>'+
         '</div>'+
         '<label class="field full"><span>아이템을 줬을 때 직접 반응</span><textarea data-item-bind="reactionText" placeholder="캐릭터 대사 또는 나레이션">'+esc(i.reactionText)+'</textarea></label>'+
-        '<label class="field"><span>반응 뒤 후속 이벤트 (선택)</span><select data-item-bind="inventoryEventId">'+eventOptions(i.inventoryEventId,"후속 이벤트 없음",editorDraft)+'</select></label>'+
+        '<label class="field"><span>반응 뒤 삽입 이벤트 (선택 · 종료 후 기존 대화 복귀)</span><select data-item-bind="inventoryEventId">'+eventOptions(i.inventoryEventId,"후속 이벤트 없음",editorDraft)+'</select></label>'+
         '<div class="inline-grid"><label class="checkline"><input type="checkbox" data-item-bind="gachaEnabled" '+(i.gachaEnabled?"checked":"")+'> 가챠 포함</label><label class="checkline"><input type="checkbox" data-item-bind="enabled" '+(i.enabled?"checked":"")+'> 사용</label></div>'+
         '<label class="field full"><span>아이템 설명</span><textarea data-item-bind="description">'+esc(i.description)+'</textarea></label>'+
       '</div>'+

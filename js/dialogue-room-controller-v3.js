@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V6__)return;
-window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V6__=1;
+if(window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V7__)return;
+window.__HELLAVERSE_DIALOGUE_ROOM_CONTROLLER_V7__=1;
 
 const K='hellaverse_dialogue_state_v1',META='hellaverse_dialogue_render_meta_v1';
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -38,7 +38,7 @@ function askHtml(){const rows=conceptualQuestions();return `<section class="hv-a
 function closeAsk(){$$('[data-hv-ask-panel]').forEach(x=>x.remove());$$('.dialogue-box.hv-ask-open').forEach(x=>x.classList.remove('hv-ask-open'))}
 function openAsk(){const box=$('.character-room .dialogue-box');if(!box){toast('대화가 시작된 뒤 질문할 수 있어요.');return}closeAsk();$$('[data-hv-action-panel]').forEach(x=>x.remove());box.classList.add('hv-ask-open');box.insertAdjacentHTML('beforeend',askHtml())}
 
-function makeBar(){const bar=document.createElement('div');bar.className='hv-room-action-bar';bar.dataset.hvRoomActionBar='6';bar.innerHTML='<button type="button" data-hv-room-command="TALK">TALK</button><button type="button" data-hv-room-command="ASK">ASK</button><button type="button" data-hv-room-command="ACTION">ACTION</button><button type="button" data-hv-room-command="INVENTORY">INVENTORY</button><button type="button" data-hv-room-command="LEAVE">LEAVE ROOM</button>';return bar}
+function makeBar(){const bar=document.createElement('div');bar.className='hv-room-action-bar';bar.dataset.hvRoomActionBar='7';bar.innerHTML='<button type="button" data-hv-room-command="ASK">ASK</button><button type="button" data-hv-room-command="ACTION">ACTION</button><button type="button" data-hv-room-command="INVENTORY">INVENTORY</button><button type="button" data-hv-room-command="LEAVE">LEAVE ROOM</button>';return bar}
 function cleanLegacy(box){for(const utility of $$('.dialogue-utility',box))$$('[data-vn-ask],[data-hv-action],[data-inventory-open],[data-vn-leave],[data-runtime-leave],[data-vn-gift]',utility).forEach(b=>b.remove())}
 function ensureBar(){
   const room=$('.character-room'),box=$('.character-room .dialogue-box'),stage=box?.closest('.dialogue-stage');
@@ -91,7 +91,6 @@ window.addEventListener('click',e=>{
   const home=t.closest('.home-lobby [data-room]');if(home){e.preventDefault();e.stopImmediatePropagation();synthetic({'data-profile':home.dataset.room||''});return}
   const profile=t.closest('.character-file [data-room]');if(profile){e.preventDefault();e.stopImmediatePropagation();const cid=String(profile.dataset.room||'');beginDirect(cid);synthetic({'data-room':cid});queueMicrotask(schedule);setTimeout(schedule,30);setTimeout(schedule,100);return}
   const command=t.closest('[data-hv-room-command]')?.dataset.hvRoomCommand;
-  if(command==='TALK'){e.preventDefault();e.stopImmediatePropagation();closeAsk();const fn=window.__HV_START_CONVERSATION__;if(typeof fn!=='function'||!fn({fresh:true}))toast('지금 시작할 수 있는 대화가 없습니다.');return}
   if(command==='ASK'){e.preventDefault();e.stopImmediatePropagation();if(!$('.character-room .dialogue-box'))synthetic({'data-action':'ASK'});queueMicrotask(openAsk);setTimeout(openAsk,20);return}
   if(command==='INVENTORY'){e.preventDefault();e.stopImmediatePropagation();closeAsk();if(!window.__HELLAVERSE_ITEM_SYSTEM_V2__){toast('INVENTORY를 불러오는 중입니다. 잠시 후 다시 눌러주세요.');return}synthetic({'data-inventory-open':''});return}
   if(command==='LEAVE'){e.preventDefault();e.stopImmediatePropagation();closeAsk();synthetic({'data-vn-leave':''});return}

@@ -71,6 +71,7 @@ function ownerFromDialogueId(id,valid){
  for(const cid of valid){
   if(id.startsWith('ambient100-'+cid+'-'))return cid;
   if(id.startsWith('fanon50-'+cid+'-'))return cid;
+  if(id.startsWith(cid+'-'))return cid;
  }
  return'';
 }

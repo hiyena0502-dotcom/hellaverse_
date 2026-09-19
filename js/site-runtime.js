@@ -1884,31 +1884,168 @@ function renderThoughtEditor(){
 }
 function renderCollectionEditor(){
   const chars=editorDraft.characters;
-  const owned=editorDraft.items.filter(i=>itemCount(i.id,editorDraft)>0).length;
-  const fresh=editorDraft.newItemIds.filter(id=>itemCount(id,editorDraft)>0).length;
-  editorBody.innerHTML=editorHead("COLLECTION","컬렉션 설정","컬렉션은 아이템 정의가 아니라 획득 상태를 보여주는 캐릭터별 아카이브입니다.")+
+  const overall=collectionOverallProgress(editorDraft);
+  const fresh=editorDraft.newItemIds.filter(id=>hasEverAcquired(id,editorDraft)).length;
+  editorBody.innerHTML=editorHead("COLLECTION","컬렉션 설정","컬렉션은 현재 인벤토리가 아니라 한 번이라도 발견한 아이템을 기록하는 아카이브입니다.")+
     '<div class="settings-grid">'+
       '<section class="settings-card"><h3>DISPLAY</h3>'+
-        '<label class="checkline"><input type="checkbox" data-collection-setting="showLocked" '+(editorDraft.collectionSettings.showLocked?"checked":"")+'> 미획득 아이템도 LOCKED로 표시</label>'+
-        '<label class="checkline"><input type="checkbox" data-collection-setting="showOwnedCount" '+(editorDraft.collectionSettings.showOwnedCount?"checked":"")+'> 보유 개수 표시</label>'+
+        '<label class="checkline"><input type="checkbox" data-collection-setting="showLocked" '+(editorDraft.collectionSettings.showLocked?"checked":"")+'> 미획득 일반 아이템도 LOCKED로 표시</label>'+
+        '<label class="checkline"><input type="checkbox" data-collection-setting="showOwnedCount" '+(editorDraft.collectionSettings.showOwnedCount?"checked":"")+'> 현재 인벤토리 개수 표시</label>'+
         '<label class="field"><span>기본 보기</span><select data-collection-setting="view"><option value="grouped" '+(editorDraft.collectionSettings.view==="grouped"?"selected":"")+'>캐릭터별 묶기</option><option value="all" '+(editorDraft.collectionSettings.view==="all"?"selected":"")+'>전체 카드</option></select></label>'+
         '<label class="field"><span>기본 정렬</span><select data-collection-setting="sort"><option value="recent" '+(editorDraft.collectionSettings.sort==="recent"?"selected":"")+'>최근 획득</option><option value="rarity" '+(editorDraft.collectionSettings.sort==="rarity"?"selected":"")+'>희귀도</option><option value="name" '+(editorDraft.collectionSettings.sort==="name"?"selected":"")+'>이름</option><option value="count" '+(editorDraft.collectionSettings.sort==="count"?"selected":"")+'>보유 수</option></select></label>'+
       '</section>'+
-      '<section class="settings-card"><h3>SUMMARY</h3><p class="muted">아이템 정의·카테고리·선물 반응은 “아이템 설정”에서 관리합니다.</p>'+
-        '<div class="collection-editor-summary"><b>'+editorDraft.items.length+'</b><span>TOTAL</span><b>'+owned+'</b><span>OWNED</span><b>'+fresh+'</b><span>NEW</span></div>'+
+      '<section class="settings-card"><h3>SUMMARY</h3><p class="muted">미발견 SECRET은 전체 개수와 완성도에 포함되지 않습니다.</p>'+
+        '<div class="collection-editor-summary"><b>'+overall.total+'</b><span>VISIBLE</span><b>'+overall.acquired+'</b><span>ARCHIVED</span><b>'+fresh+'</b><span>NEW</span></div>'+
+        '<div class="collection-progress-track"><div style="width:'+overall.percent+'%"></div></div><p class="muted">'+overall.percent+'% COMPLETE</p>'+
       '</section>'+
     '</div>'+
     (chars.length?chars.map(ch=>{
-      const items=editorDraft.items.filter(i=>i.collectionCharacterId===ch.id);
-      return '<section class="collection-preview-group"><h3>'+esc(ch.name)+'</h3><div class="collection-preview-items">'+
+      const progress=collectionProgressForCharacter(ch.id,editorDraft);
+      const items=editorDraft.items.filter(i=>i.collectionCharacterId===ch.id&&(!i.secret||hasEverAcquired(i.id,editorDraft)));
+      return '<section class="collection-preview-group"><div class="collection-group-head"><h3>'+esc(ch.name)+'</h3><span>'+progress.acquired+' / '+progress.total+' · '+progress.percent+'%</span></div><div class="collection-progress-track"><div style="width:'+progress.percent+'%"></div></div><div class="collection-preview-items">'+
         (items.length?items.map(i=>{
-          const count=itemCount(i.id,editorDraft),isNew=editorDraft.newItemIds.includes(i.id);
-          return '<div class="collection-preview-item '+(isNew?"is-new":"")+'"><b>'+esc(i.name)+(isNew?' · NEW':'')+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+' · '+esc(itemSourceLabel(i,editorDraft))+'</small><div>'+esc(i.acquisitionMode.toUpperCase())+' · 현재 보유 '+count+' · '+new Set(i.reactions.map(r=>r.characterId).filter(Boolean)).size+' REACTIONS</div></div>';
-        }).join(""):'<div class="editor-note">이 캐릭터의 아이템이 없습니다.</div>')+
+          const count=itemCount(i.id,editorDraft),archived=hasEverAcquired(i.id,editorDraft),isNew=editorDraft.newItemIds.includes(i.id);
+          return '<div class="collection-preview-item '+(isNew?"is-new":"")+'"><b>'+(archived?esc(i.name):"LOCKED")+(isNew?' · NEW':'')+(i.secret?' · SECRET':'')+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+' · '+esc(itemSourceLabel(i,editorDraft))+'</small><div>'+esc(i.acquisitionMode.toUpperCase())+' · INVENTORY '+count+' · '+new Set(i.reactions.map(r=>r.characterId).filter(Boolean)).size+' REACTIONS</div></div>';
+        }).join(""):'<div class="editor-note">현재 표시되는 아이템이 없습니다.</div>')+
       '</div></section>';
     }).join(""):'<div class="editor-note">캐릭터가 없습니다.</div>');
 }
 
+
+function walkEntries(entries,visit){
+  for(const entry of entries||[]){
+    visit(entry,"entry");
+    if(entry.type==="choice"){
+      for(const option of entry.options||[]){
+        visit(option,"option");
+        walkEntries(option.entries,visit);
+      }
+    }
+  }
+}
+function walkProjectOwners(source,visit){
+  source.events.forEach(ev=>walkEntries(ev.entries,(owner,type)=>visit(owner,type,"EVENT · "+ev.name)));
+  source.asks.forEach(ask=>walkEntries(ask.entries,(owner,type)=>visit(owner,type,"ASK · "+ask.label)));
+  source.items.forEach(item=>item.reactions.forEach(r=>{
+    const ch=source.characters.find(c=>c.id===r.characterId);
+    walkEntries(r.firstEntries,(owner,type)=>visit(owner,type,"GIFT FIRST · "+item.name+" · "+(ch?.name||"미지정")));
+    walkEntries(r.repeatEntries,(owner,type)=>visit(owner,type,"GIFT REPEAT · "+item.name+" · "+(ch?.name||"미지정")));
+    walkEntries(r.specialEntries,(owner,type)=>visit(owner,type,"GIFT SPECIAL · "+item.name+" · "+(ch?.name||"미지정")));
+  }));
+}
+function cleanVariableReference(id){
+  walkProjectOwners(editorDraft,owner=>{
+    if(owner.condition?.variableId===id)owner.condition=null;
+    owner.effects=(owner.effects||[]).filter(f=>f.variableId!==id);
+  });
+  editorDraft.asks.forEach(a=>{if(a.unlockCondition?.variableId===id)a.unlockCondition=null});
+}
+function cleanItemReference(id){
+  walkProjectOwners(editorDraft,owner=>{
+    if(owner.itemCondition?.itemId===id)owner.itemCondition=null;
+    owner.itemEffects=(owner.itemEffects||[]).filter(f=>f.itemId!==id);
+  });
+  editorDraft.asks.forEach(a=>{if(a.unlockItemCondition?.itemId===id)a.unlockItemCondition=null});
+}
+function cleanAskReference(id){
+  walkProjectOwners(editorDraft,owner=>{if(owner.askCondition?.askId===id)owner.askCondition=null});
+  editorDraft.asks.forEach(a=>{if(a.unlockAskCondition?.askId===id)a.unlockAskCondition=null});
+  editorDraft.askedAskIds=(editorDraft.askedAskIds||[]).filter(x=>x!==id);
+  editorDraft.unlockedAskIds=(editorDraft.unlockedAskIds||[]).filter(x=>x!==id);
+  editorDraft.interactionHistory=(editorDraft.interactionHistory||[]).filter(h=>h.askId!==id);
+}
+function cleanCharacterReference(id){
+  walkProjectOwners(editorDraft,owner=>{
+    if(owner.affectionCondition?.characterId===id)owner.affectionCondition=null;
+    if(owner.emotionCondition?.characterId===id)owner.emotionCondition=null;
+    owner.affectionEffects=(owner.affectionEffects||[]).filter(f=>f.characterId!==id);
+    owner.emotionEffects=(owner.emotionEffects||[]).filter(f=>f.characterId!==id);
+  });
+  editorDraft.asks.forEach(a=>{if(a.unlockEmotionCondition?.characterId===id)a.unlockEmotionCondition=null});
+  editorDraft.discoveredGiftReactionKeys=(editorDraft.discoveredGiftReactionKeys||[]).filter(k=>!k.endsWith("::"+id));
+  editorDraft.giftInteractionCounts=Object.fromEntries(Object.entries(editorDraft.giftInteractionCounts||{}).filter(([k])=>!k.endsWith("::"+id)));
+  editorDraft.interactionHistory=(editorDraft.interactionHistory||[]).filter(h=>h.characterId!==id);
+}
+function validateDraft(source=editorDraft){
+  const issues=[];
+  const push=(level,area,text)=>issues.push({level,area,text});
+  const charIds=new Set(source.characters.map(x=>x.id));
+  const varIds=new Set(source.variables.map(x=>x.id));
+  const itemIds=new Set(source.items.map(x=>x.id));
+  const askIds=new Set(source.asks.map(x=>x.id));
+  const eventIds=new Set(source.events.map(x=>x.id));
+
+  if(!source.characters.length)push("error","CHARACTER","등록된 캐릭터가 없습니다.");
+  source.events.forEach(ev=>{
+    if(!charIds.has(ev.characterId))push("error","EVENT · "+ev.name,"캐릭터가 지정되지 않았습니다.");
+    if(!ev.entries.length)push("warning","EVENT · "+ev.name,"FLOW가 비어 있습니다.");
+    if(ev.nextEventId&&!eventIds.has(ev.nextEventId))push("error","EVENT · "+ev.name,"종료 후 이동 이벤트가 존재하지 않습니다.");
+  });
+  source.asks.forEach(a=>{
+    if(!charIds.has(a.characterId))push("error","ASK · "+a.label,"질문 대상 캐릭터가 없습니다.");
+    if(!a.entries.length)push("warning","ASK · "+a.label,"REACTION FLOW가 비어 있습니다.");
+    if(a.startLocked&&!a.unlockMinAffection&&!a.unlockCondition&&!a.unlockItemCondition&&!a.unlockAskCondition&&!a.unlockEmotionCondition)
+      push("warning","ASK · "+a.label,"LOCKED지만 해금 조건이 없어 ASK 화면을 열면 즉시 해금됩니다.");
+    if(a.unlockCondition?.variableId&&!varIds.has(a.unlockCondition.variableId))push("error","ASK · "+a.label,"해금 변수 참조가 삭제되었습니다.");
+    if(a.unlockItemCondition?.itemId&&!itemIds.has(a.unlockItemCondition.itemId))push("error","ASK · "+a.label,"해금 아이템 참조가 삭제되었습니다.");
+    if(a.unlockAskCondition?.askId===a.id)push("error","ASK · "+a.label,"자기 자신을 해금 조건으로 참조하고 있습니다.");
+    else if(a.unlockAskCondition?.askId&&!askIds.has(a.unlockAskCondition.askId))push("error","ASK · "+a.label,"해금 ASK 참조가 삭제되었습니다.");
+    if(a.unlockEmotionCondition?.characterId&&!charIds.has(a.unlockEmotionCondition.characterId))push("error","ASK · "+a.label,"해금 감정 대상이 삭제되었습니다.");
+  });
+  source.items.forEach(item=>{
+    if(item.collectionCharacterId&&!charIds.has(item.collectionCharacterId))push("error","ITEM · "+item.name,"컬렉션 소속 캐릭터가 삭제되었습니다.");
+    if(!item.collectionCharacterId)push("warning","ITEM · "+item.name,"컬렉션 소속 캐릭터가 지정되지 않았습니다.");
+    if(!item.reactions.length)push("info","ITEM · "+item.name,"캐릭터별 선물 반응이 없습니다.");
+    const seen=new Set();
+    item.reactions.forEach(r=>{
+      if(!r.characterId||!charIds.has(r.characterId))push("error","ITEM · "+item.name,"선물 반응 대상 캐릭터가 비어 있거나 삭제되었습니다.");
+      if(r.characterId&&seen.has(r.characterId))push("warning","ITEM · "+item.name,"같은 캐릭터의 선물 반응이 중복 등록되어 있습니다.");
+      if(r.characterId)seen.add(r.characterId);
+      if(!r.firstEntries.length)push("warning","ITEM · "+item.name,"FIRST GIFT FLOW가 비어 있습니다.");
+      if(!r.repeatEntries.length)push("info","ITEM · "+item.name,"REPEAT GIFT FLOW가 비어 있어 FIRST FLOW로 대체됩니다.");
+      if((r.specialMinAffection||r.specialEmotionState)&&!r.specialEntries.length)push("warning","ITEM · "+item.name,"SPECIAL 조건은 있지만 SPECIAL FLOW가 비어 있습니다.");
+    });
+  });
+  source.thoughts.forEach(t=>{
+    if(!charIds.has(t.characterId))push("error","THOUGHT","캐릭터가 지정되지 않았습니다.");
+    if(!String(t.text||"").trim())push("warning","THOUGHT · "+(source.characters.find(c=>c.id===t.characterId)?.name||"미지정"),"문장이 비어 있습니다.");
+  });
+  if(source.gacha.enabled&&!source.items.some(i=>i.enabled&&i.gachaEnabled))push("warning","GACHA","가챠가 켜져 있지만 아이템 풀이 비어 있습니다.");
+
+  walkProjectOwners(source,(owner,type,area)=>{
+    if(owner.condition?.variableId&&!varIds.has(owner.condition.variableId))push("error",area,"삭제된 변수를 조건으로 참조합니다.");
+    for(const fx of owner.effects||[])if(fx.variableId&&!varIds.has(fx.variableId))push("error",area,"삭제된 변수를 효과로 참조합니다.");
+    if(owner.itemCondition?.itemId&&!itemIds.has(owner.itemCondition.itemId))push("error",area,"삭제된 아이템을 조건으로 참조합니다.");
+    for(const fx of owner.itemEffects||[])if(fx.itemId&&!itemIds.has(fx.itemId))push("error",area,"삭제된 아이템을 지급 효과로 참조합니다.");
+    if(owner.askCondition?.askId&&!askIds.has(owner.askCondition.askId))push("error",area,"삭제된 ASK를 조건으로 참조합니다.");
+    if(owner.affectionCondition?.characterId&&!charIds.has(owner.affectionCondition.characterId))push("error",area,"삭제된 캐릭터를 호감도 조건으로 참조합니다.");
+    if(owner.emotionCondition?.characterId&&!charIds.has(owner.emotionCondition.characterId))push("error",area,"삭제된 캐릭터를 감정 조건으로 참조합니다.");
+    for(const fx of owner.affectionEffects||[])if(fx.characterId&&!charIds.has(fx.characterId))push("error",area,"삭제된 캐릭터를 호감도 효과로 참조합니다.");
+    for(const fx of owner.emotionEffects||[])if(fx.characterId&&!charIds.has(fx.characterId))push("error",area,"삭제된 캐릭터를 감정 효과로 참조합니다.");
+    if(type==="entry"){
+      if(owner.type==="choice"&&!owner.options.length)push("warning",area,"선택지 항목이 0개인 CHOICE가 있습니다.");
+      if(owner.type==="dialogue"&&!String(owner.text||"").trim())push("info",area,"빈 대사가 있습니다.");
+      if(owner.type==="narration"&&!String(owner.text||"").trim())push("info",area,"빈 지문이 있습니다.");
+    }else{
+      if(!String(owner.label||"").trim())push("warning",area,"선택지 문구가 비어 있습니다.");
+      if(owner.targetEventId&&!eventIds.has(owner.targetEventId))push("error",area,"선택지가 삭제된 이벤트로 이동합니다.");
+    }
+  });
+  return issues;
+}
+function renderValidationReport(){
+  if(!editorDraft)return;
+  $$(".editor-nav").forEach(b=>b.classList.remove("active"));
+  const issues=validateDraft(editorDraft);
+  const counts={
+    error:issues.filter(x=>x.level==="error").length,
+    warning:issues.filter(x=>x.level==="warning").length,
+    info:issues.filter(x=>x.level==="info").length
+  };
+  editorBody.innerHTML=editorHead("CHECK","프로젝트 검사","삭제된 참조와 비어 있는 콘텐츠, 설정 충돌을 저장 전에 확인합니다.",'<button class="small-button" data-action="run-validation">다시 검사</button>')+
+    '<div class="validation-summary"><div><b>'+counts.error+'</b><span>ERROR</span></div><div><b>'+counts.warning+'</b><span>WARNING</span></div><div><b>'+counts.info+'</b><span>INFO</span></div></div>'+
+    (issues.length?'<div class="validation-list">'+issues.map(x=>'<article class="validation-row '+x.level+'"><span>'+esc(x.level.toUpperCase())+'</span><div><strong>'+esc(x.area)+'</strong><p>'+esc(x.text)+'</p></div></article>').join("")+'</div>':'<div class="validation-clean"><strong>문제를 찾지 못했습니다.</strong><p>현재 편집 중인 프로젝트 구조가 정상입니다.</p></div>');
+}
 /* APP EVENTS */
 originChoice.addEventListener("click",e=>{
   const b=e.target.closest("[data-origin]");if(!b)return;
@@ -1922,6 +2059,7 @@ $("#changeProfileButton").addEventListener("click",renderStart);
 $("#brandButton").addEventListener("click",()=>setPage("home"));
 $("#editorButton").addEventListener("click",openEditor);
 $$(".nav-button").forEach(b=>b.addEventListener("click",()=>setPage(b.dataset.page)));
+$("#editorCheckButton").addEventListener("click",renderValidationReport);
 $("#editorCancelButton").addEventListener("click",closeEditor);
 $("#editorSaveButton").addEventListener("click",saveEditor);
 $$(".editor-nav").forEach(b=>b.addEventListener("click",()=>{editorTab=b.dataset.editorTab;renderEditor()}));
@@ -2010,6 +2148,8 @@ pageRoot.addEventListener("click",e=>{
 editorBody.addEventListener("click",e=>{
   const b=e.target.closest("[data-action]");if(!b)return;
   const a=b.dataset.action;
+  if(a==="run-validation"){renderValidationReport();return}
+
   if(a==="mini-add-entry"||a==="mini-add-branch"){
     const rootList=getInteractionFlowList(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId,b.dataset.flowKey);
     if(!rootList)return;
@@ -2042,6 +2182,7 @@ editorBody.addEventListener("click",e=>{
   if(a==="select-character"){selectedEditorCharacterId=b.dataset.id;renderCharacterManager();return}
   if(a==="delete-character"){
     const id=selectedEditorCharacterId;editorDraft.characters=editorDraft.characters.filter(c=>c.id!==id);
+    cleanCharacterReference(id);
     editorDraft.events.forEach(ev=>{if(ev.characterId===id)ev.characterId=""});
     editorDraft.thoughts.forEach(t=>{if(t.characterId===id)t.characterId=""});
     editorDraft.asks.forEach(a=>{if(a.characterId===id)a.characterId=""});
@@ -2054,7 +2195,9 @@ editorBody.addEventListener("click",e=>{
   if(a==="new-variable"){editorDraft.variables.push(normalizeVariable({id:uid("var"),name:"새 변수"}));renderVariableManager();return}
   if(a==="delete-variable"){
     const row=b.closest("[data-var-id]");const id=row?.dataset.varId;if(!id)return;
-    editorDraft.variables=editorDraft.variables.filter(v=>v.id!==id);renderVariableManager();return;
+    editorDraft.variables=editorDraft.variables.filter(v=>v.id!==id);
+    cleanVariableReference(id);
+    renderVariableManager();return;
   }
   if(a==="new-event"){
     const ev=normalizeEvent({id:uid("event"),name:"새 이벤트",characterId:selectedEditorCharacterId||editorDraft.characters[0]?.id||""});
@@ -2126,8 +2269,9 @@ editorBody.addEventListener("click",e=>{
     renderAskEditor();return;
   }
   if(a==="delete-ask"){
-    const row=b.closest("[data-ask-id]");
-    editorDraft.asks=editorDraft.asks.filter(a=>a.id!==row?.dataset.askId);
+    const row=b.closest("[data-ask-id]");const id=row?.dataset.askId;if(!id)return;
+    editorDraft.asks=editorDraft.asks.filter(a=>a.id!==id);
+    cleanAskReference(id);
     renderAskEditor();return;
   }
   if(a==="add-item-category"){
@@ -2171,27 +2315,15 @@ editorBody.addEventListener("click",e=>{
     renderItemEditor();return;
   }
   if(a==="delete-item"){
-    const row=b.closest("[data-item-id]");const id=row?.dataset.itemId;
+    const row=b.closest("[data-item-id]");const id=row?.dataset.itemId;if(!id)return;
     editorDraft.items=editorDraft.items.filter(i=>i.id!==id);
-    if(id){
-      delete editorDraft.inventoryCounts[id];
-      editorDraft.newItemIds=editorDraft.newItemIds.filter(x=>x!==id);
-      editorDraft.itemHistory=editorDraft.itemHistory.filter(h=>h.itemId!==id);
-      const cleanEntries=entries=>{
-        for(const entry of entries||[]){
-          entry.itemEffects=(entry.itemEffects||[]).filter(fx=>fx.itemId!==id);
-          if(entry.type==="choice"){
-            for(const option of entry.options||[]){
-              option.itemEffects=(option.itemEffects||[]).filter(fx=>fx.itemId!==id);
-              cleanEntries(option.entries);
-            }
-          }
-        }
-      };
-      editorDraft.events.forEach(ev=>cleanEntries(ev.entries));
-      editorDraft.asks.forEach(ask=>cleanEntries(ask.entries));
-      editorDraft.items.forEach(item=>item.reactions.forEach(r=>cleanEntries(r.entries)));
-    }
+    cleanItemReference(id);
+    delete editorDraft.inventoryCounts[id];
+    editorDraft.newItemIds=(editorDraft.newItemIds||[]).filter(x=>x!==id);
+    editorDraft.itemHistory=(editorDraft.itemHistory||[]).filter(h=>h.itemId!==id);
+    editorDraft.discoveredGiftReactionKeys=(editorDraft.discoveredGiftReactionKeys||[]).filter(k=>!k.startsWith(id+"::"));
+    editorDraft.giftInteractionCounts=Object.fromEntries(Object.entries(editorDraft.giftInteractionCounts||{}).filter(([k])=>!k.startsWith(id+"::")));
+    editorDraft.interactionHistory=(editorDraft.interactionHistory||[]).filter(h=>h.itemId!==id);
     renderItemEditor();return;
   }
   if(a==="new-thought"){const t=normalizeThought({id:uid("thought"),category:editorDraft.thoughtSettings.categories[0]||"일상"});editorDraft.thoughts.push(t);renderThoughtEditor();return}

@@ -832,33 +832,73 @@ function renderThought(){
 }
 function renderCollection(){
   const chars=enabledCharacters();
-  const filterChars=["ALL",...chars.map(c=>c.id)];
-  const groups=chars
-    .filter(ch=>collectionFilter==="ALL"||collectionFilter===ch.id)
-    .map(ch=>({
-      character:ch,
-      items:state.items.filter(i=>i.enabled&&i.collectionCharacterId===ch.id)
-        .filter(i=>state.collectionSettings.showLocked||itemCount(i.id)>0)
-    }))
-    .filter(g=>g.items.length || collectionFilter!=="ALL");
+  const categories=[...new Set(state.items.map(i=>i.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ko"));
+  const query=collectionQuery.trim().toLowerCase();
+  let items=state.items.filter(i=>i.enabled).filter(i=>{
+    const count=itemCount(i.id),isNew=state.newItemIds.includes(i.id),source=itemSourceLabel(i);
+    if(!state.collectionSettings.showLocked&&count<=0)return false;
+    if(collectionFilter!=="ALL"&&i.collectionCharacterId!==collectionFilter)return false;
+    if(collectionRarity!=="ALL"&&i.rarity!==collectionRarity)return false;
+    if(collectionCategory!=="ALL"&&i.category!==collectionCategory)return false;
+    if(collectionSource!=="ALL"&&source!==collectionSource)return false;
+    if(collectionStatus==="NEW"&&!isNew)return false;
+    if(collectionStatus==="OWNED"&&count<=0)return false;
+    if(collectionStatus==="LOCKED"&&count>0)return false;
+    if(query){
+      const text=[i.name,i.description,i.category,i.rarity,source,getCharacter(i.collectionCharacterId)?.name].join(" ").toLowerCase();
+      if(!text.includes(query))return false;
+    }
+    return true;
+  });
+
+  const sort=state.collectionSettings.sort||"recent";
+  items.sort((a,b)=>{
+    if(sort==="rarity")return (RARITY_ORDER[b.rarity]||0)-(RARITY_ORDER[a.rarity]||0)||a.name.localeCompare(b.name,"ko");
+    if(sort==="name")return a.name.localeCompare(b.name,"ko");
+    if(sort==="count")return itemCount(b.id)-itemCount(a.id)||a.name.localeCompare(b.name,"ko");
+    return itemLastAcquiredAt(b.id)-itemLastAcquiredAt(a.id)||a.name.localeCompare(b.name,"ko");
+  });
+
+  const card=i=>{
+    const count=itemCount(i.id),unlocked=count>0,isNew=state.newItemIds.includes(i.id),source=itemSourceLabel(i);
+    return '<button class="collection-card rarity-'+esc(i.rarity)+' '+(unlocked?"":"locked")+' '+(isNew?"is-new":"")+'" type="button" data-action="collection-detail" data-id="'+esc(i.id)+'">'+
+      (isNew?'<span class="collection-new-badge">NEW</span>':'')+
+      '<em>'+esc(i.category)+'</em><span class="rarity">'+esc(i.rarity)+'</span>'+
+      '<strong>'+(unlocked?esc(i.name):"LOCKED")+'</strong>'+
+      '<div class="collection-card-meta"><span>'+esc(source)+'</span><span>'+esc(i.acquisitionMode.toUpperCase())+'</span></div>'+
+      '<p>'+(unlocked?esc(i.description||"설명 없음"):"아직 획득하지 않은 아이템입니다.")+'</p>'+
+      (unlocked&&state.collectionSettings.showOwnedCount?'<small>OWNED ×'+count+'</small>':'')+
+    '</button>';
+  };
+
+  let body="";
+  if(!items.length){
+    body='<div class="empty-panel"><div><h2>조건에 맞는 아이템이 없습니다.</h2><p>필터를 바꾸거나 아이템을 획득해보세요.</p></div></div>';
+  }else if(state.collectionSettings.view==="all"){
+    body='<div class="collection-grid">'+items.map(card).join("")+'</div>';
+  }else{
+    const groups=chars
+      .filter(ch=>collectionFilter==="ALL"||ch.id===collectionFilter)
+      .map(ch=>({character:ch,items:items.filter(i=>i.collectionCharacterId===ch.id)}))
+      .filter(g=>g.items.length);
+    const unassigned=items.filter(i=>!getCharacter(i.collectionCharacterId));
+    body=groups.map(g=>'<section class="collection-preview-group"><h3>'+esc(g.character.name)+'</h3><div class="collection-grid">'+g.items.map(card).join("")+'</div></section>').join("");
+    if(unassigned.length)body+='<section class="collection-preview-group"><h3>UNASSIGNED</h3><div class="collection-grid">'+unassigned.map(card).join("")+'</div></section>';
+  }
 
   pageRoot.innerHTML=
-    '<section><div class="page-head"><div><p class="page-kicker">COLLECTION</p><h1>CHARACTER ARCHIVE</h1></div><p>캐릭터마다 가진 고유 아이템을 모아두는 기록입니다. 가챠에서 얻은 아이템이 자동으로 해금됩니다.</p></div>'+
-    '<div class="collection-toolbar">'+filterChars.map(id=>{
-      const label=id==="ALL"?"ALL":getCharacter(id)?.name||"UNKNOWN";
-      return '<button class="filter-chip '+(collectionFilter===id?"active":"")+'" data-action="collection-filter" data-id="'+esc(id)+'">'+esc(label)+'</button>';
-    }).join("")+'</div>'+
-    (groups.length?groups.map(g=>'<section class="collection-preview-group"><h3>'+esc(g.character.name)+'</h3><div class="collection-grid">'+
-      (g.items.length?g.items.map(i=>{
-        const count=itemCount(i.id);
-        const unlocked=count>0;
-        return '<button class="collection-card rarity-'+esc(i.rarity)+' '+(unlocked?"":"locked")+'" type="button" data-action="collection-detail" data-id="'+esc(i.id)+'">'+
-          '<em>'+esc(i.category)+'</em><span class="rarity">'+esc(i.rarity)+'</span><strong>'+(unlocked?esc(i.name):"LOCKED")+'</strong>'+
-          '<p>'+(unlocked?esc(i.description||"설명 없음"):"아직 획득하지 않은 아이템입니다.")+'</p>'+
-          (unlocked&&state.collectionSettings.showOwnedCount?'<small>OWNED ×'+count+'</small>':'')+'</button>';
-      }).join(""):'<p class="muted">표시할 아이템이 없습니다.</p>')+
-      '</div></section>').join(""):'<div class="empty-panel"><div><h2>컬렉션이 비어 있습니다.</h2><p>EDITOR → 아이템 설정에서 캐릭터별 아이템을 추가하세요.</p></div></div>')+
-    '</section>';
+    '<section><div class="page-head"><div><p class="page-kicker">COLLECTION</p><h1>CHARACTER ARCHIVE</h1></div><p>획득한 아이템과 아직 잠긴 아이템을 캐릭터별로 정리합니다.</p></div>'+
+    '<div class="collection-viewbar"><div class="collection-view-buttons"><button class="filter-chip '+(state.collectionSettings.view==="grouped"?"active":"")+'" data-action="collection-view" data-view="grouped">캐릭터별</button><button class="filter-chip '+(state.collectionSettings.view==="all"?"active":"")+'" data-action="collection-view" data-view="all">전체</button></div>'+
+      '<input data-collection-control="query" value="'+esc(collectionQuery)+'" placeholder="컬렉션 검색">'+
+      '<select data-collection-control="rarity"><option value="ALL">모든 희귀도</option>'+RARITIES.map(r=>'<option value="'+r+'" '+(collectionRarity===r?"selected":"")+'>'+r+'</option>').join("")+'</select>'+
+      '<select data-collection-control="category"><option value="ALL">모든 카테고리</option>'+categories.map(cat=>'<option value="'+esc(cat)+'" '+(collectionCategory===cat?"selected":"")+'>'+esc(cat)+'</option>').join("")+'</select>'+
+      '<select data-collection-control="status"><option value="ALL" '+(collectionStatus==="ALL"?"selected":"")+'>전체 상태</option><option value="NEW" '+(collectionStatus==="NEW"?"selected":"")+'>NEW</option><option value="OWNED" '+(collectionStatus==="OWNED"?"selected":"")+'>OWNED</option><option value="LOCKED" '+(collectionStatus==="LOCKED"?"selected":"")+'>LOCKED</option></select>'+
+      '<select data-collection-control="source"><option value="ALL">모든 획득처</option>'+["GACHA","DIALOGUE","BOTH","BASIC"].map(s=>'<option value="'+s+'" '+(collectionSource===s?"selected":"")+'>'+s+'</option>').join("")+'</select>'+
+      '<select data-collection-control="sort"><option value="recent" '+(sort==="recent"?"selected":"")+'>최근 획득</option><option value="rarity" '+(sort==="rarity"?"selected":"")+'>희귀도</option><option value="name" '+(sort==="name"?"selected":"")+'>이름</option><option value="count" '+(sort==="count"?"selected":"")+'>보유 수</option></select>'+
+    '</div>'+
+    '<div class="collection-toolbar"><button class="filter-chip '+(collectionFilter==="ALL"?"active":"")+'" data-action="collection-filter" data-id="ALL">ALL</button>'+chars.map(ch=>'<button class="filter-chip '+(collectionFilter===ch.id?"active":"")+'" data-action="collection-filter" data-id="'+esc(ch.id)+'">'+esc(ch.name)+'</button>').join("")+'</div>'+
+    '<div class="collection-summary">'+items.length+' ITEMS · '+state.newItemIds.filter(id=>itemCount(id)>0).length+' NEW · '+state.items.filter(i=>itemCount(i.id)>0).length+' OWNED</div>'+
+    body+'</section>';
 }
 
 function startDialogue(characterId,eventId){
@@ -1192,9 +1232,21 @@ function drawGacha(count){
 }
 function collectionDetail(id){
   const i=itemById(id);if(!i)return;
-  const count=itemCount(i.id);
-  const unlocked=count>0;
-  openModal(unlocked?i.name:"LOCKED",unlocked?'<p class="label">'+esc(i.rarity)+' · '+esc(i.category)+'</p><p style="line-height:1.7">'+esc(i.description||"설명 없음")+'</p><p class="muted">'+esc(getCharacter(i.collectionCharacterId)?.name||"캐릭터 미지정")+(state.collectionSettings.showOwnedCount?' · OWNED ×'+count:'')+'</p>':'<p class="muted">아직 가챠에서 획득하지 않은 아이템입니다.</p>');
+  const count=itemCount(i.id),unlocked=count>0;
+  const wasNew=state.newItemIds.includes(i.id);
+  if(wasNew){
+    markItemSeen(i.id,state);
+    saveState();
+    if(currentPage==="collection")renderCollection();
+  }
+  const sources=itemSourceTypes(i).join(" + ");
+  const recent=state.itemHistory.filter(h=>h.itemId===i.id).slice(-5).reverse();
+  openModal(unlocked?i.name:"LOCKED",unlocked?
+    '<p class="label">'+esc(i.rarity)+' · '+esc(i.category)+'</p>'+
+    '<p style="line-height:1.7">'+esc(i.description||"설명 없음")+'</p>'+
+    '<div class="collection-detail-meta"><span>COLLECTION · '+esc(getCharacter(i.collectionCharacterId)?.name||"미지정")+'</span><span>'+esc(sources)+'</span><span>'+esc(i.acquisitionMode.toUpperCase())+'</span>'+(state.collectionSettings.showOwnedCount?'<span>OWNED ×'+count+'</span>':'')+'</div>'+
+    (recent.length?'<div class="collection-history-mini">'+recent.map(h=>'<div><span>'+esc(h.source)+'</span><b>+'+h.amount+'</b></div>').join("")+'</div>':'')
+    :'<p class="muted">아직 획득하지 않은 아이템입니다.</p>');
 }
 
 /* EDITOR */
@@ -1607,12 +1659,39 @@ pageRoot.addEventListener("click",e=>{
   else if(a==="clear-gacha-history")clearGachaHistory();
   else if(a==="thought-filter"){thoughtFilter=b.dataset.id;renderThought()}
   else if(a==="collection-filter"){collectionFilter=b.dataset.id;renderCollection()}
+  else if(a==="collection-view"){
+    state.collectionSettings.view=b.dataset.view==="all"?"all":"grouped";
+    saveState();
+    renderCollection();
+  }
   else if(a==="collection-detail")collectionDetail(b.dataset.id);
 });
+pageRoot.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.collectionControl==="query"){
+    collectionQuery=t.value;
+    const pos=window.scrollY;
+    renderCollection();
+    window.scrollTo(0,pos);
+    const input=$('[data-collection-control="query"]',pageRoot);
+    if(input){input.focus();try{input.setSelectionRange(input.value.length,input.value.length)}catch{}}
+  }
+});
 pageRoot.addEventListener("change",e=>{
-  if(e.target.id==="roomEventSelect"){
+  const t=e.target;
+  if(t.id==="roomEventSelect"){
     roomMode="talk";
-    startDialogue(selectedCharacterId,e.target.value);
+    startDialogue(selectedCharacterId,t.value);
+    return;
+  }
+  if(t.dataset.collectionControl){
+    const k=t.dataset.collectionControl;
+    if(k==="rarity")collectionRarity=t.value;
+    if(k==="category")collectionCategory=t.value;
+    if(k==="status")collectionStatus=t.value;
+    if(k==="source")collectionSource=t.value;
+    if(k==="sort"){state.collectionSettings.sort=t.value;saveState()}
+    renderCollection();
   }
 });
 pageRoot.addEventListener("click",e=>{

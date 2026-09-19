@@ -1616,6 +1616,14 @@ function getInteractionFlowOwner(scope,ownerId,itemId=""){
   }
   return null;
 }
+function getInteractionFlowList(scope,ownerId,itemId="",flowKey="entries"){
+  const owner=getInteractionFlowOwner(scope,ownerId,itemId);
+  if(!owner)return null;
+  const key=scope==="ask"?"entries":(["firstEntries","repeatEntries","specialEntries"].includes(flowKey)?flowKey:"firstEntries");
+  owner[key] ||= [];
+  return owner[key];
+}
+
 function findFlowEntryContext(entries,id,ancestors=[]){
   for(let i=0;i<entries.length;i++){
     const entry=entries[i];
@@ -1655,11 +1663,12 @@ function refreshInteractionEditor(scope){
   if(scope==="ask")renderAskEditor();
   else renderItemEditor();
 }
-function flowData(scope,ownerId,itemId=""){
-  return ' data-flow-scope="'+esc(scope)+'" data-flow-owner-id="'+esc(ownerId)+'" data-flow-item-id="'+esc(itemId)+'"';
+function flowData(scope,ownerId,itemId="",flowKey="entries"){
+  return ' data-flow-scope="'+esc(scope)+'" data-flow-owner-id="'+esc(ownerId)+'" data-flow-item-id="'+esc(itemId)+'" data-flow-key="'+esc(flowKey)+'"';
 }
-function renderInteractionFlow(entries,scope,ownerId,itemId="",depth=0){
-  const attrs=flowData(scope,ownerId,itemId);
+function renderInteractionFlow(entries,scope,ownerId,itemId="",depth=0,flowKey="entries"){
+  entries=Array.isArray(entries)?entries:[];
+  const attrs=flowData(scope,ownerId,itemId,flowKey);
   const list=entries.length?entries.map((entry,index)=>{
     let body="";
     if(entry.type==="dialogue"){
@@ -1668,20 +1677,20 @@ function renderInteractionFlow(entries,scope,ownerId,itemId="",depth=0){
       body='<div class="mini-flow-fields"><textarea '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="text" placeholder="지문">'+esc(entry.text||"")+'</textarea></div>';
     }else{
       body='<div class="mini-flow-fields"><textarea '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="prompt" placeholder="선택지 질문 / 상황">'+esc(entry.prompt||"")+'</textarea>'+
-        '<div class="mini-options">'+entry.options.map(option=>
-          '<article class="mini-option"><div class="mini-option-head"><input '+attrs+' data-mini-option-id="'+esc(option.id)+'" data-mini-option-field="label" value="'+esc(option.label||"")+'" placeholder="선택지 문구"><select '+attrs+' data-mini-option-id="'+esc(option.id)+'" data-mini-option-field="exit"><option value="continue" '+(option.exitMode!=="end"?"selected":"")+'>분기 뒤 계속</option><option value="end" '+(option.exitMode==="end"?"selected":"")+'>상호작용 종료</option></select><button class="icon-button" type="button" data-action="mini-delete-option" '+attrs+' data-mini-option-id="'+esc(option.id)+'">×</button></div>'+
-          renderInteractionFlow(option.entries,scope,ownerId,itemId,depth+1)+
-          '<div class="mini-add-row"><button class="small-button" type="button" data-action="mini-add-branch" data-type="dialogue" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 대사</button><button class="small-button" type="button" data-action="mini-add-branch" data-type="narration" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 지문</button><button class="small-button" type="button" data-action="mini-add-branch" data-type="choice" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 선택지</button></div></article>'
-        ).join("")+'</div>'+
-        '<button class="small-button" type="button" data-action="mini-add-option" '+attrs+' data-mini-entry-id="'+esc(entry.id)+'">+ 선택지 항목</button></div>';
+      '<div class="mini-options">'+entry.options.map(option=>
+        '<article class="mini-option"><div class="mini-option-head"><input '+attrs+' data-mini-option-id="'+esc(option.id)+'" data-mini-option-field="label" value="'+esc(option.label||"")+'" placeholder="선택지 문구"><select '+attrs+' data-mini-option-id="'+esc(option.id)+'" data-mini-option-field="exit"><option value="continue" '+(option.exitMode!=="end"?"selected":"")+'>분기 뒤 계속</option><option value="end" '+(option.exitMode==="end"?"selected":"")+'>상호작용 종료</option></select><button class="icon-button" type="button" data-action="mini-delete-option" '+attrs+' data-mini-option-id="'+esc(option.id)+'">×</button></div>'+
+        renderInteractionFlow(option.entries,scope,ownerId,itemId,depth+1,flowKey)+
+        '<div class="mini-add-row"><button class="small-button" type="button" data-action="mini-add-branch" data-type="dialogue" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 대사</button><button class="small-button" type="button" data-action="mini-add-branch" data-type="narration" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 지문</button><button class="small-button" type="button" data-action="mini-add-branch" data-type="choice" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 선택지</button></div></article>'
+      ).join("")+'</div>'+
+      '<button class="small-button" type="button" data-action="mini-add-option" '+attrs+' data-mini-entry-id="'+esc(entry.id)+'">+ 선택지 항목</button></div>';
     }
     return '<article class="mini-flow-entry depth-'+Math.min(depth,3)+'"><header><span>'+(index+1)+' · '+esc(entry.type.toUpperCase())+'</span><button class="icon-button" type="button" data-action="mini-delete-entry" '+attrs+' data-mini-entry-id="'+esc(entry.id)+'">×</button></header>'+body+'</article>';
   }).join(""):'<div class="editor-note">아직 흐름이 없습니다.</div>';
   return '<div class="mini-flow-list">'+list+'</div>';
 }
-function interactionFlowEditor(entries,scope,ownerId,itemId=""){
-  const attrs=flowData(scope,ownerId,itemId);
-  return '<section class="mini-flow-editor"><div class="mini-flow-title"><div><strong>REACTION FLOW</strong><small>대사 · 지문 · 선택지를 원하는 순서로 구성합니다.</small></div><div class="mini-add-row"><button class="small-button" type="button" data-action="mini-add-entry" data-type="dialogue" '+attrs+'>+ 대사</button><button class="small-button" type="button" data-action="mini-add-entry" data-type="narration" '+attrs+'>+ 지문</button><button class="small-button" type="button" data-action="mini-add-entry" data-type="choice" '+attrs+'>+ 선택지</button></div></div>'+renderInteractionFlow(entries,scope,ownerId,itemId)+'</section>';
+function interactionFlowEditor(entries,scope,ownerId,itemId="",flowKey="entries",title="REACTION FLOW"){
+  const attrs=flowData(scope,ownerId,itemId,flowKey);
+  return '<section class="mini-flow-editor"><div class="mini-flow-title"><div><strong>'+esc(title)+'</strong><small>대사 · 지문 · 선택지를 원하는 순서로 구성합니다.</small></div><div class="mini-add-row"><button class="small-button" type="button" data-action="mini-add-entry" data-type="dialogue" '+attrs+'>+ 대사</button><button class="small-button" type="button" data-action="mini-add-entry" data-type="narration" '+attrs+'>+ 지문</button><button class="small-button" type="button" data-action="mini-add-entry" data-type="choice" '+attrs+'>+ 선택지</button></div></div>'+renderInteractionFlow(entries,scope,ownerId,itemId,0,flowKey)+'</section>';
 }
 function renderAskEditor(){
   editorBody.innerHTML=editorHead("ASK","ASK 설정","질문마다 호감도·감정 변화와 대사/지문/선택지 흐름을 직접 구성합니다.",'<button class="small-button" data-action="new-ask">+ 질문</button>')+

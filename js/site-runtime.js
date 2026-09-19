@@ -163,6 +163,11 @@ function normalizeAsk(a={}){
     label:a.label||a.question||"새 질문",
     eventId:a.eventId||"",
     minAffection:clamp(a.minAffection,0,100,0),
+    affectionDelta:clamp(a.affectionDelta ?? a.reactionAffectionDelta,-100,100,0),
+    emotionState:EMOTIONS.some(x=>x[0]===a.emotionState) ? a.emotionState : "",
+    emotionIntensity:clamp(a.emotionIntensity ?? a.reactionEmotionIntensity,0,100,0),
+    reactionType:a.reactionType==="narration" ? "narration" : "dialogue",
+    reactionText:String(a.reactionText||""),
     enabled:a.enabled!==false
   };
 }
@@ -176,6 +181,11 @@ function normalizeItem(i={}){
     description:i.description||"",
     gachaEnabled:i.gachaEnabled!==false,
     inventoryEventId:i.inventoryEventId||i.eventId||"",
+    affectionDelta:clamp(i.affectionDelta ?? i.giftAffectionDelta,-100,100,0),
+    emotionState:EMOTIONS.some(x=>x[0]===i.emotionState) ? i.emotionState : "",
+    emotionIntensity:clamp(i.emotionIntensity ?? i.giftEmotionIntensity,0,100,0),
+    reactionType:i.reactionType==="narration" ? "narration" : "dialogue",
+    reactionText:String(i.reactionText||""),
     enabled:i.enabled!==false,
     weight:Math.max(.01,Number(i.weight)||1),
     legacyOwned:Math.max(0,Number(i.owned)||0),
@@ -261,6 +271,7 @@ let thoughtFilter="ALL";
 let collectionFilter="ALL";
 let pendingOrigin=state.profile.origin || "";
 let roomMode="talk";
+let activeInteractionReaction=null;
 let editorDraft=null;
 let editorTab="dialogue";
 let dialogueSubtab="characters";
@@ -396,6 +407,60 @@ function applyEmotionEffects(arr){
   if(messages.length)showToast(messages.join(" · "));
 }
 function applyOwnerEffects(o){applyEffects(o.effects);applyAffectionEffects(o.affectionEffects);applyEmotionEffects(o.emotionEffects)}
+function applyInteractionEffects(source){
+  const ch=getCharacter(source.characterId);if(!ch)return;
+  const messages=[];
+  const delta=clamp(source.affectionDelta,-100,100,0);
+  if(delta){
+    const current=Number(session.affection[ch.id]??ch.affectionStart);
+    const next=clamp(current+delta,0,100,current);
+    const applied=next-current;
+    session.affection[ch.id]=next;
+    if(applied)messages.push(ch.name+" 호감도 "+(applied>0?"+":"")+applied);
+  }
+  if(source.emotionState){
+    const intensity=clamp(source.emotionIntensity,0,100,0);
+    session.emotions[ch.id]={state:source.emotionState,intensity};
+    messages.push(ch.name+" 감정 → "+emotionLabel(source.emotionState)+" "+intensity);
+  }
+  if(messages.length)showToast(messages.join(" · "));
+}
+function beginInteractionReaction(kind,source,followEventId=""){
+  const ch=getCharacter(source.characterId);if(!ch)return;
+  applyInteractionEffects(source);
+  activeInteractionReaction={
+    kind,
+    sourceId:source.id,
+    characterId:ch.id,
+    type:source.reactionType==="narration"?"narration":"dialogue",
+    text:String(source.reactionText||""),
+    followEventId:followEventId||"",
+    label:kind==="ask"?(source.label||"ASK"):(source.name||"ITEM")
+  };
+  session.log.push({
+    kind,
+    speaker:activeInteractionReaction.type==="narration"?"NARRATION":ch.name,
+    text:activeInteractionReaction.text,
+    eventName:(kind==="ask"?"ASK · ":"ITEM · ")+activeInteractionReaction.label
+  });
+  if(session.log.length>200)session.log.splice(0,session.log.length-200);
+  renderRoom();
+}
+function renderInteractionReaction(){
+  const dynamic=$("#roomDynamic");if(!dynamic||!activeInteractionReaction)return;
+  const ch=getCharacter(activeInteractionReaction.characterId);
+  const speaker=activeInteractionReaction.type==="narration"?"NARRATION":(ch?.name||"UNKNOWN");
+  const text=activeInteractionReaction.text || (activeInteractionReaction.type==="narration"?"아무 일도 일어나지 않았다.":"...");
+  dynamic.innerHTML='<div class="dialogue-box interaction-reaction"><p class="speaker">'+esc(speaker)+'</p><p class="dialogue-text">'+esc(text)+'</p><div class="dialogue-meta"><span>'+esc(activeInteractionReaction.kind.toUpperCase())+' · '+esc(activeInteractionReaction.label)+'</span><button type="button" data-action="finish-interaction">NEXT</button></div></div>';
+}
+function finishInteractionReaction(){
+  const reaction=activeInteractionReaction;if(!reaction)return;
+  activeInteractionReaction=null;
+  if(reaction.followEventId&&getEvent(reaction.followEventId)){
+    startDialogue(reaction.characterId,reaction.followEventId);return;
+  }
+  renderRoom();
+}
 function resetEventEmotion(event){
   if(event?.emotionExitMode!=="reset")return;
   const ch=getCharacter(event.characterId);if(ch)session.emotions[ch.id]={state:ch.emotionDefault,intensity:ch.emotionIntensity};

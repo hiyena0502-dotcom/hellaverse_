@@ -552,6 +552,118 @@ function readPrefs(){
   }catch{return{textSpeed:24,autoDelay:900,stageClick:true}}
 }
 function savePrefs(){localStorage.setItem(PREFS_KEY,JSON.stringify(prefs))}
+function readBackupStore(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(DATA_BACKUP_KEY)||"{}");
+    return {
+      slots:Array.from({length:3},(_,i)=>Array.isArray(raw.slots)?raw.slots[i]||null:null),
+      safety:raw.safety&&typeof raw.safety==="object"?raw.safety:null
+    };
+  }catch{return{slots:[null,null,null],safety:null}}
+}
+function writeBackupStore(store){localStorage.setItem(DATA_BACKUP_KEY,JSON.stringify(store))}
+function makeDataSnapshot(label){
+  saveState();
+  return {version:2,label:String(label||"BACKUP"),at:Date.now(),state:clone(state),prefs:clone(prefs)};
+}
+function captureSafetySnapshot(label){
+  const store=readBackupStore();
+  store.safety=makeDataSnapshot(label||"자동 안전 백업");
+  writeBackupStore(store);
+}
+function backupDate(snap){return snap?.at?new Date(snap.at).toLocaleString("ko-KR"):"EMPTY"}
+function saveBackupSlot(index){
+  const store=readBackupStore();
+  store.slots[index]=makeDataSnapshot("SLOT "+(index+1));
+  writeBackupStore(store);
+  showToast("세이브 슬롯 "+(index+1)+"에 저장했습니다.");
+  showDataManager();
+}
+function applyDataSnapshot(snapshot,label="백업"){
+  if(!snapshot?.state)return;
+  if(!confirm(label+"을(를) 불러올까요? 현재 상태는 자동 안전 백업으로 보관됩니다."))return;
+  captureSafetySnapshot("복원 전 자동 백업");
+  state=normalizeState(snapshot.state);
+  prefs={
+    textSpeed:clamp(snapshot.prefs?.textSpeed,0,80,24),
+    autoDelay:clamp(snapshot.prefs?.autoDelay,250,3000,900),
+    stageClick:snapshot.prefs?.stageClick!==false
+  };
+  session=createSession();
+  pendingOrigin=state.profile.origin||"";
+  savePrefs();
+  saveState();
+  closeModal();
+  if(gameShell.hidden)renderStart();
+  else{updatePlayerBadge();renderPage()}
+  showToast(label+"을(를) 불러왔습니다.");
+}
+function loadBackupSlot(index){
+  const snap=readBackupStore().slots[index];
+  if(!snap){showToast("비어 있는 세이브 슬롯입니다.");return}
+  applyDataSnapshot(snap,"세이브 슬롯 "+(index+1));
+}
+function restoreSafetySnapshot(){
+  const snap=readBackupStore().safety;
+  if(!snap){showToast("복원할 자동 안전 백업이 없습니다.");return}
+  applyDataSnapshot(snap,"자동 안전 백업");
+}
+function exportData(){
+  const snap=makeDataSnapshot("JSON EXPORT");
+  const blob=new Blob([JSON.stringify(snap,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="hellaverse-studio-backup.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function importDataFile(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const raw=JSON.parse(String(reader.result||"{}"));
+      const snapshot=raw?.state?raw:{version:2,label:"IMPORTED",at:Date.now(),state:raw,prefs:{}};
+      applyDataSnapshot(snapshot,"가져온 JSON");
+    }catch{alert("백업 JSON 파일을 읽지 못했습니다.")}
+  };
+  reader.readAsText(file);
+}
+function resetPlayProgress(){
+  if(!confirm("대화 진행도, 호감도·감정, ASK 기록, 아이템 획득 기록을 초기화할까요? 편집한 캐릭터/이벤트/아이템 설정은 유지됩니다."))return;
+  captureSafetySnapshot("진행도 초기화 전 자동 백업");
+  state.playState=normalizePlayState({});
+  state.inventoryCounts={};
+  state.newItemIds=[];
+  state.itemHistory=[];
+  state.discoveredGiftReactionKeys=[];
+  state.giftInteractionCounts={};
+  state.askedAskIds=[];
+  state.unlockedAskIds=[];
+  state.interactionHistory=[];
+  state.discoveredThoughtIds=[];
+  state.gacha.history=[];
+  session=createSession();
+  saveState();
+  closeModal();
+  renderPage();
+  showToast("플레이 진행도를 초기화했습니다.");
+}
+function showDataManager(){
+  const store=readBackupStore();
+  const slots=store.slots.map((snap,i)=>
+    '<article class="save-slot"><div><small>SLOT '+(i+1)+'</small><strong>'+(snap?esc(snap.label):"EMPTY")+'</strong><span>'+esc(backupDate(snap))+'</span></div><div class="save-slot-actions"><button class="small-button" type="button" data-data-action="save-slot" data-slot="'+i+'">SAVE</button><button class="small-button" type="button" data-data-action="load-slot" data-slot="'+i+'" '+(!snap?"disabled":"")+'>LOAD</button></div></article>'
+  ).join("");
+  openModal("DATA & SAVE",
+    '<div class="data-manager"><p class="muted">플레이 데이터는 이 브라우저에 자동 저장됩니다. 중요한 변경 전에는 슬롯이나 JSON 백업을 함께 사용하세요.</p>'+
+    '<div class="save-slot-list">'+slots+'</div>'+
+    '<section class="safety-snapshot"><div><small>AUTO SAFETY</small><strong>'+(store.safety?esc(store.safety.label):"아직 없음")+'</strong><span>'+esc(backupDate(store.safety))+'</span></div><button class="small-button" type="button" data-data-action="restore-safety" '+(!store.safety?"disabled":"")+'>RESTORE</button></section>'+
+    '<div class="data-actions"><button class="ghost-button" type="button" data-data-action="export">EXPORT JSON</button><label class="ghost-button file-button">IMPORT JSON<input id="dataImportFile" type="file" accept="application/json,.json"></label><button class="danger-button" type="button" data-data-action="reset-progress">RESET PLAY PROGRESS</button></div></div>'
+  );
+}
 
 let state=readState();
 let prefs=readPrefs();
@@ -2251,6 +2363,7 @@ startForm.addEventListener("submit",event=>{
 });
 $("#changeProfileButton").addEventListener("click",renderStart);
 $("#brandButton").addEventListener("click",()=>setPage("home"));
+$("#dataButton").addEventListener("click",showDataManager);
 $("#editorButton").addEventListener("click",openEditor);
 $$(".nav-button").forEach(b=>b.addEventListener("click",()=>setPage(b.dataset.page)));
 $("#editorCheckButton").addEventListener("click",renderValidationReport);
@@ -2258,13 +2371,23 @@ $("#editorCancelButton").addEventListener("click",closeEditor);
 $("#editorSaveButton").addEventListener("click",saveEditor);
 $$(".editor-nav").forEach(b=>b.addEventListener("click",()=>{editorTab=b.dataset.editorTab;renderEditor()}));
 
-modalRoot.addEventListener("click",e=>{if(e.target.matches("[data-close-modal]"))closeModal()});
+modalRoot.addEventListener("click",e=>{
+  if(e.target.matches("[data-close-modal]")){closeModal();return}
+  const b=e.target.closest("[data-data-action]");if(!b)return;
+  const a=b.dataset.dataAction;
+  if(a==="save-slot")saveBackupSlot(Number(b.dataset.slot)||0);
+  else if(a==="load-slot")loadBackupSlot(Number(b.dataset.slot)||0);
+  else if(a==="restore-safety")restoreSafetySnapshot();
+  else if(a==="export")exportData();
+  else if(a==="reset-progress")resetPlayProgress();
+});
 modalRoot.addEventListener("input",e=>{
   if(e.target.id==="prefTextSpeed"){prefs.textSpeed=Number(e.target.value);savePrefs()}
   if(e.target.id==="prefAutoDelay"){prefs.autoDelay=Number(e.target.value);savePrefs()}
 });
 modalRoot.addEventListener("change",e=>{
   if(e.target.id==="prefStageClick"){prefs.stageClick=e.target.checked;savePrefs()}
+  if(e.target.id==="dataImportFile")importDataFile(e.target.files?.[0]);
 });
 
 pageRoot.addEventListener("click",e=>{

@@ -627,6 +627,7 @@ function startDialogue(characterId,eventId){
   const ch=getCharacter(characterId);if(!ch)return;
   selectedCharacterId=ch.id;
   roomMode="talk";
+  activeInteractionReaction=null;
   const ev=eventId?getEvent(eventId):eventsForCharacter(ch.id)[0];
   playback=ev?{
     characterId:ch.id,eventId:ev.id,
@@ -726,9 +727,10 @@ function renderRoom(){
     (roomMode==="talk"&&eventOptions.length?'<select id="roomEventSelect" style="width:auto;min-width:190px">'+eventOptions.map(e=>'<option value="'+esc(e.id)+'" '+(ev?.id===e.id?"selected":"")+'>'+esc(e.name)+'</option>').join("")+'</select>':'')+
     '<div class="room-actions"><button class="text-link" type="button" data-action="show-log">LOG</button><button class="text-link" type="button" data-action="show-affection">AFFECTION</button><button class="text-link" type="button" data-action="show-emotion">EMOTION</button></div></div>'+
     '<div class="room-stage"><div class="room-art">'+art+'</div><div id="roomDynamic"></div>'+
-    (roomMode==="talk"?'<div class="room-control-bar"><button type="button" data-action="toggle-auto" class="'+(autoMode?"active":"")+'">AUTO</button><button type="button" data-action="open-play-settings">SET</button></div>':'')+
+    (roomMode==="talk"&&!activeInteractionReaction?'<div class="room-control-bar"><button type="button" data-action="toggle-auto" class="'+(autoMode?"active":"")+'">AUTO</button><button type="button" data-action="open-play-settings">SET</button></div>':'')+
     '</div></section>';
-  if(roomMode==="ask")renderAskPanel();
+  if(activeInteractionReaction)renderInteractionReaction();
+  else if(roomMode==="ask")renderAskPanel();
   else if(roomMode==="inventory")renderInventoryPanel();
   else renderRoomBeat();
 }
@@ -781,26 +783,20 @@ function startAsk(id){
   const ch=getCharacter(ask.characterId);if(!ch||selectedCharacterId!==ch.id)return;
   const affection=Number(session.affection[ch.id]??ch.affectionStart);
   if(affection<ask.minAffection){showToast("아직 물어볼 수 없습니다.");return}
-  const ev=getEvent(ask.eventId);
-  if(!ev){showToast("ASK에 연결된 이벤트가 없습니다.");return}
-  startDialogue(ch.id,ev.id);
+  beginInteractionReaction("ask",ask,ask.eventId);
 }
 function renderInventoryPanel(){
   clearTyping();clearAuto();
   const dynamic=$("#roomDynamic");if(!dynamic)return;
   const ch=getCharacter(selectedCharacterId);if(!ch)return;
   const items=itemsForCharacter(ch.id).filter(i=>itemCount(i.id)>0);
-  dynamic.innerHTML='<section class="inventory-panel"><div class="inventory-character-head"><div><p class="page-kicker">INVENTORY</p><h2>'+esc(ch.name)+' ITEMS</h2></div><p>보유 아이템만 표시됩니다.</p></div><div class="inventory-list">'+
-    (items.length?items.map(i=>'<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+'</small></span><span class="count">×'+itemCount(i.id)+'</span></button>').join(""):'<div class="editor-note">이 캐릭터의 보유 아이템이 없습니다. 가챠에서 획득하면 여기에 나타납니다.</div>')+
+  dynamic.innerHTML='<section class="inventory-panel"><div class="inventory-character-head"><div><p class="page-kicker">INVENTORY</p><h2>'+esc(ch.name)+' ITEMS</h2></div><p>아이템을 건네면 캐릭터의 반응이 나옵니다.</p></div><div class="inventory-list">'+
+    (items.length?items.map(i=>'<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+'</small></span><span class="count">GIVE · ×'+itemCount(i.id)+'</span></button>').join(""):'<div class="editor-note">이 캐릭터에게 줄 수 있는 보유 아이템이 없습니다. 가챠에서 획득하면 여기에 나타납니다.</div>')+
     '</div></section>';
 }
 function useInventoryItem(id){
   const item=itemById(id);if(!item||item.characterId!==selectedCharacterId||itemCount(id)<=0)return;
-  if(item.inventoryEventId&&getEvent(item.inventoryEventId)){
-    startDialogue(selectedCharacterId,item.inventoryEventId);
-    return;
-  }
-  collectionDetail(id);
+  beginInteractionReaction("item",item,item.inventoryEventId);
 }
 function chName(id){return getCharacter(id)?.name||"UNKNOWN"}
 function advanceDialogue(fromAuto=false){
@@ -1135,12 +1131,14 @@ pageRoot.addEventListener("click",e=>{
   else if(a==="talk")startDialogue(selectedCharacterId);
   else if(a==="room-mode"){
     roomMode=b.dataset.mode||"talk";
+    activeInteractionReaction=null;
     autoMode=false;clearAuto();
     renderRoom();
   }
   else if(a==="ask-topic")startAsk(b.dataset.id);
   else if(a==="inventory-item")useInventoryItem(b.dataset.id);
-  else if(a==="back-home")setPage("home");
+  else if(a==="finish-interaction")finishInteractionReaction();
+  else if(a==="back-home"){activeInteractionReaction=null;setPage("home")}
   else if(a==="random-thought")randomThought();
   else if(a==="show-affection")showAffection();
   else if(a==="show-emotion")showEmotion();

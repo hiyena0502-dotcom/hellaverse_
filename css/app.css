@@ -1263,3 +1263,18 @@ details.advanced summary{cursor:pointer;color:var(--gold);font-size:.72rem}
 @media(max-width:640px){
   .interaction-effect-grid{grid-template-columns:1fr}
 }
+
+/* GACHA HISTORY */
+.info-card-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px
+}
+.info-card-head h3{margin:0}
+.history-clear{
+  min-height:28px;
+  padding:4px 8px;
+  font-size:.62rem
+}

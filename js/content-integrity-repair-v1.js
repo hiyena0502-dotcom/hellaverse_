@@ -54,7 +54,7 @@ const push=(arr,type,entity,id,detail)=>{if(arr.length<120)arr.push({type,entity
 
 function rarity(v){
  let r=clean(v||'COMMON').toUpperCase();
- if(r==='MYSTIC'||r==='SECRET')r='MISTIC';
+ if(r==='MYSTIC')r='MISTIC';
  if(r==='LEGEND')r='LEGENDARY';
  return ALLOWED_RARITY.has(r)?r:'COMMON';
 }
@@ -125,16 +125,16 @@ function run(){
   for(const item of s.collectionItems){
    const id=String(item?.id||''),name=clean(item?.name||item?.title),current=String(item?.characterId||'');
    if(id){if(itemIds.has(id))push(warnings,'DUPLICATE_ITEM_ID','collection',id,'같은 collection item id가 둘 이상 있습니다.');itemIds.add(id)}
-   const byId=ownerFromCollectionId(id,valid),byName=ownerFromExplicitName(name,valid),implied=byId||byName;
-   if(implied&&current!==implied){
-    item.characterId=implied;changed=true;push(fixed,byId?'ITEM_OWNER_FROM_ID':'ITEM_OWNER_FROM_NAME','collection',id||name,current+' → '+implied);
+   const byId=ownerFromCollectionId(id,valid);
+   if(byId&&current!==byId){
+    item.characterId=byId;changed=true;push(fixed,'ITEM_OWNER_FROM_ID','collection',id||name,current+' → '+byId);
    }else if(current&&!valid.has(current))push(warnings,'INVALID_ITEM_CHARACTER','collection',id||name,'존재하지 않는 characterId: '+current);
 
+   const nameCue=ownerFromExplicitName(name,valid);
+   if(nameCue&&current&&nameCue!==current)push(warnings,'ITEM_NAME_MENTIONS_OTHER_CHARACTER','collection',id||name,'이름은 '+nameCue+'를 가리키지만 collection owner는 '+current+'입니다. 선물/관련 물건일 수 있어 자동 수정하지 않음.');
+
    if(item.dialogueSourceCharacterId&&!valid.has(String(item.dialogueSourceCharacterId))){
-    const owner=String(item.characterId||'');
-    if(valid.has(owner)){
-     const before=String(item.dialogueSourceCharacterId);item.dialogueSourceCharacterId=owner;changed=true;push(fixed,'ITEM_DIALOGUE_SOURCE','collection',id||name,before+' → '+owner);
-    }else push(warnings,'INVALID_ITEM_DIALOGUE_SOURCE','collection',id||name,String(item.dialogueSourceCharacterId));
+    push(warnings,'INVALID_ITEM_DIALOGUE_SOURCE','collection',id||name,'존재하지 않는 dialogueSourceCharacterId: '+String(item.dialogueSourceCharacterId));
    }
 
    const rr=rarity(item.rarity);

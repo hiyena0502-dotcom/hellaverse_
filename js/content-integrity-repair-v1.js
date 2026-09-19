@@ -53,10 +53,10 @@ const write=s=>{const value=JSON.stringify(s);localStorage.setItem(K,value);try{
 const push=(arr,type,entity,id,detail)=>{if(arr.length<120)arr.push({type,entity,id:String(id||''),detail})};
 
 function rarity(v){
- let r=clean(v||'COMMON').toUpperCase();
+ let r=clean(v||'').toUpperCase();
  if(r==='MYSTIC')r='MISTIC';
  if(r==='LEGEND')r='LEGENDARY';
- return ALLOWED_RARITY.has(r)?r:'COMMON';
+ return r;
 }
 function ids(state){
  return new Set((Array.isArray(state.characters)?state.characters:[]).map(c=>String(c?.id||'')).filter(Boolean));
@@ -137,9 +137,11 @@ function run(){
     push(warnings,'INVALID_ITEM_DIALOGUE_SOURCE','collection',id||name,'존재하지 않는 dialogueSourceCharacterId: '+String(item.dialogueSourceCharacterId));
    }
 
-   const rr=rarity(item.rarity);
-   if(clean(item.rarity).toUpperCase()!==rr){
+   const rr=rarity(item.rarity),rawRarity=clean(item.rarity).toUpperCase();
+   if((rawRarity==='MYSTIC'||rawRarity==='LEGEND')&&rr!==rawRarity){
     const before=String(item.rarity||'');item.rarity=rr;changed=true;push(fixed,'RARITY_NORMALIZED','collection',id||name,before+' → '+rr);
+   }else if(rawRarity&&!ALLOWED_RARITY.has(rr)){
+    push(warnings,'UNKNOWN_RARITY','collection',id||name,'알 수 없는 rarity: '+rawRarity+' (자동 수정하지 않음)');
    }
    const desc=clean(item.desc||item.description||item.memo||item.body);
    if(!clean(item.gachaDescription)&&desc){

@@ -1059,16 +1059,49 @@ function getSelectedOwner(kind,element){
 
 
 function renderAskEditor(){
-  editorBody.innerHTML=editorHead("ASK","ASK 설정","ROOM의 ASK 목록을 관리합니다. 각 질문은 기존 대화 이벤트 하나에 연결됩니다.",'<button class="small-button" data-action="new-ask">+ 질문</button>')+
+  editorBody.innerHTML=editorHead("ASK","ASK 설정","질문을 했을 때의 호감도·감정·직접 반응을 설정합니다. 필요하면 그 뒤에 기존 대화 이벤트를 이어갈 수 있습니다.",'<button class="small-button" data-action="new-ask">+ 질문</button>')+
     '<div class="ask-editor-grid">'+
-    (editorDraft.asks.length?editorDraft.asks.map(a=>'<div class="ask-row" data-ask-id="'+esc(a.id)+'"><select data-ask-bind="characterId">'+charOptions(a.characterId,"캐릭터 선택")+'</select><input data-ask-bind="label" value="'+esc(a.label)+'" placeholder="질문 문구"><select data-ask-bind="eventId">'+eventOptions(a.eventId,"연결 이벤트 선택",editorDraft)+'</select><label class="field"><span>최소 호감도</span><input type="number" min="0" max="100" data-ask-bind="minAffection" value="'+a.minAffection+'"></label><span><label class="checkline"><input type="checkbox" data-ask-bind="enabled" '+(a.enabled?"checked":"")+'> 사용</label><button class="danger-button" data-action="delete-ask">×</button></span></div>').join(""):'<div class="editor-note">등록된 ASK가 없습니다. 질문을 추가하고 대화 이벤트에 연결하세요.</div>')+
+    (editorDraft.asks.length?editorDraft.asks.map(a=>'<div class="ask-row interaction-editor-row" data-ask-id="'+esc(a.id)+'">'+
+      '<select data-ask-bind="characterId">'+charOptions(a.characterId,"캐릭터 선택")+'</select>'+
+      '<input data-ask-bind="label" value="'+esc(a.label)+'" placeholder="질문 문구">'+
+      '<label class="field"><span>최소 호감도</span><input type="number" min="0" max="100" data-ask-bind="minAffection" value="'+a.minAffection+'"></label>'+
+      '<label class="checkline"><input type="checkbox" data-ask-bind="enabled" '+(a.enabled?"checked":"")+'> 사용</label>'+
+      '<button class="danger-button" data-action="delete-ask">×</button>'+
+      '<div class="full-row interaction-response-editor">'+
+        '<div class="interaction-effect-grid">'+
+          '<label class="field"><span>호감도 변화</span><input type="number" min="-100" max="100" data-ask-bind="affectionDelta" value="'+a.affectionDelta+'"></label>'+
+          '<label class="field"><span>감정 변화</span><select data-ask-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(a.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
+          '<label class="field"><span>감정 강도</span><input type="number" min="0" max="100" data-ask-bind="emotionIntensity" value="'+a.emotionIntensity+'"></label>'+
+          '<label class="field"><span>반응 형식</span><select data-ask-bind="reactionType"><option value="dialogue" '+(a.reactionType==="dialogue"?"selected":"")+'>캐릭터 대사</option><option value="narration" '+(a.reactionType==="narration"?"selected":"")+'>나레이션</option></select></label>'+
+        '</div>'+
+        '<label class="field"><span>직접 반응 문장</span><textarea data-ask-bind="reactionText" placeholder="질문 직후 나올 대사 또는 나레이션">'+esc(a.reactionText)+'</textarea></label>'+
+        '<label class="field"><span>반응 뒤 후속 이벤트 (선택)</span><select data-ask-bind="eventId">'+eventOptions(a.eventId,"후속 이벤트 없음",editorDraft)+'</select></label>'+
+      '</div>'+
+    '</div>').join(""):'<div class="editor-note">등록된 ASK가 없습니다. 질문을 추가한 뒤 반응을 설정하세요.</div>')+
     '</div>';
 }
 function renderItemEditor(){
-  editorBody.innerHTML=editorHead("ITEM","아이템 설정","캐릭터마다 여러 아이템을 만들 수 있습니다. 가챠에서 획득하면 INVENTORY와 COLLECTION에 기록됩니다.",'<button class="small-button" data-action="new-item">+ 아이템</button>')+
+  editorBody.innerHTML=editorHead("ITEM","아이템 설정","아이템을 캐릭터에게 줬을 때의 호감도·감정·직접 반응을 설정합니다. 필요하면 후속 대화 이벤트까지 이어집니다.",'<button class="small-button" data-action="new-item">+ 아이템</button>')+
     '<div class="item-editor-grid">'+
-    (editorDraft.items.length?editorDraft.items.map(i=>'<div class="item-row" data-item-id="'+esc(i.id)+'"><select data-item-bind="characterId">'+charOptions(i.characterId,"캐릭터 선택")+'</select><input data-item-bind="name" value="'+esc(i.name)+'" placeholder="아이템 이름"><select data-item-bind="rarity">'+RARITIES.map(r=>'<option '+(i.rarity===r?"selected":"")+'>'+r+'</option>').join("")+'</select><input data-item-bind="category" value="'+esc(i.category)+'" placeholder="카테고리"><input type="number" min=".01" step=".01" data-item-bind="weight" value="'+i.weight+'"><button class="danger-button" data-action="delete-item">×</button>'+
-      '<div class="full-row form-grid"><label class="field"><span>INVENTORY 선택 시 이벤트</span><select data-item-bind="inventoryEventId">'+eventOptions(i.inventoryEventId,"이벤트 없음",editorDraft)+'</select></label><label class="checkline"><input type="checkbox" data-item-bind="gachaEnabled" '+(i.gachaEnabled?"checked":"")+'> 가챠 포함</label><label class="checkline"><input type="checkbox" data-item-bind="enabled" '+(i.enabled?"checked":"")+'> 사용</label><label class="field full"><span>설명</span><textarea data-item-bind="description">'+esc(i.description)+'</textarea></label></div>'+
+    (editorDraft.items.length?editorDraft.items.map(i=>'<div class="item-row interaction-editor-row" data-item-id="'+esc(i.id)+'">'+
+      '<select data-item-bind="characterId">'+charOptions(i.characterId,"캐릭터 선택")+'</select>'+
+      '<input data-item-bind="name" value="'+esc(i.name)+'" placeholder="아이템 이름">'+
+      '<select data-item-bind="rarity">'+RARITIES.map(r=>'<option '+(i.rarity===r?"selected":"")+'>'+r+'</option>').join("")+'</select>'+
+      '<input data-item-bind="category" value="'+esc(i.category)+'" placeholder="카테고리">'+
+      '<input type="number" min=".01" step=".01" data-item-bind="weight" value="'+i.weight+'">'+
+      '<button class="danger-button" data-action="delete-item">×</button>'+
+      '<div class="full-row interaction-response-editor">'+
+        '<div class="interaction-effect-grid">'+
+          '<label class="field"><span>호감도 변화</span><input type="number" min="-100" max="100" data-item-bind="affectionDelta" value="'+i.affectionDelta+'"></label>'+
+          '<label class="field"><span>감정 변화</span><select data-item-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(i.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
+          '<label class="field"><span>감정 강도</span><input type="number" min="0" max="100" data-item-bind="emotionIntensity" value="'+i.emotionIntensity+'"></label>'+
+          '<label class="field"><span>반응 형식</span><select data-item-bind="reactionType"><option value="dialogue" '+(i.reactionType==="dialogue"?"selected":"")+'>캐릭터 대사</option><option value="narration" '+(i.reactionType==="narration"?"selected":"")+'>나레이션</option></select></label>'+
+        '</div>'+
+        '<label class="field full"><span>아이템을 줬을 때 직접 반응</span><textarea data-item-bind="reactionText" placeholder="캐릭터 대사 또는 나레이션">'+esc(i.reactionText)+'</textarea></label>'+
+        '<label class="field"><span>반응 뒤 후속 이벤트 (선택)</span><select data-item-bind="inventoryEventId">'+eventOptions(i.inventoryEventId,"후속 이벤트 없음",editorDraft)+'</select></label>'+
+        '<div class="inline-grid"><label class="checkline"><input type="checkbox" data-item-bind="gachaEnabled" '+(i.gachaEnabled?"checked":"")+'> 가챠 포함</label><label class="checkline"><input type="checkbox" data-item-bind="enabled" '+(i.enabled?"checked":"")+'> 사용</label></div>'+
+        '<label class="field full"><span>아이템 설명</span><textarea data-item-bind="description">'+esc(i.description)+'</textarea></label>'+
+      '</div>'+
     '</div>').join(""):'<div class="editor-note">아이템이 없습니다.</div>')+
     '</div>';
 }
@@ -1354,7 +1387,10 @@ function handleEditorField(e){
   if(ar&&t.dataset.askBind){
     const ask=editorDraft.asks.find(x=>x.id===ar.dataset.askId);if(!ask)return;
     const k=t.dataset.askBind;
-    ask[k]=t.type==="checkbox"?t.checked:(k==="minAffection"?clamp(t.value,0,100,0):t.value);
+    if(t.type==="checkbox")ask[k]=t.checked;
+    else if(k==="minAffection"||k==="emotionIntensity")ask[k]=clamp(t.value,0,100,0);
+    else if(k==="affectionDelta")ask[k]=clamp(t.value,-100,100,0);
+    else ask[k]=t.value;
     return;
   }
   const tr=t.closest("[data-thought-id]");
@@ -1366,7 +1402,11 @@ function handleEditorField(e){
   if(ir&&t.dataset.itemBind){
     const item=editorDraft.items.find(x=>x.id===ir.dataset.itemId);if(!item)return;
     const k=t.dataset.itemBind;
-    item[k]=t.type==="checkbox"?t.checked:(k==="weight"?Math.max(.01,Number(t.value)||1):t.value);
+    if(t.type==="checkbox")item[k]=t.checked;
+    else if(k==="weight")item[k]=Math.max(.01,Number(t.value)||1);
+    else if(k==="emotionIntensity")item[k]=clamp(t.value,0,100,0);
+    else if(k==="affectionDelta")item[k]=clamp(t.value,-100,100,0);
+    else item[k]=t.value;
     return;
   }
   if(t.dataset.collectionSetting){

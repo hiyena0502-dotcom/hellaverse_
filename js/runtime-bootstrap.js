@@ -8,7 +8,7 @@ async function loadModule(src){try{await import(absolute(src));return true}catch
 function loadClassic(src){return new Promise(resolve=>{const script=document.createElement('script');script.src=src;script.async=false;script.onload=()=>resolve(true);script.onerror=(event)=>{console.error(`Failed to load script: ${src}`,event);resolve(false)};document.head.appendChild(script)})}
 
 async function loadStableCore(){
-  const src='js/hv-stable.js?v=63';
+  const src='js/hv-stable.js?v=64';
   try{
     const response=await fetch(absolute(src),{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);
     let source=await response.text();
@@ -92,7 +92,7 @@ await loadClassic('js/dialogue-multistage-upgrader-v2.js?v=6');
 await loadClassic('js/dialogue-player-line-normalizer.js?v=1');
 await loadClassic('js/event-progression-pack-v1.js?v=1');
 
-await loadClassic('js/dialogue-continuity-controller-v6.js?v=5');
+await loadClassic('js/dialogue-continuity-controller-v6.js?v=6');
 await loadClassic('js/room-exit-transition.js?v=4');
 await loadStableCore();
 await loadClassic('js/event-progression-runtime-v1.js?v=2');

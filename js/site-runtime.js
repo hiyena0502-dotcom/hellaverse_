@@ -289,9 +289,11 @@ function normalizeState(raw){
     variables:Array.isArray(s.variables)?s.variables.map(normalizeVariable):[],
     asks:Array.isArray(s.asks)?s.asks.map(normalizeAsk):[],
     items,
-    itemCategories:Array.isArray(s.itemCategories)&&s.itemCategories.length
-      ? [...new Set(s.itemCategories.map(String).map(x=>x.trim()).filter(Boolean))]
-      : d.itemCategories,
+    itemCategories:[...new Set([
+      ...(Array.isArray(s.itemCategories)&&s.itemCategories.length?s.itemCategories:d.itemCategories),
+      ...items.map(i=>i.category),
+      "기타"
+    ].map(String).map(x=>x.trim()).filter(Boolean))],
     inventoryCounts:Object.fromEntries(Object.entries(inventoryCounts).map(([id,n])=>[id,Math.max(0,Number(n)||0)])),
     newItemIds:Array.isArray(s.newItemIds)?[...new Set(s.newItemIds.map(String))]:[],
     itemHistory:Array.isArray(s.itemHistory)?s.itemHistory.slice(-500):[],
@@ -1609,12 +1611,29 @@ function renderThoughtEditor(){
 }
 function renderCollectionEditor(){
   const chars=editorDraft.characters;
-  editorBody.innerHTML=editorHead("COLLECTION","컬렉션 설정","컬렉션은 아이템 정의가 아니라, 가챠로 얻은 캐릭터별 아이템의 아카이브입니다.")+
-    '<div class="settings-grid"><section class="settings-card"><h3>DISPLAY</h3><label class="checkline"><input type="checkbox" data-collection-setting="showLocked" '+(editorDraft.collectionSettings.showLocked?"checked":"")+'> 미획득 아이템도 LOCKED로 표시</label><label class="checkline"><input type="checkbox" data-collection-setting="showOwnedCount" '+(editorDraft.collectionSettings.showOwnedCount?"checked":"")+'> 보유 개수 표시</label></section>'+
-    '<section class="settings-card"><h3>SUMMARY</h3><p class="muted">아이템 추가·희귀도·가챠 여부는 “아이템 설정”에서 관리합니다.</p><p>'+editorDraft.items.length+' ITEMS · '+Object.values(editorDraft.inventoryCounts).filter(n=>Number(n)>0).length+' DISCOVERED</p></section></div>'+
-    (chars.length?chars.map(ch=>'<section class="collection-preview-group"><h3>'+esc(ch.name)+'</h3><div class="collection-preview-items">'+
-      (editorDraft.items.filter(i=>i.collectionCharacterId===ch.id).length?editorDraft.items.filter(i=>i.collectionCharacterId===ch.id).map(i=>'<div class="collection-preview-item"><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+'</small><div>현재 보유 '+itemCount(i.id,editorDraft)+'</div></div>').join(""):'<div class="editor-note">이 캐릭터의 아이템이 없습니다.</div>')+
-      '</div></section>').join(""):'<div class="editor-note">캐릭터가 없습니다.</div>');
+  const owned=editorDraft.items.filter(i=>itemCount(i.id,editorDraft)>0).length;
+  const fresh=editorDraft.newItemIds.filter(id=>itemCount(id,editorDraft)>0).length;
+  editorBody.innerHTML=editorHead("COLLECTION","컬렉션 설정","컬렉션은 아이템 정의가 아니라 획득 상태를 보여주는 캐릭터별 아카이브입니다.")+
+    '<div class="settings-grid">'+
+      '<section class="settings-card"><h3>DISPLAY</h3>'+
+        '<label class="checkline"><input type="checkbox" data-collection-setting="showLocked" '+(editorDraft.collectionSettings.showLocked?"checked":"")+'> 미획득 아이템도 LOCKED로 표시</label>'+
+        '<label class="checkline"><input type="checkbox" data-collection-setting="showOwnedCount" '+(editorDraft.collectionSettings.showOwnedCount?"checked":"")+'> 보유 개수 표시</label>'+
+        '<label class="field"><span>기본 보기</span><select data-collection-setting="view"><option value="grouped" '+(editorDraft.collectionSettings.view==="grouped"?"selected":"")+'>캐릭터별 묶기</option><option value="all" '+(editorDraft.collectionSettings.view==="all"?"selected":"")+'>전체 카드</option></select></label>'+
+        '<label class="field"><span>기본 정렬</span><select data-collection-setting="sort"><option value="recent" '+(editorDraft.collectionSettings.sort==="recent"?"selected":"")+'>최근 획득</option><option value="rarity" '+(editorDraft.collectionSettings.sort==="rarity"?"selected":"")+'>희귀도</option><option value="name" '+(editorDraft.collectionSettings.sort==="name"?"selected":"")+'>이름</option><option value="count" '+(editorDraft.collectionSettings.sort==="count"?"selected":"")+'>보유 수</option></select></label>'+
+      '</section>'+
+      '<section class="settings-card"><h3>SUMMARY</h3><p class="muted">아이템 정의·카테고리·선물 반응은 “아이템 설정”에서 관리합니다.</p>'+
+        '<div class="collection-editor-summary"><b>'+editorDraft.items.length+'</b><span>TOTAL</span><b>'+owned+'</b><span>OWNED</span><b>'+fresh+'</b><span>NEW</span></div>'+
+      '</section>'+
+    '</div>'+
+    (chars.length?chars.map(ch=>{
+      const items=editorDraft.items.filter(i=>i.collectionCharacterId===ch.id);
+      return '<section class="collection-preview-group"><h3>'+esc(ch.name)+'</h3><div class="collection-preview-items">'+
+        (items.length?items.map(i=>{
+          const count=itemCount(i.id,editorDraft),isNew=editorDraft.newItemIds.includes(i.id);
+          return '<div class="collection-preview-item '+(isNew?"is-new":"")+'"><b>'+esc(i.name)+(isNew?' · NEW':'')+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+' · '+esc(itemSourceLabel(i,editorDraft))+'</small><div>'+esc(i.acquisitionMode.toUpperCase())+' · 현재 보유 '+count+' · '+new Set(i.reactions.map(r=>r.characterId).filter(Boolean)).size+' REACTIONS</div></div>';
+        }).join(""):'<div class="editor-note">이 캐릭터의 아이템이 없습니다.</div>')+
+      '</div></section>';
+    }).join(""):'<div class="editor-note">캐릭터가 없습니다.</div>');
 }
 
 /* APP EVENTS */
@@ -1878,7 +1897,25 @@ editorBody.addEventListener("click",e=>{
   if(a==="delete-item"){
     const row=b.closest("[data-item-id]");const id=row?.dataset.itemId;
     editorDraft.items=editorDraft.items.filter(i=>i.id!==id);
-    if(id)delete editorDraft.inventoryCounts[id];
+    if(id){
+      delete editorDraft.inventoryCounts[id];
+      editorDraft.newItemIds=editorDraft.newItemIds.filter(x=>x!==id);
+      editorDraft.itemHistory=editorDraft.itemHistory.filter(h=>h.itemId!==id);
+      const cleanEntries=entries=>{
+        for(const entry of entries||[]){
+          entry.itemEffects=(entry.itemEffects||[]).filter(fx=>fx.itemId!==id);
+          if(entry.type==="choice"){
+            for(const option of entry.options||[]){
+              option.itemEffects=(option.itemEffects||[]).filter(fx=>fx.itemId!==id);
+              cleanEntries(option.entries);
+            }
+          }
+        }
+      };
+      editorDraft.events.forEach(ev=>cleanEntries(ev.entries));
+      editorDraft.asks.forEach(ask=>cleanEntries(ask.entries));
+      editorDraft.items.forEach(item=>item.reactions.forEach(r=>cleanEntries(r.entries)));
+    }
     renderItemEditor();return;
   }
   if(a==="new-thought"){const t=normalizeThought({id:uid("thought"),category:editorDraft.thoughtSettings.categories[0]||"일상"});editorDraft.thoughts.push(t);renderThoughtEditor();return}
@@ -2042,7 +2079,8 @@ function handleEditorField(e){
     return;
   }
   if(t.dataset.collectionSetting){
-    editorDraft.collectionSettings[t.dataset.collectionSetting]=t.checked;
+    const key=t.dataset.collectionSetting;
+    editorDraft.collectionSettings[key]=t.type==="checkbox"?t.checked:t.value;
     return;
   }
 }

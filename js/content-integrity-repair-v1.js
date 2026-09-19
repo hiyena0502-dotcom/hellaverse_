@@ -81,8 +81,7 @@ function ownerFromExplicitName(name,valid){
   for(const alias of names){
    const a=escRe(alias);
    const p1=new RegExp('^'+a+'(?:가|이)\\s*(?:보낸|준|만든|쓰던|남긴|전해준|골라준|주워온|적은|쓴)(?:\\s|$)','i');
-   const p2=new RegExp('^'+a+'의\\s+','i');
-   if(p1.test(n)||p2.test(n))return cid;
+   if(p1.test(n))return cid;
   }
  }
  return'';

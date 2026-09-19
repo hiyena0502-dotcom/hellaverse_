@@ -272,6 +272,7 @@ let collectionFilter="ALL";
 let pendingOrigin=state.profile.origin || "";
 let roomMode="talk";
 let activeInteractionReaction=null;
+let interactionContext=null;
 let editorDraft=null;
 let editorTab="dialogue";
 let dialogueSubtab="characters";
@@ -427,11 +428,19 @@ function applyInteractionEffects(source){
 }
 function beginInteractionReaction(kind,source,followEventId=""){
   const ch=getCharacter(source.characterId);if(!ch)return;
+  if(!interactionContext){
+    interactionContext={
+      playback:playback ? clone(playback) : null,
+      selectedCharacterId,
+      typing:{token:typing.token||"",full:typing.full||"",index:(typing.full||"").length,done:true,timer:null},
+      followupActive:false
+    };
+  }
+  clearTyping();clearAuto();autoMode=false;
   applyInteractionEffects(source);
+  roomMode="talk";
   activeInteractionReaction={
-    kind,
-    sourceId:source.id,
-    characterId:ch.id,
+    kind,sourceId:source.id,characterId:ch.id,
     type:source.reactionType==="narration"?"narration":"dialogue",
     text:String(source.reactionText||""),
     followEventId:followEventId||"",
@@ -451,15 +460,56 @@ function renderInteractionReaction(){
   const ch=getCharacter(activeInteractionReaction.characterId);
   const speaker=activeInteractionReaction.type==="narration"?"NARRATION":(ch?.name||"UNKNOWN");
   const text=activeInteractionReaction.text || (activeInteractionReaction.type==="narration"?"아무 일도 일어나지 않았다.":"...");
-  dynamic.innerHTML='<div class="dialogue-box interaction-reaction"><p class="speaker">'+esc(speaker)+'</p><p class="dialogue-text">'+esc(text)+'</p><div class="dialogue-meta"><span>'+esc(activeInteractionReaction.kind.toUpperCase())+' · '+esc(activeInteractionReaction.label)+'</span><button type="button" data-action="finish-interaction">NEXT</button></div></div>';
+  dynamic.innerHTML='<div class="dialogue-box interaction-reaction"><p class="speaker">'+esc(speaker)+'</p><p class="dialogue-text">'+esc(text)+'</p><div class="dialogue-meta"><span>INTERRUPT · '+esc(activeInteractionReaction.kind.toUpperCase())+' · '+esc(activeInteractionReaction.label)+'</span><button type="button" data-action="finish-interaction">NEXT</button></div></div>';
 }
 function finishInteractionReaction(){
   const reaction=activeInteractionReaction;if(!reaction)return;
   activeInteractionReaction=null;
   if(reaction.followEventId&&getEvent(reaction.followEventId)){
-    startDialogue(reaction.characterId,reaction.followEventId);return;
+    startInteractionFollowEvent(reaction.followEventId);
+    return;
   }
+  restoreInterruptedDialogue();
   renderRoom();
+}
+function startInteractionFollowEvent(eventId){
+  const ev=getEvent(eventId);
+  if(!ev){restoreInterruptedDialogue();renderRoom();return}
+  interactionContext ||= {
+    playback:playback ? clone(playback) : null,
+    selectedCharacterId,
+    typing:{token:"",full:"",index:0,done:true,timer:null},
+    followupActive:false
+  };
+  interactionContext.followupActive=true;
+  selectedCharacterId=ev.characterId||selectedCharacterId;
+  roomMode="talk";
+  playback={
+    characterId:selectedCharacterId,
+    eventId:ev.id,
+    frames:[{sourceType:"event",sourceId:ev.id,index:0,label:"상호작용",exitMode:"continue",targetEventId:""}],
+    ended:false
+  };
+  typing={token:"",full:"",index:0,done:true,timer:null};
+  renderRoom();
+}
+function restoreInterruptedDialogue(){
+  if(!interactionContext)return false;
+  clearTyping();clearAuto();
+  const saved=interactionContext;
+  interactionContext=null;
+  activeInteractionReaction=null;
+  selectedCharacterId=saved.selectedCharacterId||selectedCharacterId;
+  playback=saved.playback ? clone(saved.playback) : null;
+  typing={
+    token:saved.typing?.token||"",
+    full:saved.typing?.full||"",
+    index:(saved.typing?.full||"").length,
+    done:true,
+    timer:null
+  };
+  roomMode="talk";
+  return true;
 }
 function resetEventEmotion(event){
   if(event?.emotionExitMode!=="reset")return;
@@ -628,6 +678,7 @@ function startDialogue(characterId,eventId){
   selectedCharacterId=ch.id;
   roomMode="talk";
   activeInteractionReaction=null;
+  interactionContext=null;
   const ev=eventId?getEvent(eventId):eventsForCharacter(ch.id)[0];
   playback=ev?{
     characterId:ch.id,eventId:ev.id,
@@ -667,7 +718,13 @@ function jumpEvent(id){
 function finishEvent(){
   const ev=currentEvent();
   if(ev?.nextEventId&&getEvent(ev.nextEventId)){jumpEvent(ev.nextEventId);return true}
-  resetEventEmotion(ev);if(playback)playback.ended=true;return false;
+  resetEventEmotion(ev);
+  if(interactionContext?.followupActive){
+    restoreInterruptedDialogue();
+    return true;
+  }
+  if(playback)playback.ended=true;
+  return false;
 }
 function settlePlayback(){
   if(!playback||playback.ended)return false;

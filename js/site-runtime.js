@@ -420,11 +420,54 @@ function eventsForCharacter(charId, source=state){return source.events.filter(e=
 function variableById(id,source=state){return source.variables.find(v=>v.id===id)||null}
 function itemById(id,source=state){return source.items.find(i=>i.id===id)||null}
 function itemCount(id,source=state){return Math.max(0,Number(source.inventoryCounts?.[id])||0)}
-function addItem(id,count=1,source=state){
-  const item=itemById(id,source);if(!item)return 0;
+function itemLastAcquiredAt(id,source=state){
+  for(let i=source.itemHistory.length-1;i>=0;i--){
+    if(source.itemHistory[i]?.itemId===id)return Number(source.itemHistory[i].at)||0;
+  }
+  return 0;
+}
+function markItemSeen(id,source=state){
+  source.newItemIds=(source.newItemIds||[]).filter(x=>x!==id);
+}
+function showItemAcquired(item,count,sourceType,isNew){
+  const host=document.createElement("div");
+  host.className="item-acquire-toast";
+  host.innerHTML='<span class="item-acquire-kicker">'+esc(isNew?"NEW ITEM":"ITEM ACQUIRED")+'</span>'+
+    '<strong>'+esc(item.name)+'</strong>'+
+    '<small>'+esc(item.rarity)+' · '+esc(sourceType)+' · ×'+count+'</small>';
+  document.body.appendChild(host);
+  setTimeout(()=>host.classList.add("show"),20);
+  setTimeout(()=>{host.classList.remove("show");setTimeout(()=>host.remove(),250)},2200);
+}
+function acquireItem(id,count=1,sourceType="BASIC",source=state,{notify=true}={}){
+  const item=itemById(id,source);if(!item)return{count:itemCount(id,source),gained:0,isNew:false};
   source.inventoryCounts ||= {};
-  source.inventoryCounts[id]=itemCount(id,source)+Math.max(0,Number(count)||0);
-  return source.inventoryCounts[id];
+  source.newItemIds ||= [];
+  source.itemHistory ||= [];
+  const before=itemCount(id,source);
+  let gain=Math.max(0,Number(count)||0);
+  if(item.acquisitionMode==="unique"){
+    gain=before>0?0:Math.min(1,gain);
+  }
+  const after=before+gain;
+  source.inventoryCounts[id]=after;
+  const isNew=before===0&&gain>0;
+  if(isNew&&!source.newItemIds.includes(id))source.newItemIds.push(id);
+  if(gain>0){
+    source.itemHistory.push({
+      id:uid("item-history"),itemId:id,source:String(sourceType||"BASIC").toUpperCase(),
+      amount:gain,at:Date.now()
+    });
+    source.itemHistory=source.itemHistory.slice(-500);
+    if(source===state){
+      saveState();
+      if(notify)showItemAcquired(item,after,String(sourceType||"BASIC").toUpperCase(),isNew);
+    }
+  }
+  return{count:after,gained:gain,isNew};
+}
+function addItem(id,count=1,source=state){
+  return acquireItem(id,count,"BASIC",source,{notify:false}).count;
 }
 function asksForCharacter(charId,source=state){
   return source.asks.filter(a=>a.characterId===charId&&a.enabled);
@@ -432,6 +475,40 @@ function asksForCharacter(charId,source=state){
 function itemsForCharacter(charId,source=state){
   return source.items.filter(i=>i.enabled&&(i.collectionCharacterId===charId||i.reactions.some(r=>r.characterId===charId)));
 }
+function flowHasItemGrant(entries,itemId){
+  for(const entry of entries||[]){
+    if((entry.itemEffects||[]).some(f=>f.itemId===itemId))return true;
+    if(entry.type==="choice"){
+      for(const option of entry.options||[]){
+        if((option.itemEffects||[]).some(f=>f.itemId===itemId))return true;
+        if(flowHasItemGrant(option.entries,itemId))return true;
+      }
+    }
+  }
+  return false;
+}
+function itemSourceTypes(item,source=state){
+  const sources=[];
+  if(item.gachaEnabled)sources.push("GACHA");
+  let dialogue=false;
+  for(const event of source.events||[])if(flowHasItemGrant(event.entries,item.id)){dialogue=true;break}
+  if(!dialogue)for(const ask of source.asks||[])if(flowHasItemGrant(ask.entries,item.id)){dialogue=true;break}
+  if(!dialogue){
+    for(const it of source.items||[]){
+      for(const reaction of it.reactions||[]){
+        if(flowHasItemGrant(reaction.entries,item.id)){dialogue=true;break}
+      }
+      if(dialogue)break;
+    }
+  }
+  if(dialogue)sources.push("DIALOGUE");
+  return sources.length?sources:["BASIC"];
+}
+function itemSourceLabel(item,source=state){
+  const s=itemSourceTypes(item,source);
+  return s.includes("GACHA")&&s.includes("DIALOGUE")?"BOTH":s[0];
+}
+
 
 function conditionPasses(c){
   if(!c?.variableId)return true;
@@ -490,7 +567,18 @@ function applyEmotionEffects(arr){
   });
   if(messages.length)showToast(messages.join(" · "));
 }
-function applyOwnerEffects(o){applyEffects(o.effects);applyAffectionEffects(o.affectionEffects);applyEmotionEffects(o.emotionEffects)}
+function applyItemEffects(arr){
+  normalizeItemEffects(arr).forEach(f=>{
+    if(!f.itemId)return;
+    acquireItem(f.itemId,f.amount,"DIALOGUE",state,{notify:true});
+  });
+}
+function applyOwnerEffects(o){
+  applyEffects(o.effects);
+  applyItemEffects(o.itemEffects);
+  applyAffectionEffects(o.affectionEffects);
+  applyEmotionEffects(o.emotionEffects);
+}
 function applyInteractionEffects(source){
   const ch=getCharacter(source.characterId);if(!ch)return;
   const messages=[];
@@ -619,11 +707,13 @@ function makeOption(label){
 function regenerateIds(entry){
   entry.id=uid("entry");
   entry.effects=normalizeEffects(entry.effects).map(x=>({...x,id:uid("fx")}));
+  entry.itemEffects=normalizeItemEffects(entry.itemEffects).map(x=>({...x,id:uid("itemfx")}));
   entry.affectionEffects=normalizeAffectionEffects(entry.affectionEffects).map(x=>({...x,id:uid("afx")}));
   entry.emotionEffects=normalizeEmotionEffects(entry.emotionEffects).map(x=>({...x,id:uid("efx")}));
   if(entry.type==="choice")entry.options.forEach(o=>{
     o.id=uid("option");
     o.effects=normalizeEffects(o.effects).map(x=>({...x,id:uid("fx")}));
+    o.itemEffects=normalizeItemEffects(o.itemEffects).map(x=>({...x,id:uid("itemfx")}));
     o.affectionEffects=normalizeAffectionEffects(o.affectionEffects).map(x=>({...x,id:uid("afx")}));
     o.emotionEffects=normalizeEmotionEffects(o.emotionEffects).map(x=>({...x,id:uid("efx")}));
     o.entries.forEach(regenerateIds);

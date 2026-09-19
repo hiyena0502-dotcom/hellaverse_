@@ -572,6 +572,10 @@ function renderNav(){
   $$(".nav-button").forEach(b=>b.classList.toggle("active",b.dataset.page===currentPage));
 }
 function setPage(page){
+  if(page!=="room"){
+    activeInteractionReaction=null;
+    interactionContext=null;
+  }
   currentPage=page;
   renderNav();
   renderPage();
@@ -617,6 +621,7 @@ function renderGacha(){
   const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled);
   const total=RARITIES.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1;
   const history=state.gacha.history.slice(-8).reverse();
+
   pageRoot.innerHTML=
     '<section><div class="page-head"><div><p class="page-kicker">GACHA</p><h1>ARCHIVE DRAW</h1></div><p>아이템 설정에서 가챠 포함으로 지정한 아이템을 추첨합니다. 획득한 아이템은 컬렉션과 인벤토리에 기록됩니다.</p></div>'+
     '<div class="gacha-layout">'+
@@ -625,7 +630,8 @@ function renderGacha(){
       '<div class="draw-actions"><button class="gold-button" type="button" data-action="draw-gacha" data-count="1" '+(!state.gacha.enabled||!pool.length?"disabled":"")+'>1 DRAW · '+state.gacha.singleCost+'</button>'+
       '<button class="gold-button" type="button" data-action="draw-gacha" data-count="10" '+(!state.gacha.enabled||!pool.length?"disabled":"")+'>10 DRAW · '+state.gacha.tenCost+'</button></div></div></div>'+
       '<aside class="gacha-side"><div class="info-card"><h3>RATES</h3>'+RARITIES.map(r=>'<div class="rate-row"><span>'+r+'</span><b>'+((state.gacha.rarityWeights[r]/total)*100).toFixed(1)+'%</b></div>').join("")+'</div>'+
-      '<div class="info-card"><h3>RECENT</h3>'+(history.length?history.map(h=>'<div class="history-row"><span>'+esc(h.rarity)+'</span><b>'+esc(h.name)+'</b></div>').join(""):'<p class="muted">아직 기록이 없습니다.</p>')+'</div></aside>'+
+      '<div class="info-card"><div class="info-card-head"><h3>RECENT</h3><button class="small-button history-clear" type="button" data-action="clear-gacha-history" '+(!history.length?"disabled":"")+'>CLEAR</button></div>'+
+      (history.length?history.map(h=>'<div class="history-row"><span>'+esc(h.rarity)+'</span><b>'+esc(h.name)+'</b></div>').join(""):'<p class="muted">아직 기록이 없습니다.</p>')+'</div></aside>'+
     '</div></section>';
 }
 function renderThought(){
@@ -776,16 +782,19 @@ function renderRoom(){
   const ev=currentEvent();
   const art=ch.image?'<img src="'+esc(ch.image)+'" alt="'+esc(ch.name)+'" />':'<div class="silhouette">'+esc(ch.name.slice(0,2).toUpperCase())+'</div>';
   const eventOptions=eventsForCharacter(ch.id);
+  const interactionLocked=Boolean(activeInteractionReaction||interactionContext?.followupActive);
+
   pageRoot.innerHTML=
     '<section class="room-page"><div class="room-hud"><button class="text-link" type="button" data-action="back-home">← HOME</button><strong>'+esc(ch.name)+'</strong>'+
-    '<div class="room-mode-bar"><button class="room-mode-button '+(roomMode==="talk"?"active":"")+'" type="button" data-action="room-mode" data-mode="talk">TALK</button>'+
-    '<button class="room-mode-button '+(roomMode==="ask"?"active":"")+'" type="button" data-action="room-mode" data-mode="ask">ASK</button>'+
-    '<button class="room-mode-button '+(roomMode==="inventory"?"active":"")+'" type="button" data-action="room-mode" data-mode="inventory">INVENTORY</button></div>'+
-    (roomMode==="talk"&&eventOptions.length?'<select id="roomEventSelect" style="width:auto;min-width:190px">'+eventOptions.map(e=>'<option value="'+esc(e.id)+'" '+(ev?.id===e.id?"selected":"")+'>'+esc(e.name)+'</option>').join("")+'</select>':'')+
+    '<div class="room-mode-bar"><button class="room-mode-button '+(roomMode==="talk"?"active":"")+'" type="button" data-action="room-mode" data-mode="talk" '+(interactionLocked?"disabled":"")+'>TALK</button>'+
+    '<button class="room-mode-button '+(roomMode==="ask"?"active":"")+'" type="button" data-action="room-mode" data-mode="ask" '+(interactionLocked?"disabled":"")+'>ASK</button>'+
+    '<button class="room-mode-button '+(roomMode==="inventory"?"active":"")+'" type="button" data-action="room-mode" data-mode="inventory" '+(interactionLocked?"disabled":"")+'>INVENTORY</button></div>'+
+    (roomMode==="talk"&&eventOptions.length&&!interactionLocked?'<select id="roomEventSelect" style="width:auto;min-width:190px">'+eventOptions.map(e=>'<option value="'+esc(e.id)+'" '+(ev?.id===e.id?"selected":"")+'>'+esc(e.name)+'</option>').join("")+'</select>':'')+
     '<div class="room-actions"><button class="text-link" type="button" data-action="show-log">LOG</button><button class="text-link" type="button" data-action="show-affection">AFFECTION</button><button class="text-link" type="button" data-action="show-emotion">EMOTION</button></div></div>'+
     '<div class="room-stage"><div class="room-art">'+art+'</div><div id="roomDynamic"></div>'+
     (roomMode==="talk"&&!activeInteractionReaction?'<div class="room-control-bar"><button type="button" data-action="toggle-auto" class="'+(autoMode?"active":"")+'">AUTO</button><button type="button" data-action="open-play-settings">SET</button></div>':'')+
     '</div></section>';
+
   if(activeInteractionReaction)renderInteractionReaction();
   else if(roomMode==="ask")renderAskPanel();
   else if(roomMode==="inventory")renderInventoryPanel();
@@ -826,13 +835,18 @@ function renderRoomBeat(){
 }
 
 function renderAskPanel(){
-  clearTyping();clearAuto();
+  if(!typing.done){
+    clearTyping();
+    typing.index=typing.full.length;
+    typing.done=true;
+  }
+  clearAuto();
   const dynamic=$("#roomDynamic");if(!dynamic)return;
   const ch=getCharacter(selectedCharacterId);if(!ch)return;
   const affection=Number(session.affection[ch.id]??ch.affectionStart);
   const asks=asksForCharacter(ch.id).filter(a=>affection>=a.minAffection);
-  dynamic.innerHTML='<section class="ask-panel"><div class="inventory-character-head"><div><p class="page-kicker">ASK</p><h2>무엇을 물어볼까?</h2></div><p>'+esc(ch.name)+'</p></div><div class="ask-list">'+
-    (asks.length?asks.map(a=>'<button class="ask-entry" type="button" data-action="ask-topic" data-id="'+esc(a.id)+'"><span>'+esc(a.label)+'</span><small>ASK</small></button>').join(""):'<div class="editor-note">현재 사용할 수 있는 질문이 없습니다.</div>')+
+  dynamic.innerHTML='<section class="ask-panel"><div class="inventory-character-head"><div><p class="page-kicker">ASK</p><h2>대화 중 무엇을 물어볼까?</h2></div><p>현재 대화는 그대로 유지됩니다.</p></div><div class="ask-list">'+
+    (asks.length?asks.map(a=>'<button class="ask-entry" type="button" data-action="ask-topic" data-id="'+esc(a.id)+'"><span>'+esc(a.label)+'</span><small>INTERRUPT</small></button>').join(""):'<div class="editor-note">현재 사용할 수 있는 질문이 없습니다.</div>')+
     '</div></section>';
 }
 function startAsk(id){
@@ -843,12 +857,17 @@ function startAsk(id){
   beginInteractionReaction("ask",ask,ask.eventId);
 }
 function renderInventoryPanel(){
-  clearTyping();clearAuto();
+  if(!typing.done){
+    clearTyping();
+    typing.index=typing.full.length;
+    typing.done=true;
+  }
+  clearAuto();
   const dynamic=$("#roomDynamic");if(!dynamic)return;
   const ch=getCharacter(selectedCharacterId);if(!ch)return;
   const items=itemsForCharacter(ch.id).filter(i=>itemCount(i.id)>0);
-  dynamic.innerHTML='<section class="inventory-panel"><div class="inventory-character-head"><div><p class="page-kicker">INVENTORY</p><h2>'+esc(ch.name)+' ITEMS</h2></div><p>아이템을 건네면 캐릭터의 반응이 나옵니다.</p></div><div class="inventory-list">'+
-    (items.length?items.map(i=>'<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+'</small></span><span class="count">GIVE · ×'+itemCount(i.id)+'</span></button>').join(""):'<div class="editor-note">이 캐릭터에게 줄 수 있는 보유 아이템이 없습니다. 가챠에서 획득하면 여기에 나타납니다.</div>')+
+  dynamic.innerHTML='<section class="inventory-panel"><div class="inventory-character-head"><div><p class="page-kicker">INVENTORY</p><h2>'+esc(ch.name)+' ITEMS</h2></div><p>대화 중 아이템을 건네면 반응이 삽입됩니다.</p></div><div class="inventory-list">'+
+    (items.length?items.map(i=>'<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+'</small></span><span class="count">GIVE · ×'+itemCount(i.id)+'</span></button>').join(""):'<div class="editor-note">이 캐릭터에게 줄 수 있는 보유 아이템이 없습니다.</div>')+
     '</div></section>';
 }
 function useInventoryItem(id){
@@ -1220,15 +1239,15 @@ pageRoot.addEventListener("click",e=>{
   else if(a==="home-next"){const n=enabledCharacters().length;homeIndex=(homeIndex+1)%n;renderHome()}
   else if(a==="talk")startDialogue(selectedCharacterId);
   else if(a==="room-mode"){
+    if(activeInteractionReaction||interactionContext?.followupActive)return;
     roomMode=b.dataset.mode||"talk";
-    activeInteractionReaction=null;
     autoMode=false;clearAuto();
     renderRoom();
   }
   else if(a==="ask-topic")startAsk(b.dataset.id);
   else if(a==="inventory-item")useInventoryItem(b.dataset.id);
   else if(a==="finish-interaction")finishInteractionReaction();
-  else if(a==="back-home"){activeInteractionReaction=null;setPage("home")}
+  else if(a==="back-home"){activeInteractionReaction=null;interactionContext=null;setPage("home")}
   else if(a==="random-thought")randomThought();
   else if(a==="show-affection")showAffection();
   else if(a==="show-emotion")showEmotion();
@@ -1238,6 +1257,12 @@ pageRoot.addEventListener("click",e=>{
   else if(a==="advance-dialogue")advanceDialogue(false);
   else if(a==="choose-option")chooseOption(b.dataset.id);
   else if(a==="draw-gacha")drawGacha(Number(b.dataset.count)||1);
+  else if(a==="clear-gacha-history"){
+    state.gacha.history=[];
+    saveState();
+    renderGacha();
+    showToast("가챠 RECENT 기록을 비웠습니다.");
+  }
   else if(a==="thought-filter"){thoughtFilter=b.dataset.id;renderThought()}
   else if(a==="collection-filter"){collectionFilter=b.dataset.id;renderCollection()}
   else if(a==="collection-detail")collectionDetail(b.dataset.id);

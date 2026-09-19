@@ -1,9 +1,9 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V7__)return;
-window.__HELLAVERSE_AMBIENT100_RUNTIME_V7__=1;
+if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V8__)return;
+window.__HELLAVERSE_AMBIENT100_RUNTIME_V8__=1;
 
-const K='hellaverse_dialogue_state_v1',PACK='ambient100-v7';
+const K='hellaverse_dialogue_state_v1',PACK='ambient100-v8';
 const EXCLUDED=new Set(['eve','lilith-morningstar','speaker-of-god','michael','gabriel','azrael','saint-peter','st-peter','peter']);
 const FORMAL_PLAYER_TARGETS=new Set([
  'lucifer-morningstar','alastor','husk','sir-pentious','sera','adam','vox','valentino',
@@ -463,54 +463,106 @@ const FallbackV=[
  '“사람마다 {topic} 보는 방식은 다르지.” {name}이 자기 기준을 덧붙인다.'
 ];
 const QA=[
- '{topic}에서 네가 제일 먼저 보는 건 뭐야?',
- '{topic} 얘기할 때 태도가 달라지는 이유가 있어?',
- '{topic}에선 절대 양보하지 않는 기준이 뭐야?',
- '{topic} 때문에 생각이 바뀐 적도 있어?',
- '{topic}을 다른 사람이 건드리면 보통 어떻게 해?',
- '{topic}에서 네가 제일 싫어하는 오해는 뭐야?',
- '{topic}을 누군가에게 설명해야 한다면 어디부터 말할 거야?',
- '{topic}에 대해 예전이랑 지금 생각이 달라?',
- '{topic}에서 혼자 결정하지 않는 부분도 있어?',
- '{topic}을 계속 붙잡는 이유가 뭐야?'
+ '{topic}, 자주 그래?',
+ '{topic}, 요즘도 그래?',
+ '{topic}, 원래부터 그랬어?',
+ '{topic}, 요즘은 어때?',
+ '{topic}, 그거 좋아해?',
+ '{topic}, 생각보다 신경 쓰는구나.',
+ '{topic} 얘기 좀 더 해줘.',
+ '{topic}, 예전에도 그랬어?',
+ '{topic}, 꽤 중요해 보여.',
+ '{topic}, 그냥 좀 궁금했어.'
 ];
 const QB=[
- '{topic}에서 의외로 마음에 드는 부분도 있어?',
- '다른 사람은 {topic}을 너랑 다르게 볼 것 같은데?',
- '{topic} 때문에 누군가랑 부딪힌 적 있어?',
- '{topic}을 아예 피하고 싶은 날도 있어?',
- '{topic}에서 가장 기억에 남는 순간은 뭐야?',
- '{topic}을 너무 심각하게 생각한다는 말 들은 적 있어?',
- '{topic}에서 네가 후회하는 선택도 있어?',
- '{topic}에 관해서는 누굴 제일 믿어?',
- '{topic}을 다시 처음부터 한다면 바꿀 게 있어?',
- '{topic} 얘기를 지금 꺼내도 괜찮은 이유가 있어?'
+ '{topic}은 좀 궁금하네.',
+ '{topic} 얘기 더 들어도 돼?',
+ '{topic}, 왠지 너답다.',
+ '{topic}은 지금이 좀 더 편해?',
+ '{topic}, 제일 기억나는 건 있어?',
+ '{topic}, 은근 신경 쓰는 편이네.',
+ '{topic} 얘기 조금만 더 해줘.',
+ '{topic}, 지금은 좀 달라?',
+ '{topic}은 말보다 티가 나는 것 같아.',
+ '{topic}, 아직도 자주 그래?'
 ];
 const QA_FORMAL=[
- '{topic}에서 제일 먼저 보시는 건 뭐예요?',
- '{topic} 얘기하실 때 태도가 달라지는 이유가 있어요?',
- '{topic}에선 절대 양보하지 않는 기준이 뭐예요?',
- '{topic} 때문에 생각이 바뀐 적도 있으세요?',
- '{topic}을 다른 사람이 건드리면 보통 어떻게 하세요?',
- '{topic}에서 제일 싫어하시는 오해는 뭐예요?',
- '{topic}을 누군가에게 설명하신다면 어디부터 말씀하실 거예요?',
- '{topic}에 대해 예전이랑 지금 생각이 달라지셨어요?',
- '{topic}에서 혼자 결정하지 않는 부분도 있으세요?',
- '{topic}을 계속 붙잡고 계신 이유가 뭐예요?'
+ '{topic}, 자주 그래요?',
+ '{topic}, 요즘도 그래요?',
+ '{topic}, 원래부터 그러셨어요?',
+ '{topic}, 요즘은 어때요?',
+ '{topic}, 그거 좋아하세요?',
+ '{topic}, 생각보다 신경 쓰시네요.',
+ '{topic} 얘기 조금 더 해주세요.',
+ '{topic}, 예전에도 그러셨어요?',
+ '{topic}, 꽤 중요해 보여요.',
+ '{topic}, 그냥 좀 궁금했어요.'
 ];
 const QB_FORMAL=[
- '{topic}에서 의외로 마음에 드는 부분도 있으세요?',
- '다른 사람은 {topic}을 다르게 볼 것 같은데, 어떻게 생각하세요?',
- '{topic} 때문에 누군가와 부딪힌 적 있으세요?',
- '{topic}을 아예 피하고 싶은 날도 있으세요?',
- '{topic}에서 가장 기억에 남는 순간은 뭐예요?',
- '{topic}을 너무 심각하게 생각한다는 말을 들은 적 있으세요?',
- '{topic}에서 후회하시는 선택도 있으세요?',
- '{topic}에 관해서는 누구를 제일 믿으세요?',
- '{topic}을 다시 처음부터 하신다면 바꾸고 싶은 게 있으세요?',
- '{topic} 얘기를 지금 꺼내도 괜찮은 이유가 있으세요?'
+ '{topic}은 좀 궁금하네요.',
+ '{topic} 얘기 더 들어도 돼요?',
+ '{topic}, 왠지 잘 어울리세요.',
+ '{topic}은 지금이 좀 더 편하세요?',
+ '{topic}, 제일 기억나는 게 있어요?',
+ '{topic}, 은근 신경 쓰시는 편이네요.',
+ '{topic} 얘기 조금만 더 해주실래요?',
+ '{topic}, 지금은 좀 달라요?',
+ '{topic}은 말보다 티가 나는 것 같아요.',
+ '{topic}, 아직도 자주 그래요?'
 ];
-const SUFFIX=[' 상대가 끼어들 틈을 남기며 말을 멈춘다.',' 이번에는 농담이나 격식으로 끝까지 숨기지 않는다.'];
+
+const LUCIFER_SHORT={
+ '고무 오리 작업대':[
+  ['요즘은 어떤 오리 만들고 있어요?','“요즘 건 좀 실용적이야. …물론 실용적인 고무 오리가 뭔지는 묻지 마.”'],
+  ['제일 마음에 드는 오리는 뭐예요?','“그걸 하나만 고르라고? 너무 잔인한 질문인데. 그래도 첫 작품은 좀 특별하지.”']
+ ],
+ '호텔을 돕는 방식':[
+  ['호텔 일, 요즘은 좀 익숙해졌어요?','“전보단 낫지. 도와준답시고 전부 내 방식대로 하려는 건 좀 줄었고.”'],
+  ['찰리가 부탁하면 보통 바로 도와줘요?','“바로? 거의. 너무 바로 티 내면 부담스러울까 봐 한 번 정도는 뜸 들이지만.”']
+ ],
+ '찰리에게 먼저 연락하는 일':[
+  ['요즘 찰리한테 먼저 연락도 자주 해요?','“예전보다 훨씬. 별일 없어도 한 번쯤은 먼저 보내려고 해.”'],
+  ['연락할 땐 무슨 얘기부터 해요?','“아주 중요한 얘기부터 하지. 밥은 먹었는지, 잠은 잤는지, 무리하진 않는지.”']
+ ],
+ '천국 이야기를 피하는 습관':[
+  ['천국 얘기는 아직 좀 불편해요?','루시퍼가 잠깐 웃음을 거둔다. “응. 예전보단 낫지만 편한 얘기는 아니야.”'],
+  ['그 얘긴 안 해도 괜찮아요.','루시퍼가 눈을 한 번 깜빡인다. “고마워. 말하고 싶어질 때 내가 먼저 꺼낼게.”']
+ ],
+ '왕이라는 직함':[
+  ['‘왕’이라고 불리는 건 아직도 익숙해요?','“익숙하긴 하지. 좋아하냐고 물으면 그건 또 다른 문제고.”'],
+  ['그냥 루시퍼라고 부르는 게 더 편해요?','“훨씬. 직함보다 이름이 짧기도 하고.”']
+ ],
+ '피아노와 오래된 곡':[
+  ['요즘도 피아노 자주 쳐요?','“가끔. 아무도 안 들을 때 더 오래 치는 편이야.”'],
+  ['제일 자주 치는 곡이 뭐예요?','“오래된 곡 하나가 있어. 손이 먼저 기억해서 생각 안 해도 나오는 곡.”']
+ ],
+ '사과를 준비하는 방식':[
+  ['사과할 때 원래 이렇게 준비 많이 해요?','“말만 하면 또 망칠까 봐. 준비라도 해두면 덜 엉망일 것 같잖아.”'],
+  ['말로 하는 것보다 준비하는 게 편해요?','“응. 물건은 적어도 내가 말실수했다고 상처받진 않으니까.”']
+ ],
+ '알래스터를 볼 때 드는 신경질':[
+  ['알래스터 보면 아직도 그렇게 신경 쓰여요?','루시퍼가 바로 얼굴을 찌푸린다. “그 사슴? 당연하지. 존재 방식 자체가 거슬려.”'],
+  ['둘이 있으면 꼭 그렇게 티격태격해요?','“내가 먼저 그러는 건 아니야. 대부분. …한 60퍼센트 정도는.”']
+ ],
+ '가족사진을 정리하는 일':[
+  ['이 사진들 자주 봐요?','루시퍼가 사진 모서리를 엄지로 쓸어본다. “생각보다 자주. 정리한다는 핑계로.”'],
+  ['제일 아끼는 사진이 뭐예요?','“찰리가 아주 어릴 때 찍은 게 하나 있어. 웃다가 넘어지기 직전 사진.”']
+ ],
+ '혼자 있는 시간이 길어진 밤':[
+  ['잠 안 오는 밤엔 보통 뭐 해요?','“오리 만들거나 피아노 치거나… 괜히 서랍 정리하다 옛날 물건 발견하고 후회하거나.”'],
+  ['혼자 있고 싶은 날도 있어요?','“있지. 근데 너무 오래 혼자 있으면 그것도 좋은 건 아니더라.”']
+ ]
+};
+
+function questionPair(c,topic,i){
+ if(c?.id==='lucifer-morningstar'&&LUCIFER_SHORT[topic])return LUCIFER_SHORT[topic];
+ const polite=formalTarget(c?.id),qa=polite?QA_FORMAL:QA,qb=polite?QB_FORMAL:QB;
+ return[
+  [qa[i%qa.length].replaceAll('{topic}',topic),''],
+  [qb[i%qb.length].replaceAll('{topic}',topic),'']
+ ];
+}
+const SUFFIX=[' 잠깐 말을 멈추고 이쪽을 본다.',' 말끝을 흐리며 반응을 기다린다.'];
 const ANGLES=['첫인상','습관','기준','변화','충돌','오해','설명','과거와 지금','신뢰','놓지 못하는 것'];
 const FOLLOW_A=[
  '{topic}에서 네가 방금 가장 신경 쓴다고 한 부분, 실제로는 언제 제일 크게 느껴?',
@@ -564,17 +616,17 @@ function eventId(cid,stage){return 'ambient100.'+cid+'.'+stage}
 function eventDef(cid,name,stage,desc){return{id:eventId(cid,stage),name:name+' · '+stage.toUpperCase(),description:desc,type:'MILESTONE',characterId:cid,namespace:'ambient100'}}
 function sceneFor(c,p,i){
  const topic=p.t[i]||('대화 주제 '+(i+1)),id='ambient100-'+c.id+'-'+String(i+1).padStart(2,'0'),node='start';
- const polite=formalTarget(c.id),qa=polite?QA_FORMAL:QA,qb=polite?QB_FORMAL:QB;
- const q1=qa[i%qa.length].replaceAll('{topic}',topic),q2=qb[i%qb.length].replaceAll('{topic}',topic);
+ const polite=formalTarget(c.id),pairs=questionPair(c,topic,i),q1=pairs[0][0],q2=pairs[1][0];
  const follow=[2,5,8].includes(i),nextId=follow?'follow-'+(i+1):'';
- const c1={id:id+'-a',type:'speech',text:q1,playerLine:'',response:responseVariants(c,p,topic,0),affectionDelta:i%4===0?1:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.listened',removeFlags:'',addMemoryTitle:i===8?topic:'',addMemorySummary:i===8?responseVariants(c,p,topic,1).split('\n')[0]:'',addMemoryTags:i===8?'conversation, trust':'',moodChange:'',unlockItemId:'',nextNodeId:nextId,endConversation:!follow};
- const c2={id:id+'-b',type:'speech',text:q2,playerLine:'',response:responseVariants(c,p,topic,1),affectionDelta:i%5===4?-1:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:nextId,endConversation:!follow};
+ const r1=pairs[0][1]||responseVariants(c,p,topic,0),r2=pairs[1][1]||responseVariants(c,p,topic,1);
+ const c1={id:id+'-a',type:'speech',text:q1,playerLine:'',response:r1,affectionDelta:i%4===0?1:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.listened',removeFlags:'',addMemoryTitle:i===8?topic:'',addMemorySummary:i===8?r2.split('\n')[0]:'',addMemoryTags:i===8?'conversation, trust':'',moodChange:'',unlockItemId:'',nextNodeId:nextId,endConversation:!follow};
+ const c2={id:id+'-b',type:'speech',text:q2,playerLine:'',response:r2,affectionDelta:i%5===4?-1:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:nextId,endConversation:!follow};
  const nodes=[{id:node,speaker:'character',text:'',choices:[c1,c2]}];
  if(follow){
   const ftopic='조금 더 개인적인 '+topic;
   nodes.push({id:nextId,speaker:'character',text:responseVariants(c,p,ftopic,2).split('\n')[0]||'',choices:[
-   {id:id+'-f1',type:'speech',text:polite?'그 부분은 편하신 만큼만 말씀해 주세요.':'그 부분은 네가 편한 만큼만 말해도 돼.',playerLine:'',response:responseVariants(c,p,ftopic,0),affectionDelta:1,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.safe',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true},
-   {id:id+'-f2',type:'speech',text:polite?'그럼 다른 쪽에서 여쭤볼게요. 지금 원하시는 건 뭐예요?':'그럼 다른 쪽에서 물어볼게. 지금 네가 원하는 건 뭐야?',playerLine:'',response:responseVariants(c,p,ftopic,1),affectionDelta:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true}
+   {id:id+'-f1',type:'speech',text:polite?'괜찮으면 조금 더 얘기해주세요.':'괜찮으면 조금 더 얘기해줘.',playerLine:'',response:responseVariants(c,p,ftopic,0),affectionDelta:1,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'ambient100.'+c.id+'.safe',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true},
+   {id:id+'-f2',type:'speech',text:polite?'그건 여기까지만 들어도 괜찮아요.':'그건 여기까지만 들어도 돼.',playerLine:'',response:responseVariants(c,p,ftopic,1),affectionDelta:0,requiredAffection:0,requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:'',removeFlags:'',addMemoryTitle:'',addMemorySummary:'',addMemoryTags:'',moodChange:'',unlockItemId:'',nextNodeId:'',endConversation:true}
   ]});
  }
  const req=i===3?eventId(c.id,'opened'):i===6?eventId(c.id,'pattern'):i===9?eventId(c.id,'trust'):'';

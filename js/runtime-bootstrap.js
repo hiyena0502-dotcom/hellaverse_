@@ -133,7 +133,7 @@ const scripts=[
   ['classic','js/collection-gacha-editor.js?v=4'],
   ['classic','js/collection-reveal-line-bridge.js?v=1'],
   ['classic','js/collection-emoji-corrections.js?v=2'],
-  ['classic','js/content-integrity-repair-v1.js?v=3'],
+  ['classic','js/content-integrity-repair-v1.js?v=4'],
   ['classic','js/ux/runtime-diagnostics.js?v=10'],
   ['classic','js/final-ux-cleanup.js?v=15'],
 ];

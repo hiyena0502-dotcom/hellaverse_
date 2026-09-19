@@ -45,9 +45,10 @@ window.addEventListener('click',e=>{
 
   const now=performance.now();
   const pointerOK=e.isTrusted&&pointerChoice===ch&&now-pointerAt<1800;
-  const keyboardOK=keyboardChoice===ch&&now-keyboardAt<180;
+  const numericKeyOK=keyboardChoice===ch&&now-keyboardAt<180;
+  const nativeKeyboardOK=e.isTrusted&&e.detail===0&&(document.activeElement===ch||ch.contains(document.activeElement));
 
-  if(!pointerOK&&!keyboardOK){
+  if(!pointerOK&&!numericKeyOK&&!nativeKeyboardOK){
     e.preventDefault();
     e.stopImmediatePropagation();
     console.warn('Blocked non-user dialogue choice activation.',ch.dataset.choice||ch.dataset.gc||'');

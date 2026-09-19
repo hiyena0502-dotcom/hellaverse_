@@ -1433,3 +1433,170 @@ details.advanced summary{cursor:pointer;color:var(--gold);font-size:.72rem}
   .item-reaction-head{grid-template-columns:1fr 1fr}
   .mini-option-head{grid-template-columns:1fr}
 }
+
+/* ITEM CATALOG + ACQUISITION */
+.item-category-manager{margin-top:16px}
+.category-add-row{display:flex;gap:7px;margin-top:10px}
+.item-editor-toolbar{
+  display:grid;
+  grid-template-columns:minmax(220px,1.4fr) repeat(3,minmax(140px,.7fr)) auto;
+  gap:8px;
+  align-items:center;
+  margin:14px 0;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:rgba(21,16,20,.52)
+}
+.item-filter-count{
+  color:var(--gold);
+  font-size:.7rem;
+  letter-spacing:.1em;
+  text-align:right
+}
+.item-meta-strip{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+  padding:7px 9px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  color:var(--muted);
+  font-size:.66rem;
+  letter-spacing:.08em
+}
+.item-meta-strip span{
+  padding:4px 7px;
+  border:1px solid rgba(201,166,107,.16);
+  border-radius:999px
+}
+.item-reaction-head{
+  grid-template-columns:180px repeat(4,minmax(110px,1fr)) auto
+}
+.item-acquire-toast{
+  position:fixed;
+  right:24px;
+  bottom:24px;
+  z-index:130;
+  min-width:250px;
+  max-width:min(380px,calc(100vw - 32px));
+  display:grid;
+  gap:4px;
+  padding:15px 17px;
+  border:1px solid rgba(201,166,107,.35);
+  border-left:3px solid var(--gold);
+  border-radius:8px;
+  background:rgba(15,11,14,.96);
+  box-shadow:0 24px 80px rgba(0,0,0,.48);
+  opacity:0;
+  transform:translateY(12px);
+  transition:.22s ease;
+  pointer-events:none
+}
+.item-acquire-toast.show{opacity:1;transform:none}
+.item-acquire-kicker{
+  color:var(--gold);
+  font-size:.62rem;
+  letter-spacing:.16em
+}
+.item-acquire-toast strong{font-family:Georgia,serif;font-size:1.08rem;font-weight:500}
+.item-acquire-toast small{color:var(--muted)}
+
+/* COLLECTION FILTERS / NEW */
+.collection-viewbar{
+  display:grid;
+  grid-template-columns:auto minmax(190px,1.2fr) repeat(5,minmax(120px,.7fr));
+  gap:8px;
+  align-items:center;
+  padding:16px 0 8px
+}
+.collection-view-buttons{display:flex;gap:6px}
+.collection-summary{
+  padding:0 0 14px;
+  color:var(--muted);
+  font-size:.7rem;
+  letter-spacing:.1em
+}
+.collection-card.is-new{
+  box-shadow:inset 0 0 0 1px rgba(201,166,107,.18),0 0 28px rgba(201,166,107,.05)
+}
+.collection-new-badge,
+.gacha-new-badge{
+  position:absolute;
+  top:10px;
+  left:10px;
+  z-index:2;
+  padding:4px 7px;
+  border:1px solid rgba(201,166,107,.45);
+  border-radius:999px;
+  background:rgba(11,8,10,.84);
+  color:var(--gold);
+  font-size:.58rem;
+  letter-spacing:.14em
+}
+.gacha-result-card{position:relative}
+.gacha-result-card.is-new{border-color:rgba(201,166,107,.54);box-shadow:0 0 28px rgba(201,166,107,.08)}
+.collection-card-meta{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:7px
+}
+.collection-card-meta span{
+  padding:3px 6px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--muted);
+  font-size:.58rem;
+  letter-spacing:.08em
+}
+.collection-detail-meta{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  margin-top:14px
+}
+.collection-detail-meta span{
+  padding:6px 8px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--muted);
+  font-size:.68rem
+}
+.collection-history-mini{
+  display:grid;
+  gap:5px;
+  margin-top:16px;
+  border-top:1px solid var(--line);
+  padding-top:10px
+}
+.collection-history-mini div{
+  display:flex;
+  justify-content:space-between;
+  color:var(--muted);
+  font-size:.72rem
+}
+.collection-history-mini b{color:var(--gold)}
+.collection-preview-item.is-new{border-color:rgba(201,166,107,.4)}
+.collection-editor-summary{
+  display:grid;
+  grid-template-columns:auto 1fr auto 1fr auto 1fr;
+  gap:7px 10px;
+  align-items:center
+}
+.collection-editor-summary b{color:var(--gold);font-family:Georgia,serif;font-size:1.4rem}
+.collection-editor-summary span{color:var(--muted);font-size:.66rem;letter-spacing:.1em}
+
+@media(max-width:1180px){
+  .collection-viewbar{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .collection-view-buttons{grid-column:1/-1}
+  .item-editor-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:720px){
+  .collection-viewbar,.item-editor-toolbar{grid-template-columns:1fr}
+  .collection-view-buttons{grid-column:auto}
+  .item-reaction-head{grid-template-columns:1fr}
+  .category-add-row{display:grid;grid-template-columns:1fr auto}
+  .item-acquire-toast{right:16px;left:16px;bottom:16px;max-width:none}
+}

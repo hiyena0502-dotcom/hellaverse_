@@ -936,6 +936,12 @@ function chooseWeighted(items,getWeight){
   for(const item of items){roll-=Math.max(0,Number(getWeight(item))||0);if(roll<=0)return item}
   return items.at(-1);
 }
+function clearGachaHistory(){
+  state.gacha.history=[];
+  saveState();
+  renderGacha();
+  showToast("가챠 RECENT 기록을 비웠습니다.");
+}
 function drawGacha(count){
   const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled);
   if(!pool.length){showToast("가챠 풀이 비어 있습니다.");return}
@@ -1257,12 +1263,7 @@ pageRoot.addEventListener("click",e=>{
   else if(a==="advance-dialogue")advanceDialogue(false);
   else if(a==="choose-option")chooseOption(b.dataset.id);
   else if(a==="draw-gacha")drawGacha(Number(b.dataset.count)||1);
-  else if(a==="clear-gacha-history"){
-    state.gacha.history=[];
-    saveState();
-    renderGacha();
-    showToast("가챠 RECENT 기록을 비웠습니다.");
-  }
+  else if(a==="clear-gacha-history")clearGachaHistory();
   else if(a==="thought-filter"){thoughtFilter=b.dataset.id;renderThought()}
   else if(a==="collection-filter"){collectionFilter=b.dataset.id;renderCollection()}
   else if(a==="collection-detail")collectionDetail(b.dataset.id);

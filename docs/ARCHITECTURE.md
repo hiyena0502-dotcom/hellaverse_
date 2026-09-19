@@ -1,103 +1,82 @@
-# Hellaverse Dialogue Architecture
+# Hellaverse Architecture
 
-이 문서는 파일이 늘어나도 기능이 서로 덮어쓰지 않도록 유지하기 위한 기준입니다.
+## 1. Runtime ownership
 
-## 1. 핵심 원칙
+현재 배포 앱의 단일 런타임 소유자는 `js/site-runtime.js`, 단일 기본 스타일 소유자는 `css/app.css`입니다. `index.html`은 이 두 파일만 직접 로드합니다.
 
-- 메인 저장소 키는 `hellaverse_dialogue_state_v1` 하나를 기준으로 합니다.
-- 현재 런타임은 각 기능이 localStorage state를 읽고 필요한 필드만 수정합니다. 별도의 미사용 공용 state wrapper는 두지 않습니다.
-- 기능 파일은 모르는 필드를 삭제하지 않고 기존 state를 보존한 채 필요한 필드만 추가/수정합니다.
-- 저장 후에는 가능하면 `hellaverse:state-updated` 이벤트를 발생시킵니다.
-- DOM 후처리 기능은 같은 UI를 매번 새로 만들지 말고, 이미 만들어진 요소인지 확인한 뒤 idempotent하게 동작해야 합니다.
-- MutationObserver 안에서 DOM을 수정할 때는 signature/guard를 사용해 무한 렌더 루프를 방지합니다.
-- 같은 화면/상태를 두 파일이 동시에 소유하지 않도록 합니다. 보정 파일은 코어 원본이 해결되면 제거합니다.
+과거의 `hv-stable.js`, 대화 compatibility 파일, Item/Gift runtime 파일 등이 저장소에 남아 있어도 현재 진입점에서 로드되지 않으면 active runtime으로 간주하지 않습니다.
 
-## 2. 현재 주요 구조
+## 2. Storage
 
-```text
-/
-├─ index.html
-├─ docs/
-│  ├─ ARCHITECTURE.md
-│  └─ FILE_MAP.md
-├─ js/
-│  ├─ ux/          진단 UI
-│  └─ *.js         현재 기능/콘텐츠 런타임
-└─ css/
-   ├─ ux/          진단 UI 스타일
-   └─ *.css         현재 기능 스타일
-```
+현재 키:
 
-대규모 파일 이동은 하지 않습니다. GitHub Pages 캐시와 로딩 순서 때문에 파일 이동 자체가 오류를 만들 수 있으므로, 먼저 역할 중복을 제거한 뒤 필요할 때만 구조를 바꿉니다.
+- `hellaverse-studio-state-v2` — 프로젝트 설정 + 플레이 진행
+- `hellaverse-studio-prefs-v2` — 텍스트 속도 / AUTO / stage click
+- `hellaverse-studio-backups-v2` — 3개 수동 슬롯 + 자동 안전 백업
+- `hellaverse-studio-editor-snapshot-v2` — 마지막 EDITOR 저장 전 복구 지점
 
-## 3. 로딩 순서
+Legacy 키 `hellaverse_dialogue_state_v1`은 새 키가 없을 때만 읽습니다. 마이그레이션은 legacy 원본을 삭제하거나 덮어쓰지 않습니다.
 
-`index.html`은 다음 순서를 지켜야 합니다.
+## 3. State model
 
-1. Base content / character content
-2. Feature seeders (collection, dialogue pack 등)
-3. Cast exclusions / dialogue normalization
-4. Main renderers (`dialogue-ui`, `hv-stable`)
-5. Feature runtime modules (item, collection, gacha, missions)
-6. Dialogue/editor compatibility modules
-7. UX / diagnostics / final display cleanup
+`state`는 다음 주요 영역을 가집니다.
 
-초기 데이터를 만드는 seeder와 그것을 화면에 표시하는 renderer의 순서가 뒤바뀌면 컬렉션이나 대화가 다음 새로고침까지 보이지 않을 수 있습니다.
+- profile
+- favoriteCharacterIds
+- playState
+  - variables
+  - affection
+  - emotions
+  - log
+- characters
+- events / variables
+- asks
+- items / inventory / itemHistory
+- discovered gift reaction state
+- interaction history
+- thoughts / discoveredThoughtIds
+- collectionSettings
+- gacha
 
-## 4. State 작성 규칙
+플레이 진행 상태는 별도 임시 세션으로 동작하되 `saveState()` 시 `playState`에 동기화합니다. 따라서 새로고침 또는 EDITOR 저장 뒤에도 진행도가 유지됩니다.
 
-- `hellaverse_dialogue_state_v1`을 읽은 뒤 필요한 필드만 수정합니다.
-- 기존 배열/객체를 통째로 새 구조로 덮어쓰지 않습니다.
-- 기능별 삭제 정책은 가능한 한 한 파일에서만 관리합니다.
-- 저장 뒤 UI 갱신이 필요하면 `hellaverse:state-updated`를 발생시킵니다.
-- 이벤트의 `detail.source`는 실제 수정한 모듈 이름을 사용합니다.
+## 4. Pages
 
-## 5. ID 규칙
+`currentPage` 기준:
 
-- character: `charlie-morningstar`, `angel-dust`
-- collection item: `<characterId>-collection-<slug>`
-- dialogue: `<characterId>-talk-*`, `<characterId>-ask-*`
-- flag: `<characterId>.<topic>.<event>` 형태 권장
+- home
+- world
+- characters
+- gacha
+- thought
+- collection
+- room
 
-ID는 화면 이름보다 중요합니다. 가챠/컬렉션/이벤트/대화 연결은 대부분 ID를 기준으로 하므로 이름을 바꿔도 ID는 가능한 유지합니다.
+HELL LIFE는 일곱 링 메타데이터와 캐릭터의 `ring` 필드를 사용합니다. 기존 저장 데이터에 `ring`이 없으면 캐릭터 이름/역할을 기준으로 대표 Sin 캐릭터를 추론하고 나머지 지옥 캐릭터는 Pride로 기본 배치합니다. 천국 캐릭터는 링이 없습니다.
 
-## 6. Dialogue 상태 소유
+## 5. Editor safety
 
-- `dialogue-ui.js` — 방문 세션, Scene/Choice/LOG/ENTRY/EXIT의 코어 상태 머신.
-- `dialogue-runtime-cleanup.js` — QUESTION/ACTION 서브메뉴와 퇴실 navigation bridge만 보조.
-- `dialogue-single-beat-runtime.js` — beat/NEXT 표시, LOG 외부 레이어, 플레이어 선택문 echo 제거.
-- `dialogue-episode-upgrade-all.js` — `dialogueFileMap`, `sceneRole`, `kind` canonical 정규화.
+EDITOR는 실제 저장 전 `editorDraft`에서만 수정합니다.
 
-새 Dialogue 수정은 먼저 `dialogue-ui.js`가 이미 소유하는 상태인지 확인하고, 같은 상태를 cleanup/runtime 파일에 다시 만들지 않습니다.
+- UNDO / REDO: 편집 중 draft 스냅샷
+- RESTORE: 마지막 EDITOR 저장 직전 state
+- CHECK: 참조/빈 콘텐츠/설정 충돌 검사
+- 삭제: 확인창 뒤 실행
+- 닫기: 미저장 변경이 있으면 확인
+- 저장: 자동 안전 백업 + EDITOR 복구 지점 생성 후 state 반영
 
-## 7. UX와 오류 진단
+## 6. Gacha probability
 
-`js/ux/runtime-diagnostics.js`는 브라우저 오류와 데이터 구조 문제를 감지합니다.
+가챠 확률 표시는 현재 획득 가능한 아이템이 존재하는 희귀도만 사용해 가중치를 재정규화합니다. 현재 존재하는 희귀도의 설정 가중치가 모두 0이면 해당 희귀도들 사이에 균등 분배합니다. 이 규칙은 화면의 RATES와 실제 추첨에 동일하게 적용합니다.
 
-검사 대상:
-- 중복 ID
-- 존재하지 않는 characterId 참조
-- orphan collection/gacha profile
-- 잘못된 데이터 참조
-- JS error / unhandled promise rejection
+## 7. Change policy
 
-Settings의 Runtime Diagnostics 카드에서 검사 결과와 복사용 리포트를 확인합니다.
+새 기능은 우선 `site-runtime.js`와 `app.css`의 현재 소유 영역에 통합합니다. 임시 repair/cleanup 파일을 새로 추가해 같은 상태나 DOM을 두 런타임이 동시에 소유하게 하지 않습니다.
 
-## 8. 리팩터링 정책
+기존 legacy 파일을 다시 로드하려면 반드시:
 
-기존 파일을 삭제하기 전에는 반드시:
-
-1. `index.html` 로드 여부 확인
-2. 저장소 전체 참조 검색
-3. 같은 기능을 대체한 새 원본 확인
-4. 로더 제거 후 파일 삭제
-5. 문서/캐시 버전 정리
-
-`repair`, `cleanup`, `safety`, `migration` 이름의 파일은 이름만 보고 유지하지 않습니다. 실제 역할이 남아 있는지 기준으로 판단합니다.
-
-## 9. Item / Gift 기준
-
-- 현재 플레이 UX는 Item V2를 기준으로 합니다.
-- `collectionItems`는 발견/아카이브 기록입니다.
-- 실제 보유 수량과 전달은 Item V2 inventory 설정이 담당합니다.
-- 옛 Gift/Collection 전달 런타임은 다시 로드하지 않습니다.
+1. 현재 `index.html` 로드 목록 확인
+2. storage key와 state schema 충돌 확인
+3. DOM selector / event handler 중복 확인
+4. 현 runtime에 필요한 부분만 통합
+5. 캐시 버전 갱신

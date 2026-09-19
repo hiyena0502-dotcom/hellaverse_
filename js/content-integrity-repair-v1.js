@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_CONTENT_INTEGRITY_REPAIR_V1__)return;
-window.__HELLAVERSE_CONTENT_INTEGRITY_REPAIR_V1__=1;
+if(window.__HELLAVERSE_CONTENT_INTEGRITY_REPAIR_V2__)return;
+window.__HELLAVERSE_CONTENT_INTEGRITY_REPAIR_V2__=1;
 
 const K='hellaverse_dialogue_state_v1';
 const REPORT_KEY='hellaverse_content_integrity_report_v1';

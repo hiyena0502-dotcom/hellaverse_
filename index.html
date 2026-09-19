@@ -2,245 +2,92 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0b0a10" />
-  <title>Hellaverse Studio</title>
-  <link rel="stylesheet" href="css/app.css?v=101">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b080a" />
+  <title>Hellaverse</title>
+  <link rel="stylesheet" href="css/app.css?v=200" />
 </head>
 <body>
-  <main class="app-shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">HELLAVERSE</p>
-        <h1>Hellaverse Studio</h1>
+  <section id="startScreen" class="title-screen">
+    <div class="title-panel">
+      <p class="title-kicker">HELLAVERSE</p>
+      <h1>ENTER THE LOBBY</h1>
+      <p class="title-sub">플레이어 정보를 정한 뒤 대화할 캐릭터를 선택합니다.</p>
+
+      <label class="start-field">
+        <span>NAME</span>
+        <input id="playerNameInput" type="text" maxlength="24" placeholder="이름을 입력하세요" />
+      </label>
+
+      <div class="start-field">
+        <span>ORIGIN</span>
+        <div class="origin-choice" id="originChoice">
+          <button type="button" data-origin="hellborn">HELLBORN</button>
+          <button type="button" data-origin="heaven">HEAVEN</button>
+        </div>
       </div>
-      <div class="topbar-actions">
-        <select id="eventSelect" aria-label="재생할 이벤트"></select>
-        <button id="openSettings" class="button secondary" type="button">편집기</button>
+
+      <button id="enterGameButton" class="title-enter" type="button">ENTER</button>
+      <p id="startHint" class="title-hint">이름과 소속을 선택하세요.</p>
+    </div>
+  </section>
+
+  <div id="gameShell" class="site-shell" hidden>
+    <header class="game-hud">
+      <button id="brandButton" class="brand-mark" type="button">HELLAVERSE</button>
+      <nav class="main-nav" aria-label="주요 메뉴">
+        <button class="nav-button active" type="button" data-page="home">HOME</button>
+        <button class="nav-button" type="button" data-page="gacha">GACHA</button>
+        <button class="nav-button" type="button" data-page="thought">THOUGHT</button>
+        <button class="nav-button" type="button" data-page="collection">COLLECTION</button>
+      </nav>
+      <div class="hud-tools">
+        <span id="playerBadge" class="player-badge"></span>
+        <button id="editorButton" class="text-link" type="button">EDITOR</button>
+        <button id="changeProfileButton" class="text-link" type="button">PROFILE</button>
       </div>
     </header>
 
-    <section id="stage" class="stage" aria-live="polite">
-      <div class="stage-grid"></div>
-
-      <div class="scene-meta">
-        <span id="eventBadge">EVENT</span>
-        <strong id="eventTitle"></strong>
-      </div>
-
-      <div id="dialogueCard" class="dialogue-card">
-        <div id="speakerName" class="speaker"></div>
-        <p id="dialogueText" class="dialogue-text"></p>
-        <div class="dialogue-footer">
-          <span id="progressText"></span>
-          <button id="nextLine" class="button primary" type="button">다음</button>
-        </div>
-      </div>
-
-      <div id="choiceCard" class="choice-card" hidden>
-        <div class="choice-head">
-          <span>CHOICE</span>
-          <small id="choiceDepth"></small>
-        </div>
-        <h2 id="choicePrompt"></h2>
-        <div id="choiceButtons" class="choice-buttons"></div>
-      </div>
-
-      <div id="emptyState" class="empty-state" hidden>
-        <p>이 이벤트에는 아직 내용이 없습니다.</p>
-        <button id="emptyOpenSettings" class="button primary" type="button">편집기 열기</button>
-      </div>
-
-      <div id="endState" class="empty-state" hidden>
-        <p>이벤트 흐름이 끝났습니다.</p>
-      </div>
-
-      <div id="affectionToast" class="affection-toast" hidden></div>
-
-      <nav id="gameControls" class="game-controls" aria-label="게임 조작">
-        <button id="autoButton" type="button">AUTO</button>
-        <button id="logButton" type="button">LOG</button>
-        <button id="affectionButton" type="button">AFFECTION</button>
-        <button id="emotionButton" type="button">EMOTION</button>
-        <button id="playSettingsButton" type="button">SET</button>
-      </nav>
-    </section>
-  </main>
-
-  <div id="gameModal" class="overlay game-modal-overlay" hidden>
-    <section class="game-modal" role="dialog" aria-modal="true" aria-labelledby="gameModalTitle">
-      <header class="game-modal-header">
-        <h2 id="gameModalTitle"></h2>
-        <button id="closeGameModal" class="icon-action" type="button" aria-label="닫기">×</button>
-      </header>
-      <div id="gameModalBody" class="game-modal-body"></div>
-    </section>
+    <main id="pageRoot" class="page-root"></main>
   </div>
 
-  <div id="settingsOverlay" class="overlay" hidden>
-    <section class="editor" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-      <header class="editor-header">
+  <div id="modalRoot"></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <div id="editorOverlay" class="editor-overlay" hidden>
+    <section class="editor-shell" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+      <header class="editor-topbar">
         <div>
-          <p class="eyebrow">DIALOGUE EDITOR</p>
-          <h2 id="settingsTitle">대화 이벤트 설정</h2>
+          <p class="label">MANAGEMENT</p>
+          <h1 id="editorTitle">EDITOR</h1>
         </div>
-        <div class="header-actions">
-          <button id="projectSettings" class="button secondary" type="button">프로젝트</button>
-          <button id="cancelSettings" class="button secondary" type="button">취소</button>
-          <button id="saveSettings" class="button primary" type="button">모두 저장</button>
+        <div class="editor-top-actions">
+          <button id="editorCancelButton" class="ghost-button" type="button">취소</button>
+          <button id="editorSaveButton" class="gold-button" type="button">모두 저장</button>
         </div>
       </header>
 
-      <div class="editor-columns">
-        <aside class="event-pane">
-          <div class="pane-header">
-            <div>
-              <span class="pane-kicker">EVENTS</span>
-              <h3>이벤트</h3>
-            </div>
-            <button id="newEvent" class="button small primary-soft" type="button">+ 새 이벤트</button>
-          </div>
-
-          <div id="editorEventList" class="event-list"></div>
-
-          <div class="event-properties">
-            <label class="field">
-              <span>이벤트 이름</span>
-              <input id="eventNameInput" type="text" maxlength="60" placeholder="이벤트 이름" />
-            </label>
-
-            <label class="field">
-              <span>종료 후 이동</span>
-              <select id="eventNextSelect"></select>
-            </label>
-
-            <label class="field">
-              <span>이벤트 종료 시 감정</span>
-              <select id="eventEmotionExitSelect">
-                <option value="keep">현재 감정 유지</option>
-                <option value="reset">기본 감정으로 초기화</option>
-              </select>
-            </label>
-
-            <label class="field id-field">
-              <span>이벤트 ID</span>
-              <input id="eventIdInput" type="text" disabled />
-            </label>
-
-            <button id="deleteEvent" class="button danger full" type="button">현재 이벤트 삭제</button>
-          </div>
+      <div class="editor-workspace">
+        <aside class="editor-sidebar">
+          <button type="button" class="editor-nav active" data-editor-tab="dialogue">
+            <span>01</span><strong>대화 이벤트</strong><small>캐릭터 · 이벤트 · 선택지</small>
+          </button>
+          <button type="button" class="editor-nav" data-editor-tab="gacha">
+            <span>02</span><strong>가챠 설정</strong><small>비용 · 확률 · 풀</small>
+          </button>
+          <button type="button" class="editor-nav" data-editor-tab="thought">
+            <span>03</span><strong>THOUGHT 설정</strong><small>카테고리 · 빈도 · 문장</small>
+          </button>
+          <button type="button" class="editor-nav" data-editor-tab="collection">
+            <span>04</span><strong>컬렉션 설정</strong><small>아이템 · 희귀도 · 잠금</small>
+          </button>
         </aside>
 
-        <section class="flow-pane">
-          <div class="pane-header">
-            <div>
-              <span class="pane-kicker">FLOW</span>
-              <h3>대화 흐름</h3>
-            </div>
-            <span id="entryCount" class="count-badge">0개</span>
-          </div>
-
-          <div class="add-row">
-            <button data-add-type="dialogue" class="add-card" type="button">
-              <b>+ 대사</b><small>화자 + 텍스트</small>
-            </button>
-            <button data-add-type="narration" class="add-card" type="button">
-              <b>+ 지문</b><small>상황 설명</small>
-            </button>
-            <button data-add-type="choice" class="add-card choice" type="button">
-              <b>+ 선택지</b><small>분기 만들기</small>
-            </button>
-          </div>
-
-          <div id="entryList" class="flow-list"></div>
-        </section>
-
-        <section class="inspector-pane">
-          <div id="emptyInspector" class="inspector-empty">
-            <div class="empty-symbol">✦</div>
-            <h3>항목을 선택하세요</h3>
-            <p>가운데 대화 흐름에서 항목을 선택하면 여기서 내용을 편집할 수 있습니다.</p>
-          </div>
-
-          <div id="entryInspector" hidden>
-            <div class="inspector-header">
-              <div>
-                <div id="inspectorBreadcrumb" class="breadcrumb"></div>
-                <div class="inspector-heading">
-                  <span id="inspectorTypeBadge" class="type-badge"></span>
-                  <h3 id="inspectorTitle"></h3>
-                </div>
-              </div>
-              <div class="item-actions">
-                <button id="moveEntryUp" class="icon-action" type="button" title="위로 이동">↑</button>
-                <button id="moveEntryDown" class="icon-action" type="button" title="아래로 이동">↓</button>
-                <button id="duplicateEntry" class="icon-action" type="button" title="복제">⧉</button>
-                <button id="deleteEntry" class="icon-action danger-icon" type="button" title="삭제">×</button>
-              </div>
-            </div>
-            <div id="inspectorBody" class="inspector-body"></div>
-          </div>
-        </section>
+        <section id="editorBody" class="editor-body"></section>
       </div>
-
-      <aside id="projectPanel" class="project-panel" hidden>
-        <header class="project-panel-header">
-          <div>
-            <p class="eyebrow">PROJECT</p>
-            <h3>프로젝트 설정</h3>
-          </div>
-          <button id="closeProjectPanel" class="icon-action" type="button" aria-label="닫기">×</button>
-        </header>
-
-        <div class="project-panel-body">
-          <section class="project-section affection-project-section">
-            <div class="section-row">
-              <div>
-                <h4>호감도</h4>
-                <p>호감도를 추적할 대상을 만들고 시작값을 정합니다. 범위는 0~100입니다.</p>
-              </div>
-              <button id="addAffectionTarget" class="button small primary-soft" type="button">+ 대상</button>
-            </div>
-            <div id="affectionTargetList" class="project-list"></div>
-          </section>
-
-          <section class="project-section emotion-project-section">
-            <div class="section-row">
-              <div>
-                <h4>감정 상태</h4>
-                <p>감정을 추적할 대상과 기본 감정, 강도를 정합니다.</p>
-              </div>
-              <button id="addEmotionTarget" class="button small primary-soft" type="button">+ 대상</button>
-            </div>
-            <div id="emotionTargetList" class="project-list"></div>
-          </section>
-
-          <section class="project-section">
-            <div class="section-row">
-              <div>
-                <h4>변수</h4>
-                <p>조건과 선택 결과에 사용할 값을 등록합니다.</p>
-              </div>
-              <button id="addVariable" class="button small primary-soft" type="button">+ 변수</button>
-            </div>
-            <div id="variableList" class="project-list"></div>
-          </section>
-
-          <section class="project-section">
-            <div class="section-row">
-              <div>
-                <h4>리소스 레지스트리</h4>
-                <p>나중에 장면 시스템에서 사용할 파일/URL을 미리 관리할 수 있습니다.</p>
-              </div>
-              <button id="addAsset" class="button small primary-soft" type="button">+ 리소스</button>
-            </div>
-            <div id="assetList" class="project-list"></div>
-          </section>
-        </div>
-      </aside>
     </section>
   </div>
 
-  <script src="js/site-runtime.js?v=101"></script>
+  <script src="js/site-runtime.js?v=200"></script>
 </body>
 </html>

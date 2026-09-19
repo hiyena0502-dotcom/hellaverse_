@@ -311,6 +311,7 @@ let collectionFilter="ALL";
 let pendingOrigin=state.profile.origin || "";
 let roomMode="talk";
 let activeInteractionReaction=null;
+let activeInteractionEvent=null;
 let interactionContext=null;
 let editorDraft=null;
 let editorTab="dialogue";
@@ -371,7 +372,10 @@ function parseVariable(v,value){
 }
 function getCharacter(id, source=state){return source.characters.find(c=>c.id===id)||null}
 function enabledCharacters(source=state){return source.characters.filter(c=>c.enabled)}
-function getEvent(id, source=state){return source.events.find(e=>e.id===id)||null}
+function getEvent(id, source=state){
+  if(activeInteractionEvent&&activeInteractionEvent.id===id)return activeInteractionEvent;
+  return source.events.find(e=>e.id===id)||null;
+}
 function eventsForCharacter(charId, source=state){return source.events.filter(e=>e.characterId===charId)}
 function variableById(id,source=state){return source.variables.find(v=>v.id===id)||null}
 function itemById(id,source=state){return source.items.find(i=>i.id===id)||null}
@@ -465,33 +469,40 @@ function applyInteractionEffects(source){
   }
   if(messages.length)showToast(messages.join(" · "));
 }
-function beginInteractionReaction(kind,source,followEventId=""){
+function beginInteractionReaction(kind,source,entries,label=""){
   const ch=getCharacter(source.characterId);if(!ch)return;
   if(!interactionContext){
     interactionContext={
       playback:playback ? clone(playback) : null,
       selectedCharacterId,
       typing:{token:typing.token||"",full:typing.full||"",index:(typing.full||"").length,done:true,timer:null},
-      followupActive:false
+      followupActive:true
     };
   }
   clearTyping();clearAuto();autoMode=false;
   applyInteractionEffects(source);
-  roomMode="talk";
-  activeInteractionReaction={
-    kind,sourceId:source.id,characterId:ch.id,
-    type:source.reactionType==="narration"?"narration":"dialogue",
-    text:String(source.reactionText||""),
-    followEventId:followEventId||"",
-    label:kind==="ask"?(source.label||"ASK"):(source.name||"ITEM")
+  activeInteractionReaction=null;
+  activeInteractionEvent={
+    id:"__interaction__"+uid("flow"),
+    name:(kind==="ask"?"ASK · ":"ITEM · ")+(label||"INTERACTION"),
+    characterId:ch.id,
+    nextEventId:"",
+    emotionExitMode:"keep",
+    entries:Array.isArray(entries)&&entries.length?entries:[normalizeEntry({
+      type:"narration",
+      text:"별다른 반응은 없었다.",
+      condition:null,effects:[],affectionCondition:null,affectionEffects:[],emotionCondition:null,emotionEffects:[]
+    })]
   };
-  session.log.push({
-    kind,
-    speaker:activeInteractionReaction.type==="narration"?"NARRATION":ch.name,
-    text:activeInteractionReaction.text,
-    eventName:(kind==="ask"?"ASK · ":"ITEM · ")+activeInteractionReaction.label
-  });
-  if(session.log.length>200)session.log.splice(0,session.log.length-200);
+  selectedCharacterId=ch.id;
+  roomMode="talk";
+  playback={
+    characterId:ch.id,
+    eventId:activeInteractionEvent.id,
+    frames:[{sourceType:"event",sourceId:activeInteractionEvent.id,index:0,label:kind.toUpperCase(),exitMode:"continue",targetEventId:""}],
+    ended:false
+  };
+  typing={token:"",full:"",index:0,done:true,timer:null};
   renderRoom();
 }
 function renderInteractionReaction(){
@@ -538,6 +549,7 @@ function restoreInterruptedDialogue(){
   const saved=interactionContext;
   interactionContext=null;
   activeInteractionReaction=null;
+  activeInteractionEvent=null;
   selectedCharacterId=saved.selectedCharacterId||selectedCharacterId;
   playback=saved.playback ? clone(saved.playback) : null;
   typing={
@@ -723,6 +735,7 @@ function startDialogue(characterId,eventId){
   selectedCharacterId=ch.id;
   roomMode="talk";
   activeInteractionReaction=null;
+  activeInteractionEvent=null;
   interactionContext=null;
   const ev=eventId?getEvent(eventId):eventsForCharacter(ch.id)[0];
   playback=ev?{
@@ -739,9 +752,16 @@ function findOptionGlobal(optionId){
   function scan(entries){
     for(const e of entries){
       if(e.type!=="choice")continue;
-      for(const o of e.options){if(o.id===optionId)return o;const n=scan(o.entries);if(n)return n}
+      for(const o of e.options){
+        if(o.id===optionId)return o;
+        const n=scan(o.entries);if(n)return n;
+      }
     }
     return null;
+  }
+  if(activeInteractionEvent){
+    const f=scan(activeInteractionEvent.entries);
+    if(f)return f;
   }
   for(const ev of state.events){const f=scan(ev.entries);if(f)return f}
   return null;
@@ -762,6 +782,10 @@ function jumpEvent(id){
 }
 function finishEvent(){
   const ev=currentEvent();
+  if(activeInteractionEvent&&ev?.id===activeInteractionEvent.id){
+    restoreInterruptedDialogue();
+    return true;
+  }
   if(ev?.nextEventId&&getEvent(ev.nextEventId)){jumpEvent(ev.nextEventId);return true}
   resetEventEmotion(ev);
   if(interactionContext?.followupActive){
@@ -893,7 +917,7 @@ function startAsk(id){
   const ch=getCharacter(ask.characterId);if(!ch||selectedCharacterId!==ch.id)return;
   const affection=Number(session.affection[ch.id]??ch.affectionStart);
   if(affection<ask.minAffection){showToast("아직 물어볼 수 없습니다.");return}
-  beginInteractionReaction("ask",ask,ask.eventId);
+  beginInteractionReaction("ask",ask,ask.entries,ask.label);
 }
 function renderInventoryPanel(){
   if(!typing.done){
@@ -904,14 +928,29 @@ function renderInventoryPanel(){
   clearAuto();
   const dynamic=$("#roomDynamic");if(!dynamic)return;
   const ch=getCharacter(selectedCharacterId);if(!ch)return;
-  const items=itemsForCharacter(ch.id).filter(i=>itemCount(i.id)>0);
+  const items=state.items.filter(i=>i.enabled&&itemCount(i.id)>0);
   dynamic.innerHTML='<section class="inventory-panel"><div class="inventory-character-head"><div><p class="page-kicker">INVENTORY</p><h2>'+esc(ch.name)+' ITEMS</h2></div><p>대화 중 아이템을 건네면 반응이 삽입됩니다.</p></div><div class="inventory-list">'+
-    (items.length?items.map(i=>'<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+'</small></span><span class="count">GIVE · ×'+itemCount(i.id)+'</span></button>').join(""):'<div class="editor-note">이 캐릭터에게 줄 수 있는 보유 아이템이 없습니다.</div>')+
+    (items.length?items.map(i=>{
+      const hasReaction=i.reactions.some(r=>r.characterId===ch.id);
+      return '<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+(hasReaction?' · REACTION':' · DEFAULT')+'</small></span><span class="count">GIVE · ×'+itemCount(i.id)+'</span></button>';
+    }).join(""):'<div class="editor-note">보유 아이템이 없습니다.</div>')+
     '</div></section>';
 }
 function useInventoryItem(id){
-  const item=itemById(id);if(!item||item.characterId!==selectedCharacterId||itemCount(id)<=0)return;
-  beginInteractionReaction("item",item,item.inventoryEventId);
+  const item=itemById(id);if(!item||itemCount(id)<=0)return;
+  const reaction=item.reactions.find(r=>r.characterId===selectedCharacterId) || {
+    id:uid("item-reaction"),
+    characterId:selectedCharacterId,
+    affectionDelta:0,
+    emotionState:"",
+    emotionIntensity:0,
+    entries:[normalizeEntry({
+      type:"narration",
+      text:"상대는 아이템을 받아 들였지만 특별한 반응은 보이지 않았다.",
+      condition:null,effects:[],affectionCondition:null,affectionEffects:[],emotionCondition:null,emotionEffects:[]
+    })]
+  };
+  beginInteractionReaction("item",reaction,reaction.entries,item.name);
 }
 function chName(id){return getCharacter(id)?.name||"UNKNOWN"}
 function advanceDialogue(fromAuto=false){

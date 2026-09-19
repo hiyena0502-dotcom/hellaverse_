@@ -1,8 +1,8 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_CHARLIE_COLLECTION_CANON_REPAIR_V1__)return;
-window.__HELLAVERSE_CHARLIE_COLLECTION_CANON_REPAIR_V1__=1;
-const K='hellaverse_dialogue_state_v1',VK='hellaverse_charlie_collection_canon_repair_v1';
+if(window.__HELLAVERSE_CHARLIE_COLLECTION_CANON_REPAIR_V2__)return;
+window.__HELLAVERSE_CHARLIE_COLLECTION_CANON_REPAIR_V2__=1;
+const K='hellaverse_dialogue_state_v1',VK='hellaverse_charlie_collection_canon_repair_v2';
 const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};
 const write=s=>{try{const v=JSON.stringify(s);localStorage.setItem(K,v);try{window.dispatchEvent(new StorageEvent('storage',{key:K,newValue:v,storageArea:localStorage,url:location.href}))}catch{}window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'charlie-collection-canon-repair',clearDirty:false}}));return true}catch(error){console.warn('Charlie Collection repair could not be saved safely.',error);return false}};
 const norm=v=>String(v??'').normalize('NFKC').replace(/\s+/g,' ').trim().toLowerCase();
@@ -82,15 +82,14 @@ function run(){
  const lucifer=items.filter(i=>i?.characterId==='lucifer-morningstar');
  const changed=[];
  for(const item of items){
-   const n=nameOf(item);
-   const explicit=/찰리의 첫 리본|첫 리본/.test(n);
-   const isCharlie=item?.characterId==='charlie-morningstar'||/^찰리의 |^찰리가 |^charlie\b/i.test(n);
-   if(!explicit&&!isCharlie)continue;
+   const n=nameOf(item),iid=String(item?.id||'');
+   const isCharlie=item?.characterId==='charlie-morningstar'||iid.startsWith('charlie-morningstar-collection-');
+   const explicit=isCharlie&&/찰리의 첫 리본|첫 리본/.test(n);
+   if(!isCharlie)continue;
    if(isKnownGood(n)&&!explicit)continue;
    const suspicious=explicit||duplicateOfLucifer(item,lucifer)||luciferSpecific(bodyOf(item)+' '+revealOf(item));
    if(!suspicious)continue;
    rewrite(item);changed.push(n||item.id);
-   const iid=String(item.id||'');
    if(iid){
      for(const sc of s.dialogues||[])for(const node of sc.nodes||[])for(const ch of node.choices||[]){
        if(ch?.unlockItemId===iid&&sc.characterId==='lucifer-morningstar')ch.unlockItemId='';

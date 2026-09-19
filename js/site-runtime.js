@@ -506,13 +506,14 @@ function acquireItem(id,count=1,sourceType="BASIC",source=state,{notify=true}={}
   source.newItemIds ||= [];
   source.itemHistory ||= [];
   const before=itemCount(id,source);
+  const everBefore=hasEverAcquired(id,source);
   let gain=Math.max(0,Number(count)||0);
   if(item.acquisitionMode==="unique"){
-    gain=hasEverAcquired(id,source)?0:Math.min(1,gain);
+    gain=everBefore?0:Math.min(1,gain);
   }
   const after=before+gain;
   source.inventoryCounts[id]=after;
-  const isNew=before===0&&gain>0;
+  const isNew=!everBefore&&gain>0;
   if(isNew&&!source.newItemIds.includes(id))source.newItemIds.push(id);
   if(gain>0){
     source.itemHistory.push({
@@ -835,13 +836,13 @@ function resetEventEmotion(event){
 }
 
 function makeEntry(type){
-  const common={id:uid("entry"),condition:null,effects:[],affectionCondition:null,affectionEffects:[],emotionCondition:null,emotionEffects:[]};
+  const common={id:uid("entry"),condition:null,effects:[],itemCondition:null,askCondition:null,itemEffects:[],affectionCondition:null,affectionEffects:[],emotionCondition:null,emotionEffects:[]};
   if(type==="narration")return{...common,type,text:""};
   if(type==="choice")return{...common,type,prompt:"",options:[makeOption("선택지 1"),makeOption("선택지 2")]};
   return{...common,type:"dialogue",speaker:"",text:""};
 }
 function makeOption(label){
-  return{id:uid("option"),label,entries:[],condition:null,effects:[],affectionCondition:null,affectionEffects:[],emotionCondition:null,emotionEffects:[],exitMode:"continue",targetEventId:""};
+  return{id:uid("option"),label,entries:[],condition:null,effects:[],itemCondition:null,askCondition:null,itemEffects:[],affectionCondition:null,affectionEffects:[],emotionCondition:null,emotionEffects:[],exitMode:"continue",targetEventId:""};
 }
 function regenerateIds(entry){
   entry.id=uid("entry");
@@ -1718,6 +1719,11 @@ function refreshInteractionEditor(scope){
   if(scope==="ask")renderAskEditor();
   else renderItemEditor();
 }
+function refreshOwnerEditor(kind,element){
+  if(kind==="mini-entry"||kind==="mini-option")refreshInteractionEditor(element.dataset.flowScope);
+  else renderEventManager();
+}
+
 function flowData(scope,ownerId,itemId="",flowKey="entries"){
   return ' data-flow-scope="'+esc(scope)+'" data-flow-owner-id="'+esc(ownerId)+'" data-flow-item-id="'+esc(itemId)+'" data-flow-key="'+esc(flowKey)+'"';
 }
@@ -2252,7 +2258,7 @@ editorBody.addEventListener("click",e=>{
     if(a==="add-afffx")owner.affectionEffects.push({id:uid("afx"),characterId:editorDraft.characters[0]?.id||"",amount:1});
     if(a==="add-emofx"){const c=editorDraft.characters[0];owner.emotionEffects.push({id:uid("efx"),characterId:c?.id||"",state:c?.emotionDefault||"calm",intensity:c?.emotionIntensity||0})}
     if(a==="add-itemfx"){owner.itemEffects ||= [];owner.itemEffects.push({id:uid("itemfx"),itemId:editorDraft.items[0]?.id||"",amount:1})}
-    renderEventManager();return;
+    refreshOwnerEditor(b.dataset.kind,b);return;
   }
   if(["delete-fx","delete-afffx","delete-emofx","delete-itemfx"].includes(a)){
     const kind=b.dataset.kind||b.closest("[data-fx-kind],[data-afffx-kind],[data-emofx-kind],[data-itemfx-kind]")?.dataset?.kind;
@@ -2262,7 +2268,7 @@ editorBody.addEventListener("click",e=>{
     if(ar)owner.affectionEffects=owner.affectionEffects.filter(x=>x.id!==ar.dataset.afffxId);
     if(er)owner.emotionEffects=owner.emotionEffects.filter(x=>x.id!==er.dataset.emofxId);
     if(ir)owner.itemEffects=(owner.itemEffects||[]).filter(x=>x.id!==ir.dataset.itemfxId);
-    renderEventManager();return;
+    refreshOwnerEditor(kind||"entry",b);return;
   }
   if(a==="new-ask"){
     editorDraft.asks.push(normalizeAsk({id:uid("ask"),characterId:editorDraft.characters[0]?.id||""}));

@@ -1,8 +1,8 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_LUCIFER_ITEM_DIALOGUE_PACK_V1__)return;
-window.__HELLAVERSE_LUCIFER_ITEM_DIALOGUE_PACK_V1__=1;
-const K='hellaverse_dialogue_state_v1',PACK='lucifer-item-dialogue-v1';
+if(window.__HELLAVERSE_LUCIFER_ITEM_DIALOGUE_PACK_V2__)return;
+window.__HELLAVERSE_LUCIFER_ITEM_DIALOGUE_PACK_V2__=1;
+const K='hellaverse_dialogue_state_v1',PACK='lucifer-item-dialogue-v2';
 const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};
 const write=s=>{try{localStorage.setItem(K,JSON.stringify(s));window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'lucifer-item-dialogue-pack',clearDirty:false}}));return true}catch(error){console.warn('Lucifer item dialogue pack could not be saved safely.',error);return false}};
 const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -20,6 +20,9 @@ const putScene=(s,sc)=>{s.dialogues=Array.isArray(s.dialogues)?s.dialogues:[];s.
 function fixCharlieRibbon(s){
  const items=Array.isArray(s.collectionItems)?s.collectionItems:(Array.isArray(s.items)?s.items:[]);
  for(const i of items){
+  const id=String(i?.id||'');
+  const charlieOwned=i?.characterId==='charlie-morningstar'||id.startsWith('charlie-morningstar-collection-');
+  if(!charlieOwned)continue;
   const text=clean((i.name||i.title||'')+' '+(i.desc||i.description||''));
   if(!/(찰리의 첫 리본|첫 리본|charlie.*first.*ribbon|first.*ribbon)/i.test(text))continue;
   i.characterId='charlie-morningstar';
@@ -29,7 +32,7 @@ function fixCharlieRibbon(s){
   i.claimLine=i.revealLine;
   i.condition='찰리와 어린 시절·가족 이야기를 충분히 나눈 뒤 획득 가능';
   i.dialogueSourceCharacterId='charlie-morningstar';
-  const id=String(i.id||'');if(!id)continue;
+  if(!id)continue;
   for(const sc of s.dialogues||[])for(const n of sc.nodes||[])for(const ch of n.choices||[])if(ch?.unlockItemId===id&&sc.characterId!=='charlie-morningstar')ch.unlockItemId='';
   const flag='collection.charlie.'+safeId(id)+'.received';
   putEvent(s,{id:flag,name:'Charlie · '+(i.name||'어린 시절 리본')+' 획득',description:'찰리와 관련된 개인적인 물건을 찰리에게 직접 받았다.',type:'MILESTONE',characterId:'charlie-morningstar',namespace:'collection.charlie'});

@@ -3,6 +3,9 @@
 
 const STATE_KEY = "hellaverse-studio-state-v2";
 const PREFS_KEY = "hellaverse-studio-prefs-v2";
+const LEGACY_STATE_KEY = "hellaverse_dialogue_state_v1";
+const DATA_BACKUP_KEY = "hellaverse-studio-backups-v2";
+const EDITOR_SNAPSHOT_KEY = "hellaverse-studio-editor-snapshot-v2";
 const RARITIES = ["COMMON","UNCOMMON","RARE","EPIC","LEGENDARY","MISTIC"];
 const ORIGINS = [
   ["sinner","죄인 · SINNER","hell"],
@@ -21,6 +24,53 @@ const GIFT_PREFERENCES = [
   ["LOVED",5],["LIKED",3],["NEUTRAL",1],["DISLIKED",-2],["HATED",-4]
 ];
 const RARITY_ORDER = {COMMON:0,UNCOMMON:1,RARE:2,EPIC:3,LEGENDARY:4,MISTIC:5};
+const RINGS = [
+  {id:"pride",name:"PRIDE",ko:"프라이드",subtitle:"PENTAGRAM CITY",note:"호텔, 오버로드, 왕가와 지옥의 중심부"},
+  {id:"wrath",name:"WRATH",ko:"래스",subtitle:"VOLCANIC OUTSKIRTS",note:"화산 지대, 거대한 관문, 목초지와 농장"},
+  {id:"greed",name:"GREED",ko:"그리드",subtitle:"MAMMON DISTRICT",note:"네온, 카지노, 공장과 거대한 쇼 비즈니스 지구"},
+  {id:"gluttony",name:"GLUTTONY",ko:"글러트니",subtitle:"BEE'S DISTRICT",note:"파티, 음식, 벌집 모티프가 가득한 축제 지구"},
+  {id:"lust",name:"LUST",ko:"러스트",subtitle:"OZZIE'S DISTRICT",note:"클럽, 공연장, 네온 간판이 이어지는 밤의 거리"},
+  {id:"envy",name:"ENVY",ko:"엔비",subtitle:"LEVIATHAN DISTRICT",note:"수중빛과 유리 구조물이 섞인 차가운 도심"},
+  {id:"sloth",name:"SLOTH",ko:"슬로스",subtitle:"BELPHEGOR WARD",note:"몽환적인 의료·휴식 시설이 모인 느린 지구"}
+];
+const RING_IDS = RINGS.map(r=>r.id);
+const RING_LOCATIONS = {
+  pride:[
+    ["HAZBIN HOTEL","호텔 로비와 객실, 왕가와 호텔 식구들이 모이는 중심 거점"],
+    ["PENTAGRAM CITY","오버로드와 죄인들이 뒤섞이는 프라이드의 대도시"],
+    ["I.M.P. OFFICE","서류, 포스터와 잡동사니가 쌓인 임프 사무실"]
+  ],
+  wrath:[
+    ["VOLCANIC GATE","화산과 거대한 관문이 맞닿아 있는 래스의 입구"],
+    ["HARVEST FIELDS","건초 더미와 목초지가 이어지는 외곽 농장 지대"],
+    ["WRATH TOWN","거친 목재와 붉은 흙이 이어지는 생활 구역"]
+  ],
+  greed:[
+    ["MAMMON PLAZA","광고판과 금빛 간판이 과하게 번쩍이는 중심 광장"],
+    ["LOO LOO DISTRICT","놀이시설과 상점이 몰린 시끄러운 상업 지구"],
+    ["VAULT ROW","금고, 계약서, 상품 창고가 이어지는 뒷골목"]
+  ],
+  gluttony:[
+    ["BEE'S PARTY","음식과 음악, 벌집 조명이 넘치는 파티 구역"],
+    ["HONEY STRIP","달콤한 네온과 바가 이어지는 거리"],
+    ["FEAST YARD","큰 테이블과 야외 무대가 놓인 축제 마당"]
+  ],
+  lust:[
+    ["OZZIE'S","공연 무대와 붉은 네온이 중심인 클럽"],
+    ["LUST BOULEVARD","극장과 라운지가 이어지는 화려한 거리"],
+    ["BACKSTAGE","의상, 포스터, 소품이 쌓인 공연장 뒤편"]
+  ],
+  envy:[
+    ["LEVIATHAN QUARTER","차갑고 푸른 조명과 유리 건물이 이어지는 도심"],
+    ["MIRROR CANAL","반사광이 흐르는 운하와 산책로"],
+    ["DEEP MARKET","희귀품과 장식품을 파는 어두운 시장"]
+  ],
+  sloth:[
+    ["BELPHEGOR WARD","구름빛 조명과 병원이 섞인 조용한 중심 구역"],
+    ["DREAM CLINIC","수면과 회복을 위한 느긋한 의료 시설"],
+    ["NAP GARDEN","쿠션과 식물이 놓인 몽환적인 휴식 정원"]
+  ]
+};
 
 const $ = (q, root=document) => root.querySelector(q);
 const $$ = (q, root=document) => [...root.querySelectorAll(q)];
@@ -36,10 +86,24 @@ const originLabel = id => ORIGINS.find(x=>x[0]===id)?.[1] || "헬본 · HELLBORN
 const originRealm = id => ORIGINS.find(x=>x[0]===id)?.[2] || "hell";
 const validOrigin = id => ORIGINS.some(x=>x[0]===id);
 const normalizeOrigin = id => id==="heaven" ? "angel" : validOrigin(id) ? id : "hellborn";
+const ringLabel = id => RINGS.find(r=>r.id===id)?.name || "UNASSIGNED";
+function inferRing(c={}){
+  if(originRealm(normalizeOrigin(c.origin))==="heaven")return "";
+  const key=[c.id,c.name,c.role].join(" ").toLowerCase();
+  if(/satan|wrath/.test(key))return "wrath";
+  if(/mammon|greed/.test(key))return "greed";
+  if(/beelzebub|queen bee|\bbee\b|gluttony/.test(key))return "gluttony";
+  if(/asmodeus|ozzie|lust/.test(key))return "lust";
+  if(/leviathan|envy/.test(key))return "envy";
+  if(/belphegor|sloth/.test(key))return "sloth";
+  return "pride";
+}
 
 function defaultState(){
   return {
     profile:{name:"",origin:""},
+    favoriteCharacterIds:[],
+    playState:{variables:{},affection:{},emotions:{},log:[]},
     characters:[],
     events:[],
     variables:[],
@@ -78,6 +142,7 @@ function normalizeCharacter(c={}){
     role:c.role || "",
     quote:c.quote || "",
     image:c.image || "",
+    ring:RING_IDS.includes(c.ring)?c.ring:inferRing(c),
     enabled:c.enabled !== false,
     affectionStart:clamp(c.affectionStart,0,100,0),
     emotionDefault:EMOTIONS.some(x=>x[0]===c.emotionDefault) ? c.emotionDefault : "calm",
@@ -295,6 +360,22 @@ function normalizeThought(t={}){
     enabled:t.enabled!==false
   };
 }
+function normalizePlayState(p={}){
+  return {
+    variables:p.variables&&typeof p.variables==="object"?{...p.variables}:{},
+    affection:p.affection&&typeof p.affection==="object"?Object.fromEntries(Object.entries(p.affection).map(([id,v])=>[id,clamp(v,0,100,0)])):{},
+    emotions:p.emotions&&typeof p.emotions==="object"?Object.fromEntries(Object.entries(p.emotions).map(([id,v])=>[id,{
+      state:EMOTIONS.some(x=>x[0]===v?.state)?v.state:"calm",
+      intensity:clamp(v?.intensity,0,100,0)
+    }])):{},
+    log:Array.isArray(p.log)?p.log.slice(-200).map(x=>({
+      kind:String(x?.kind||"dialogue"),
+      speaker:String(x?.speaker||""),
+      text:String(x?.text||""),
+      eventName:String(x?.eventName||"")
+    })):[]
+  };
+}
 function normalizeState(raw){
   const d=defaultState();
   const s=raw&&typeof raw==="object"?raw:{};
@@ -314,6 +395,8 @@ function normalizeState(raw){
       name:String(s.profile?.name||""),
       origin:rawOrigin ? normalizeOrigin(rawOrigin) : ""
     },
+    favoriteCharacterIds:Array.isArray(s.favoriteCharacterIds)?[...new Set(s.favoriteCharacterIds.map(String))]:[],
+    playState:normalizePlayState(s.playState),
     characters:Array.isArray(s.characters)?s.characters.map(normalizeCharacter):[],
     events:Array.isArray(s.events)?s.events.map(normalizeEvent):[],
     variables:Array.isArray(s.variables)?s.variables.map(normalizeVariable):[],
@@ -358,10 +441,110 @@ function normalizeState(raw){
     discoveredThoughtIds:Array.isArray(s.discoveredThoughtIds)?[...new Set(s.discoveredThoughtIds)]:[]
   };
 }
-function readState(){
-  try{return normalizeState(JSON.parse(localStorage.getItem(STATE_KEY)))}catch{return normalizeState(null)}
+function legacyMoodToEmotion(value){
+  const x=String(value||"").toLowerCase();
+  if(/good|happy|excited|joy/.test(x))return "joy";
+  if(/annoyed|angry/.test(x))return "angry";
+  if(/sad/.test(x))return "sad";
+  if(/tired|sleep/.test(x))return "calm";
+  return "calm";
 }
-function saveState(){localStorage.setItem(STATE_KEY,JSON.stringify(state))}
+function migrateLegacyState(raw){
+  const legacy=raw&&typeof raw==="object"?raw:{};
+  const next=defaultState();
+  next.profile={
+    name:String(legacy.player?.name||legacy.profile?.name||""),
+    origin:validOrigin(String(legacy.player?.origin||"").toLowerCase())?String(legacy.player.origin).toLowerCase():"hellborn"
+  };
+  const oldChars=Array.isArray(legacy.characters)?legacy.characters:[];
+  next.characters=oldChars.map(ch=>normalizeCharacter({
+    id:ch.id,
+    name:ch.name,
+    origin:String(ch.group||"").toUpperCase()==="HEAVEN"?"angel":"hellborn",
+    role:ch.label||ch.status||ch.group||"",
+    quote:ch.description||ch.personality||"",
+    image:ch.image||"",
+    affectionStart:Number(legacy.affection?.[ch.id]?.value??legacy.affection?.[ch.id]??0),
+    emotionDefault:legacyMoodToEmotion(legacy.moods?.[ch.id]),
+    emotionIntensity:legacy.moods?.[ch.id]?35:10
+  }));
+  const charName=id=>next.characters.find(c=>c.id===id)?.name||"";
+  const oldScenes=Array.isArray(legacy.dialogues)?legacy.dialogues:[];
+  next.events=oldScenes.map(scene=>{
+    const entries=[];
+    if(scene.opening)entries.push(normalizeEntry({type:"narration",text:String(scene.opening)}));
+    const nodes=Array.isArray(scene.nodes)?scene.nodes:[];
+    nodes.forEach(node=>{
+      if(node?.text)entries.push(normalizeEntry({type:"dialogue",speaker:charName(scene.characterId),text:String(node.text)}));
+      if(Array.isArray(node?.choices)&&node.choices.length){
+        entries.push(normalizeEntry({
+          type:"choice",
+          prompt:"어떻게 답할까?",
+          options:node.choices.map(choice=>({
+            id:choice.id,
+            label:choice.playerLine||choice.text||"선택",
+            entries:choice.response?[normalizeEntry({type:"dialogue",speaker:charName(scene.characterId),text:String(choice.response)})]:[],
+            affectionEffects:Number(choice.affectionDelta)?[{characterId:scene.characterId,amount:Number(choice.affectionDelta)}]:[],
+            exitMode:choice.endConversation===false?"continue":"end"
+          }))
+        }));
+      }
+    });
+    return normalizeEvent({id:scene.id,name:scene.title||scene.name||"Legacy Event",characterId:scene.characterId,entries});
+  });
+  const oldItems=Array.isArray(legacy.collectionItems)?legacy.collectionItems:[];
+  next.items=oldItems.map(item=>normalizeItem({
+    id:item.id,
+    name:item.name||item.title||"Legacy Item",
+    description:item.desc||item.description||"",
+    rarity:item.rarity,
+    category:"기념품",
+    collectionCharacterId:item.characterId||"",
+    acquisitionMode:"unique",
+    gachaEnabled:false,
+    secret:false,
+    enabled:true
+  }));
+  next.inventoryCounts=Object.fromEntries((Array.isArray(legacy.ownedItems)?legacy.ownedItems:[]).map(id=>[id,1]));
+  next.thoughts=(Array.isArray(legacy.thoughts)?legacy.thoughts:[]).map(t=>normalizeThought({
+    id:t.id,
+    characterId:t.characterId,
+    category:t.category||t.categories?.[0]||"일상",
+    frequency:t.frequency,
+    rarity:t.rarity,
+    text:t.text||t.variants?.[0]||"",
+    enabled:true
+  }));
+  next.playState.affection=Object.fromEntries(next.characters.map(ch=>[ch.id,ch.affectionStart]));
+  next.playState.emotions=Object.fromEntries(next.characters.map(ch=>[ch.id,{state:ch.emotionDefault,intensity:ch.emotionIntensity}]));
+  return normalizeState(next);
+}
+function readState(){
+  try{
+    const current=localStorage.getItem(STATE_KEY);
+    if(current)return normalizeState(JSON.parse(current));
+    const legacy=localStorage.getItem(LEGACY_STATE_KEY);
+    if(legacy){
+      const migrated=migrateLegacyState(JSON.parse(legacy));
+      localStorage.setItem(STATE_KEY,JSON.stringify(migrated));
+      return migrated;
+    }
+  }catch{}
+  return normalizeState(null);
+}
+function syncPlayStateFromSession(){
+  if(!session)return;
+  state.playState={
+    variables:clone(session.variables||{}),
+    affection:clone(session.affection||{}),
+    emotions:clone(session.emotions||{}),
+    log:Array.isArray(session.log)?session.log.slice(-200):[]
+  };
+}
+function saveState(){
+  syncPlayStateFromSession();
+  localStorage.setItem(STATE_KEY,JSON.stringify(state));
+}
 function readPrefs(){
   try{
     const p=JSON.parse(localStorage.getItem(PREFS_KEY)||"{}");
@@ -369,12 +552,130 @@ function readPrefs(){
   }catch{return{textSpeed:24,autoDelay:900,stageClick:true}}
 }
 function savePrefs(){localStorage.setItem(PREFS_KEY,JSON.stringify(prefs))}
+function readBackupStore(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(DATA_BACKUP_KEY)||"{}");
+    return {
+      slots:Array.from({length:3},(_,i)=>Array.isArray(raw.slots)?raw.slots[i]||null:null),
+      safety:raw.safety&&typeof raw.safety==="object"?raw.safety:null
+    };
+  }catch{return{slots:[null,null,null],safety:null}}
+}
+function writeBackupStore(store){localStorage.setItem(DATA_BACKUP_KEY,JSON.stringify(store))}
+function makeDataSnapshot(label){
+  saveState();
+  return {version:2,label:String(label||"BACKUP"),at:Date.now(),state:clone(state),prefs:clone(prefs)};
+}
+function captureSafetySnapshot(label){
+  const store=readBackupStore();
+  store.safety=makeDataSnapshot(label||"자동 안전 백업");
+  writeBackupStore(store);
+}
+function backupDate(snap){return snap?.at?new Date(snap.at).toLocaleString("ko-KR"):"EMPTY"}
+function saveBackupSlot(index){
+  const store=readBackupStore();
+  store.slots[index]=makeDataSnapshot("SLOT "+(index+1));
+  writeBackupStore(store);
+  showToast("세이브 슬롯 "+(index+1)+"에 저장했습니다.");
+  showDataManager();
+}
+function applyDataSnapshot(snapshot,label="백업"){
+  if(!snapshot?.state)return;
+  if(!confirm(label+"을(를) 불러올까요? 현재 상태는 자동 안전 백업으로 보관됩니다."))return;
+  captureSafetySnapshot("복원 전 자동 백업");
+  state=normalizeState(snapshot.state);
+  prefs={
+    textSpeed:clamp(snapshot.prefs?.textSpeed,0,80,24),
+    autoDelay:clamp(snapshot.prefs?.autoDelay,250,3000,900),
+    stageClick:snapshot.prefs?.stageClick!==false
+  };
+  session=createSession();
+  pendingOrigin=state.profile.origin||"";
+  savePrefs();
+  saveState();
+  closeModal();
+  if(gameShell.hidden)renderStart();
+  else{updatePlayerBadge();renderPage()}
+  showToast(label+"을(를) 불러왔습니다.");
+}
+function loadBackupSlot(index){
+  const snap=readBackupStore().slots[index];
+  if(!snap){showToast("비어 있는 세이브 슬롯입니다.");return}
+  applyDataSnapshot(snap,"세이브 슬롯 "+(index+1));
+}
+function restoreSafetySnapshot(){
+  const snap=readBackupStore().safety;
+  if(!snap){showToast("복원할 자동 안전 백업이 없습니다.");return}
+  applyDataSnapshot(snap,"자동 안전 백업");
+}
+function exportData(){
+  const snap=makeDataSnapshot("JSON EXPORT");
+  const blob=new Blob([JSON.stringify(snap,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="hellaverse-studio-backup.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function importDataFile(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const raw=JSON.parse(String(reader.result||"{}"));
+      const snapshot=raw?.state?raw:{version:2,label:"IMPORTED",at:Date.now(),state:raw,prefs:{}};
+      applyDataSnapshot(snapshot,"가져온 JSON");
+    }catch{alert("백업 JSON 파일을 읽지 못했습니다.")}
+  };
+  reader.readAsText(file);
+}
+function resetPlayProgress(){
+  if(!confirm("대화 진행도, 호감도·감정, ASK 기록, 아이템 획득 기록을 초기화할까요? 편집한 캐릭터/이벤트/아이템 설정은 유지됩니다."))return;
+  captureSafetySnapshot("진행도 초기화 전 자동 백업");
+  state.playState=normalizePlayState({});
+  state.inventoryCounts={};
+  state.newItemIds=[];
+  state.itemHistory=[];
+  state.discoveredGiftReactionKeys=[];
+  state.giftInteractionCounts={};
+  state.askedAskIds=[];
+  state.unlockedAskIds=[];
+  state.interactionHistory=[];
+  state.discoveredThoughtIds=[];
+  state.gacha.history=[];
+  session=createSession();
+  saveState();
+  closeModal();
+  renderPage();
+  showToast("플레이 진행도를 초기화했습니다.");
+}
+function showDataManager(){
+  const store=readBackupStore();
+  const slots=store.slots.map((snap,i)=>
+    '<article class="save-slot"><div><small>SLOT '+(i+1)+'</small><strong>'+(snap?esc(snap.label):"EMPTY")+'</strong><span>'+esc(backupDate(snap))+'</span></div><div class="save-slot-actions"><button class="small-button" type="button" data-data-action="save-slot" data-slot="'+i+'">SAVE</button><button class="small-button" type="button" data-data-action="load-slot" data-slot="'+i+'" '+(!snap?"disabled":"")+'>LOAD</button></div></article>'
+  ).join("");
+  openModal("DATA & SAVE",
+    '<div class="data-manager"><p class="muted">플레이 데이터는 이 브라우저에 자동 저장됩니다. 중요한 변경 전에는 슬롯이나 JSON 백업을 함께 사용하세요.</p>'+
+    '<div class="save-slot-list">'+slots+'</div>'+
+    '<section class="safety-snapshot"><div><small>AUTO SAFETY</small><strong>'+(store.safety?esc(store.safety.label):"아직 없음")+'</strong><span>'+esc(backupDate(store.safety))+'</span></div><button class="small-button" type="button" data-data-action="restore-safety" '+(!store.safety?"disabled":"")+'>RESTORE</button></section>'+
+    '<div class="data-actions"><button class="ghost-button" type="button" data-data-action="export">EXPORT JSON</button><label class="ghost-button file-button">IMPORT JSON<input id="dataImportFile" type="file" accept="application/json,.json"></label><button class="danger-button" type="button" data-data-action="reset-progress">RESET PLAY PROGRESS</button></div></div>'
+  );
+}
 
 let state=readState();
 let prefs=readPrefs();
 let currentPage="home";
 let selectedCharacterId="";
 let homeIndex=0;
+let worldRing="pride";
+let characterQuery="";
+let characterRealmFilter="ALL";
+let characterRingFilter="ALL";
+let characterFavoritesOnly=false;
+let roomToolsOpen=false;
 let thoughtFilter="ALL";
 let collectionFilter="ALL";
 let collectionRarity="ALL";
@@ -388,6 +689,9 @@ let activeInteractionReaction=null;
 let activeInteractionEvent=null;
 let interactionContext=null;
 let editorDraft=null;
+let editorUndoStack=[];
+let editorRedoStack=[];
+let editorInitialSnapshot="";
 let editorTab="dialogue";
 let dialogueSubtab="characters";
 let selectedEditorCharacterId="";
@@ -424,15 +728,17 @@ const editorOverlay=$("#editorOverlay");
 const editorBody=$("#editorBody");
 
 function createSession(){
+  const saved=normalizePlayState(state.playState);
   const variables={};
-  state.variables.forEach(v=>variables[v.id]=parseVariable(v,v.defaultValue));
+  state.variables.forEach(v=>variables[v.id]=v.id in saved.variables?parseVariable(v,saved.variables[v.id]):parseVariable(v,v.defaultValue));
   const affection={};
   const emotions={};
   state.characters.forEach(c=>{
-    affection[c.id]=c.affectionStart;
-    emotions[c.id]={state:c.emotionDefault,intensity:c.emotionIntensity};
+    affection[c.id]=c.id in saved.affection?clamp(saved.affection[c.id],0,100,c.affectionStart):c.affectionStart;
+    const emo=saved.emotions[c.id];
+    emotions[c.id]=emo?{state:emo.state,intensity:emo.intensity}:{state:c.emotionDefault,intensity:c.emotionIntensity};
   });
-  return {variables,affection,emotions,log:[]};
+  return {variables,affection,emotions,log:saved.log.slice(-200)};
 }
 function syncSessionDefinitions(){
   state.variables.forEach(v=>{
@@ -717,6 +1023,7 @@ function applyOwnerEffects(o){
   applyItemEffects(o.itemEffects);
   applyAffectionEffects(o.affectionEffects);
   applyEmotionEffects(o.emotionEffects);
+  saveState();
 }
 function applyInteractionEffects(source){
   const ch=getCharacter(source.characterId);if(!ch)return;
@@ -735,6 +1042,7 @@ function applyInteractionEffects(source){
     messages.push(ch.name+" 감정 → "+emotionLabel(source.emotionState)+" "+intensity);
   }
   if(messages.length)showToast(messages.join(" · "));
+  saveState();
 }
 function beginInteractionReaction(kind,source,entries,label="",meta={}){
   const ch=getCharacter(source.characterId);if(!ch)return;
@@ -763,6 +1071,7 @@ function beginInteractionReaction(kind,source,entries,label="",meta={}){
     })]
   };
   selectedCharacterId=ch.id;
+  roomToolsOpen=false;
   roomMode="talk";
   playback={
     characterId:ch.id,
@@ -903,6 +1212,8 @@ function setPage(page){
 }
 function renderPage(){
   if(currentPage==="home")renderHome();
+  else if(currentPage==="world")renderWorld();
+  else if(currentPage==="characters")renderCharacters();
   else if(currentPage==="gacha")renderGacha();
   else if(currentPage==="thought")renderThought();
   else if(currentPage==="collection")renderCollection();
@@ -938,11 +1249,63 @@ function renderHome(){
       '</div>'+
     '</section>';
 }
+function renderWorld(){
+  const ring=RINGS.find(r=>r.id===worldRing)||RINGS[0];
+  const ringChars=enabledCharacters().filter(ch=>ch.ring===ring.id);
+  const locations=RING_LOCATIONS[ring.id]||[];
+  pageRoot.innerHTML=
+    '<section class="world-page">'+
+      '<div class="page-head world-head"><div><p class="page-kicker">HELL LIFE</p><h1>SEVEN RINGS</h1></div><p>링과 지역을 둘러보고 그곳에 배치된 캐릭터의 ROOM으로 바로 이동합니다.</p></div>'+
+      '<div class="ring-tabs">'+RINGS.map(r=>'<button class="ring-tab '+(r.id===ring.id?"active":"")+'" type="button" data-action="world-ring" data-ring="'+r.id+'"><span>'+r.name+'</span><small>'+r.ko+'</small></button>').join("")+'</div>'+
+      '<section class="world-stage ring-'+ring.id+'">'+
+        '<div class="world-scene-art" aria-hidden="true"><span class="world-moon"></span><span class="world-structure a"></span><span class="world-structure b"></span><span class="world-ground"></span></div>'+
+        '<div class="world-stage-copy"><p class="page-kicker">'+ring.name+' RING</p><h2>'+esc(ring.subtitle)+'</h2><p>'+esc(ring.note)+'</p><span>'+ringChars.length+' CHARACTERS</span></div>'+
+      '</section>'+
+      '<div class="world-location-grid">'+locations.map((loc,i)=>'<article class="world-location-card"><span>'+String(i+1).padStart(2,"0")+'</span><div><strong>'+esc(loc[0])+'</strong><p>'+esc(loc[1])+'</p></div></article>').join("")+'</div>'+
+      '<section class="world-cast"><div class="world-cast-head"><div><p class="page-kicker">LOCAL CAST</p><h2>'+ring.name+' CHARACTERS</h2></div><button class="small-button" type="button" data-action="open-characters-page">ALL CHARACTERS</button></div>'+
+      (ringChars.length?'<div class="world-cast-grid">'+ringChars.map(ch=>{
+        const art=ch.image?'<img src="'+esc(ch.image)+'" alt="">':'<span class="mini-silhouette">'+esc(ch.name.slice(0,2).toUpperCase())+'</span>';
+        return '<button class="world-character-card" type="button" data-action="world-character" data-id="'+esc(ch.id)+'"><span class="world-character-art">'+art+'</span><span><small>'+esc(ch.role||ring.name)+'</small><strong>'+esc(ch.name)+'</strong></span><b>ENTER →</b></button>';
+      }).join("")+'</div>':'<div class="empty-panel compact"><div><h2>이 링에 연결된 캐릭터가 없습니다.</h2><p>EDITOR의 캐릭터 설정에서 RING을 지정할 수 있습니다.</p></div></div>')+
+      '</section>'+
+    '</section>';
+}
+function renderCharacters(){
+  const chars=enabledCharacters();
+  const favs=new Set(state.favoriteCharacterIds||[]);
+  const query=characterQuery.trim().toLowerCase();
+  const visible=chars.filter(ch=>{
+    if(characterFavoritesOnly&&!favs.has(ch.id))return false;
+    if(characterRealmFilter!=="ALL"&&originRealm(ch.origin)!==characterRealmFilter)return false;
+    if(characterRingFilter!=="ALL"&&ch.ring!==characterRingFilter)return false;
+    if(query&&![ch.name,ch.role,ch.quote,ringLabel(ch.ring),originLabel(ch.origin)].join(" ").toLowerCase().includes(query))return false;
+    return true;
+  });
+  pageRoot.innerHTML=
+    '<section class="characters-page"><div class="page-head"><div><p class="page-kicker">CHARACTERS</p><h1>CAST DIRECTORY</h1></div><p>검색, 출신, 링, 즐겨찾기로 캐릭터를 빠르게 찾습니다.</p></div>'+
+    '<div class="character-browser-toolbar">'+
+      '<input data-character-control="query" value="'+esc(characterQuery)+'" placeholder="캐릭터 검색">'+
+      '<select data-character-control="realm"><option value="ALL">모든 출신</option><option value="hell" '+(characterRealmFilter==="hell"?"selected":"")+'>HELL</option><option value="heaven" '+(characterRealmFilter==="heaven"?"selected":"")+'>HEAVEN</option></select>'+
+      '<select data-character-control="ring"><option value="ALL">모든 링</option>'+RINGS.map(r=>'<option value="'+r.id+'" '+(characterRingFilter===r.id?"selected":"")+'>'+r.name+'</option>').join("")+'</select>'+
+      '<button class="filter-chip '+(characterFavoritesOnly?"active":"")+'" type="button" data-action="character-favorites">★ FAVORITES</button>'+
+      '<span>'+visible.length+' / '+chars.length+'</span>'+
+    '</div>'+
+    (visible.length?'<div class="character-directory-grid">'+visible.map(ch=>{
+      const favorite=favs.has(ch.id);
+      const art=ch.image?'<img src="'+esc(ch.image)+'" alt="'+esc(ch.name)+'">':'<span class="directory-silhouette">'+esc(ch.name.slice(0,2).toUpperCase())+'</span>';
+      return '<article class="character-directory-card '+(favorite?"favorite":"")+'"><button class="character-favorite" type="button" data-action="character-favorite" data-id="'+esc(ch.id)+'" aria-label="즐겨찾기">'+(favorite?"★":"☆")+'</button><button class="character-open" type="button" data-action="character-open" data-id="'+esc(ch.id)+'"><span class="directory-art">'+art+'</span><span class="directory-copy"><small>'+esc(originLabel(ch.origin))+(ch.ring?' · '+esc(ringLabel(ch.ring)):'')+'</small><strong>'+esc(ch.name)+'</strong><p>'+esc(ch.role||ch.quote||"")+'</p><b>ROOM →</b></span></button></article>';
+    }).join("")+'</div>':'<div class="empty-panel"><div><h2>조건에 맞는 캐릭터가 없습니다.</h2><p>검색어나 필터를 바꿔보세요.</p></div></div>')+
+    '</section>';
+}
 function renderGacha(){
   const availablePool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||!hasEverAcquired(i.id)));
   const hasRepeatable=availablePool.some(i=>i.acquisitionMode==="repeatable");
   const canTen=hasRepeatable||availablePool.length>=10;
-  const total=RARITIES.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1;
+  const representedRarities=RARITIES.filter(r=>availablePool.some(i=>i.rarity===r));
+  const weightedRarities=representedRarities.filter(r=>Number(state.gacha.rarityWeights[r]||0)>0);
+  const activeRarities=weightedRarities.length?weightedRarities:representedRarities;
+  const useEqualRates=!weightedRarities.length&&representedRarities.length>0;
+  const total=useEqualRates?activeRarities.length:(activeRarities.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1);
   const history=state.gacha.history.slice(-8).reverse();
   const drawDisabled=gachaAnimating||!state.gacha.enabled||!availablePool.length;
 
@@ -955,7 +1318,7 @@ function renderGacha(){
       '<button class="gold-button" type="button" data-action="draw-gacha" data-count="10" '+(drawDisabled||!canTen?"disabled":"")+'>10 DRAW · '+state.gacha.tenCost+'</button></div>'+
       (!canTen&&availablePool.length?'<p class="gacha-pool-note">REPEATABLE이 없고 UNIQUE 풀이 10개 미만이라 10회 뽑기가 잠겨 있습니다.</p>':'')+
       '</div><div class="gacha-aura" aria-hidden="true"></div></div>'+
-      '<aside class="gacha-side"><div class="info-card"><h3>RATES</h3>'+RARITIES.map(r=>'<div class="rate-row"><span>'+r+'</span><b>'+((state.gacha.rarityWeights[r]/total)*100).toFixed(1)+'%</b></div>').join("")+'</div>'+
+      '<aside class="gacha-side"><div class="info-card"><h3>RATES</h3>'+RARITIES.map(r=>'<div class="rate-row '+(activeRarities.includes(r)?"":"inactive")+'"><span>'+r+'</span><b>'+(activeRarities.includes(r)?(((useEqualRates?1:Number(state.gacha.rarityWeights[r]||0))/total)*100).toFixed(1):"0.0")+'%</b></div>').join("")+'<p class="gacha-rate-note">'+(useEqualRates?"설정 가중치가 모두 0이라 현재 존재하는 희귀도에 균등 분배합니다.":"현재 획득 가능한 희귀도만 기준으로 실제 확률을 재분배합니다.")+'</p></div>'+
       '<div class="info-card"><div class="info-card-head"><h3>RECENT</h3><button class="small-button history-clear" type="button" data-action="clear-gacha-history" '+(!history.length||gachaAnimating?"disabled":"")+'>CLEAR</button></div>'+
       (history.length?history.map(h=>'<div class="history-row"><span>'+esc(h.rarity)+'</span><b>'+esc(h.name)+'</b></div>').join(""):'<p class="muted">아직 기록이 없습니다.</p>')+'</div></aside>'+
     '</div></section>';
@@ -1173,7 +1536,7 @@ function renderRoom(){
     '<button class="room-mode-button '+(roomMode==="ask"?"active":"")+'" type="button" data-action="room-mode" data-mode="ask" '+(interactionLocked?"disabled":"")+'>ASK</button>'+
     '<button class="room-mode-button '+(roomMode==="inventory"?"active":"")+'" type="button" data-action="room-mode" data-mode="inventory" '+(interactionLocked?"disabled":"")+'>INVENTORY</button></div>'+
     (roomMode==="talk"&&eventOptions.length&&!interactionLocked?'<select id="roomEventSelect" style="width:auto;min-width:190px">'+eventOptions.map(e=>'<option value="'+esc(e.id)+'" '+(ev?.id===e.id?"selected":"")+'>'+esc(e.name)+'</option>').join("")+'</select>':'')+
-    '<div class="room-actions"><button class="text-link" type="button" data-action="show-log">LOG</button><button class="text-link" type="button" data-action="show-history">HISTORY</button><button class="text-link" type="button" data-action="show-affection">AFFECTION</button><button class="text-link" type="button" data-action="show-emotion">EMOTION</button></div></div>'+
+    '<button class="room-more-button" type="button" data-action="toggle-room-tools" aria-label="추가 메뉴">•••</button><div class="room-actions '+(roomToolsOpen?"open":"")+'"><button class="text-link" type="button" data-action="show-log">LOG</button><button class="text-link" type="button" data-action="show-history">HISTORY</button><button class="text-link" type="button" data-action="show-affection">AFFECTION</button><button class="text-link" type="button" data-action="show-emotion">EMOTION</button><button class="text-link mobile-set" type="button" data-action="open-play-settings">SET</button></div></div>'+
     '<div class="room-stage"><div class="room-art">'+art+'</div><div id="roomDynamic"></div>'+
     (roomMode==="talk"&&!activeInteractionReaction?'<div class="room-control-bar"><button type="button" data-action="toggle-auto" class="'+(autoMode?"active":"")+'">AUTO</button><button type="button" data-action="open-play-settings">SET</button></div>':'')+
     '</div></section>';
@@ -1210,6 +1573,7 @@ function renderRoomBeat(){
   if(typing.token!==token){
     session.log.push({kind:entry.type,speaker,text:entry.text||"",eventName:currentEvent()?.name||""});
     if(session.log.length>200)session.log.splice(0,session.log.length-200);
+    saveState();
     startTyping(entry.text||"",token);
   }else{
     $("#dialogueText").textContent=typing.done?typing.full:typing.full.slice(0,typing.index);
@@ -1317,6 +1681,8 @@ function chooseOption(id){
   const option=entry.options.find(o=>o.id===id);if(!option||!ownerPasses(option))return;
   applyOwnerEffects(entry);applyOwnerEffects(option);
   session.log.push({kind:"choice",speaker:"CHOICE",text:(entry.prompt||"선택")+" → "+(option.label||""),eventName:currentEvent()?.name||""});
+  if(session.log.length>200)session.log.splice(0,session.log.length-200);
+  saveState();
   frame.index++;
   if(option.entries.length){
     playback.frames.push({sourceType:"option",sourceId:option.id,index:0,label:option.label||"분기",exitMode:option.exitMode,targetEventId:option.targetEventId||""});
@@ -1418,9 +1784,12 @@ function drawGacha(count){
   for(let n=0;n<count;n++){
     const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||!hasEverAcquired(i.id)));
     if(!pool.length)break;
-    const rarity=chooseWeighted(RARITIES,r=>state.gacha.rarityWeights[r])||"COMMON";
+    const represented=RARITIES.filter(r=>pool.some(x=>x.rarity===r));
+    const weighted=represented.filter(r=>Number(state.gacha.rarityWeights[r]||0)>0);
+    const rarities=weighted.length?weighted:represented;
+    const rarity=chooseWeighted(rarities,r=>weighted.length?state.gacha.rarityWeights[r]:1)||rarities[0];
     const candidates=pool.filter(x=>x.rarity===rarity);
-    const item=chooseWeighted(candidates.length?candidates:pool,x=>x.weight);
+    const item=chooseWeighted(candidates,x=>x.weight);
     if(!item)continue;
     const acquired=acquireItem(item.id,1,"GACHA",state,{notify:false});
     if(!acquired.gained)continue;
@@ -1464,8 +1833,64 @@ function collectionDetail(id){
 }
 
 /* EDITOR */
+function serializeEditorDraft(){return editorDraft?JSON.stringify(editorDraft):""}
+function updateEditorHistoryButtons(){
+  const undo=$("#editorUndoButton"),redo=$("#editorRedoButton"),restore=$("#editorRestoreButton");
+  if(undo)undo.disabled=!editorUndoStack.length;
+  if(redo)redo.disabled=!editorRedoStack.length;
+  if(restore)restore.disabled=!localStorage.getItem(EDITOR_SNAPSHOT_KEY);
+}
+function checkpointEditor(){
+  if(!editorDraft)return;
+  const snap=serializeEditorDraft();
+  if(editorUndoStack.at(-1)!==snap){
+    editorUndoStack.push(snap);
+    if(editorUndoStack.length>80)editorUndoStack.shift();
+  }
+  editorRedoStack=[];
+  updateEditorHistoryButtons();
+}
+function editorUndo(){
+  if(!editorDraft||!editorUndoStack.length)return;
+  editorRedoStack.push(serializeEditorDraft());
+  editorDraft=normalizeState(JSON.parse(editorUndoStack.pop()));
+  renderEditor();
+}
+function editorRedo(){
+  if(!editorDraft||!editorRedoStack.length)return;
+  editorUndoStack.push(serializeEditorDraft());
+  editorDraft=normalizeState(JSON.parse(editorRedoStack.pop()));
+  renderEditor();
+}
+function storeEditorRestorePoint(){
+  saveState();
+  const snap=makeDataSnapshot("EDITOR 저장 전 복구 지점");
+  localStorage.setItem(EDITOR_SNAPSHOT_KEY,JSON.stringify(snap));
+  captureSafetySnapshot("EDITOR 저장 전 자동 백업");
+}
+function restoreEditorSnapshot(){
+  const raw=localStorage.getItem(EDITOR_SNAPSHOT_KEY);
+  if(!raw){showToast("복구할 EDITOR 스냅샷이 없습니다.");return}
+  if(!confirm("마지막 EDITOR 저장 전 상태를 현재 편집 화면으로 불러올까요?"))return;
+  try{
+    checkpointEditor();
+    const snap=JSON.parse(raw);
+    editorDraft=normalizeState(snap.state||snap);
+    renderEditor();
+    showToast("마지막 저장 전 상태를 불러왔습니다.");
+  }catch{showToast("EDITOR 스냅샷을 읽지 못했습니다.")}
+}
+function isEditorMutationAction(action){
+  return /^(new-|delete-|add-|move-|duplicate-|mini-add-|mini-delete-)/.test(String(action||""));
+}
+function isEditorDeleteAction(action){
+  return /^delete-/.test(String(action||""))||/^mini-delete-/.test(String(action||""));
+}
 function openEditor(){
   editorDraft=clone(state);
+  editorUndoStack=[];
+  editorRedoStack=[];
+  editorInitialSnapshot=serializeEditorDraft();
   editorTab="dialogue";
   dialogueSubtab="characters";
   selectedEditorCharacterId=editorDraft.characters[0]?.id||"";
@@ -1477,11 +1902,18 @@ function openEditor(){
   editorOverlay.hidden=false;document.body.style.overflow="hidden";
   renderEditor();
 }
-function closeEditor(){
+function closeEditor(force=false){
+  if(!force&&editorDraft&&serializeEditorDraft()!==editorInitialSnapshot&&!confirm("저장하지 않은 EDITOR 변경사항이 있습니다. 닫을까요?"))return false;
   editorOverlay.hidden=true;document.body.style.overflow="";
   editorDraft=null;
+  editorUndoStack=[];
+  editorRedoStack=[];
+  editorInitialSnapshot="";
+  return true;
 }
 function saveEditor(){
+  if(!editorDraft)return;
+  storeEditorRestorePoint();
   state=normalizeState(editorDraft);
   saveState();
   session=createSession();
@@ -1489,10 +1921,12 @@ function saveEditor(){
   autoMode=false;
   clearAuto();
   if(selectedCharacterId&&!getCharacter(selectedCharacterId))selectedCharacterId=enabledCharacters()[0]?.id||"";
-  closeEditor();renderPage();
+  closeEditor(true);renderPage();
+  showToast("EDITOR 저장 완료 · 이전 상태는 RESTORE로 복구할 수 있습니다.");
 }
 function renderEditor(){
-  $$(".editor-nav").forEach(b=>b.classList.toggle("active",b.dataset.editorTab===editorTab));
+  updateEditorHistoryButtons();
+  $(".editor-nav").forEach(b=>b.classList.toggle("active",b.dataset.editorTab===editorTab));
   if(editorTab==="dialogue")renderDialogueEditor();
   else if(editorTab==="ask")renderAskEditor();
   else if(editorTab==="item")renderItemEditor();
@@ -1528,6 +1962,7 @@ function characterForm(c){
   return '<div class="form-grid">'+
     '<label class="field"><span>이름</span><input data-bind="char-name" value="'+esc(c.name)+'"></label>'+
     '<label class="field"><span>출신 분류</span><select data-bind="char-origin">'+ORIGINS.map(o=>'<option value="'+o[0]+'" '+(c.origin===o[0]?"selected":"")+'>'+o[1]+'</option>').join("")+'</select></label>'+
+    '<label class="field"><span>HELL RING</span><select data-bind="char-ring"><option value="">HEAVEN / 미지정</option>'+RINGS.map(r=>'<option value="'+r.id+'" '+(c.ring===r.id?"selected":"")+'>'+r.name+' · '+r.ko+'</option>').join("")+'</select></label>'+
     '<label class="field"><span>역할 / 설명</span><input data-bind="char-role" value="'+esc(c.role)+'" placeholder="예: 호텔 관리자"></label>'+
     '<label class="field"><span>이미지 URL</span><input data-bind="char-image" value="'+esc(c.image)+'" placeholder="https://..."></label>'+
     '<label class="field full"><span>HOME 소개 문구</span><textarea data-bind="char-quote">'+esc(c.quote)+'</textarea></label>'+
@@ -2063,32 +2498,64 @@ startForm.addEventListener("submit",event=>{
 });
 $("#changeProfileButton").addEventListener("click",renderStart);
 $("#brandButton").addEventListener("click",()=>setPage("home"));
+$("#dataButton").addEventListener("click",showDataManager);
 $("#editorButton").addEventListener("click",openEditor);
 $$(".nav-button").forEach(b=>b.addEventListener("click",()=>setPage(b.dataset.page)));
+$("#editorUndoButton").addEventListener("click",editorUndo);
+$("#editorRedoButton").addEventListener("click",editorRedo);
+$("#editorRestoreButton").addEventListener("click",restoreEditorSnapshot);
 $("#editorCheckButton").addEventListener("click",renderValidationReport);
 $("#editorCancelButton").addEventListener("click",closeEditor);
 $("#editorSaveButton").addEventListener("click",saveEditor);
 $$(".editor-nav").forEach(b=>b.addEventListener("click",()=>{editorTab=b.dataset.editorTab;renderEditor()}));
 
-modalRoot.addEventListener("click",e=>{if(e.target.matches("[data-close-modal]"))closeModal()});
+modalRoot.addEventListener("click",e=>{
+  if(e.target.matches("[data-close-modal]")){closeModal();return}
+  const b=e.target.closest("[data-data-action]");if(!b)return;
+  const a=b.dataset.dataAction;
+  if(a==="save-slot")saveBackupSlot(Number(b.dataset.slot)||0);
+  else if(a==="load-slot")loadBackupSlot(Number(b.dataset.slot)||0);
+  else if(a==="restore-safety")restoreSafetySnapshot();
+  else if(a==="export")exportData();
+  else if(a==="reset-progress")resetPlayProgress();
+});
 modalRoot.addEventListener("input",e=>{
   if(e.target.id==="prefTextSpeed"){prefs.textSpeed=Number(e.target.value);savePrefs()}
   if(e.target.id==="prefAutoDelay"){prefs.autoDelay=Number(e.target.value);savePrefs()}
 });
 modalRoot.addEventListener("change",e=>{
   if(e.target.id==="prefStageClick"){prefs.stageClick=e.target.checked;savePrefs()}
+  if(e.target.id==="dataImportFile")importDataFile(e.target.files?.[0]);
 });
 
 pageRoot.addEventListener("click",e=>{
   const b=e.target.closest("[data-action]");if(!b)return;
   const a=b.dataset.action;
   if(a==="open-editor")openEditor();
+  else if(a==="world-ring"){worldRing=b.dataset.ring||"pride";renderWorld()}
+  else if(a==="world-character"||a==="character-open"){
+    const id=b.dataset.id;
+    const chars=enabledCharacters();
+    const index=chars.findIndex(ch=>ch.id===id);
+    if(index>=0)homeIndex=index;
+    startDialogue(id);
+  }
+  else if(a==="open-characters-page"){setPage("characters")}
+  else if(a==="character-favorite"){
+    const id=b.dataset.id;
+    state.favoriteCharacterIds ||= [];
+    state.favoriteCharacterIds=state.favoriteCharacterIds.includes(id)?state.favoriteCharacterIds.filter(x=>x!==id):[...state.favoriteCharacterIds,id];
+    saveState();renderCharacters();
+  }
+  else if(a==="character-favorites"){characterFavoritesOnly=!characterFavoritesOnly;renderCharacters()}
+  else if(a==="toggle-room-tools"){roomToolsOpen=!roomToolsOpen;renderRoom()}
   else if(a==="home-prev"){const n=enabledCharacters().length;homeIndex=(homeIndex-1+n)%n;renderHome()}
   else if(a==="home-next"){const n=enabledCharacters().length;homeIndex=(homeIndex+1)%n;renderHome()}
   else if(a==="talk")startDialogue(selectedCharacterId);
   else if(a==="room-mode"){
     if(activeInteractionReaction||interactionContext?.followupActive)return;
     roomMode=b.dataset.mode||"talk";
+    roomToolsOpen=false;
     autoMode=false;clearAuto();
     renderRoom();
   }
@@ -2118,6 +2585,13 @@ pageRoot.addEventListener("click",e=>{
 });
 pageRoot.addEventListener("input",e=>{
   const t=e.target;
+  if(t.dataset.characterControl==="query"){
+    characterQuery=t.value;
+    renderCharacters();
+    const input=$('[data-character-control="query"]',pageRoot);
+    if(input){input.focus();try{input.setSelectionRange(input.value.length,input.value.length)}catch{}}
+    return;
+  }
   if(t.dataset.collectionControl==="query"){
     collectionQuery=t.value;
     const pos=window.scrollY;
@@ -2129,6 +2603,12 @@ pageRoot.addEventListener("input",e=>{
 });
 pageRoot.addEventListener("change",e=>{
   const t=e.target;
+  if(t.dataset.characterControl){
+    if(t.dataset.characterControl==="realm")characterRealmFilter=t.value;
+    if(t.dataset.characterControl==="ring")characterRingFilter=t.value;
+    renderCharacters();
+    return;
+  }
   if(t.id==="roomEventSelect"){
     roomMode="talk";
     startDialogue(selectedCharacterId,t.value);
@@ -2155,6 +2635,8 @@ editorBody.addEventListener("click",e=>{
   const b=e.target.closest("[data-action]");if(!b)return;
   const a=b.dataset.action;
   if(a==="run-validation"){renderValidationReport();return}
+  if(isEditorDeleteAction(a)&&!confirm("정말 삭제할까요? 연결된 참조는 가능한 범위에서 함께 정리됩니다."))return;
+  if(isEditorMutationAction(a))checkpointEditor();
 
   if(a==="mini-add-entry"||a==="mini-add-branch"){
     const rootList=getInteractionFlowList(b.dataset.flowScope,b.dataset.flowOwnerId,b.dataset.flowItemId,b.dataset.flowKey);
@@ -2188,6 +2670,7 @@ editorBody.addEventListener("click",e=>{
   if(a==="select-character"){selectedEditorCharacterId=b.dataset.id;renderCharacterManager();return}
   if(a==="delete-character"){
     const id=selectedEditorCharacterId;editorDraft.characters=editorDraft.characters.filter(c=>c.id!==id);
+    editorDraft.favoriteCharacterIds=(editorDraft.favoriteCharacterIds||[]).filter(x=>x!==id);
     cleanCharacterReference(id);
     editorDraft.events.forEach(ev=>{if(ev.characterId===id)ev.characterId=""});
     editorDraft.thoughts.forEach(t=>{if(t.characterId===id)t.characterId=""});
@@ -2342,8 +2825,23 @@ function sanitizeOptionTargets(events,removedId){
   events.forEach(e=>scan(e.entries));
 }
 
+editorBody.addEventListener("focusin",e=>{
+  if(e.target.matches("input,textarea,select")&&!e.target.dataset.itemEditorFilter){
+    e.target.dataset.undoStart=serializeEditorDraft();
+  }
+});
 editorBody.addEventListener("input",handleEditorField);
-editorBody.addEventListener("change",handleEditorField);
+editorBody.addEventListener("change",e=>{
+  const before=e.target.dataset.undoStart;
+  if(before&&before!==serializeEditorDraft()){
+    if(editorUndoStack.at(-1)!==before)editorUndoStack.push(before);
+    if(editorUndoStack.length>80)editorUndoStack.shift();
+    editorRedoStack=[];
+    delete e.target.dataset.undoStart;
+    updateEditorHistoryButtons();
+  }
+  handleEditorField(e);
+});
 function handleEditorField(e){
   const t=e.target;
 
@@ -2399,10 +2897,19 @@ function handleEditorField(e){
   const ev=editorDraft?.events.find(x=>x.id===selectedEditorEventId);
   if(t.dataset.bind&&ch){
     const m={
-      "char-name":"name","char-origin":"origin","char-role":"role","char-image":"image","char-quote":"quote",
+      "char-name":"name","char-origin":"origin","char-ring":"ring","char-role":"role","char-image":"image","char-quote":"quote",
       "char-affection":"affectionStart","char-emotion":"emotionDefault","char-intensity":"emotionIntensity","char-enabled":"enabled"
     };
-    const k=m[t.dataset.bind];if(k){ch[k]=t.type==="checkbox"?t.checked:(["affectionStart","emotionIntensity"].includes(k)?clamp(t.value,0,100,0):t.value);return}
+    const k=m[t.dataset.bind];if(k){
+      ch[k]=t.type==="checkbox"?t.checked:(["affectionStart","emotionIntensity"].includes(k)?clamp(t.value,0,100,0):t.value);
+      if(k==="origin"){
+        ch.origin=normalizeOrigin(ch.origin);
+        if(originRealm(ch.origin)==="heaven")ch.ring="";
+        else if(!ch.ring)ch.ring=inferRing(ch);
+      }
+      if(k==="ring"&&!RING_IDS.includes(ch.ring))ch.ring="";
+      return
+    }
   }
   if(t.dataset.bind&&ev){
     if(t.dataset.bind==="event-name"){ev.name=t.value;return}

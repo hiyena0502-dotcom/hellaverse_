@@ -1685,23 +1685,38 @@ function refreshInteractionEditor(scope){
 function flowData(scope,ownerId,itemId="",flowKey="entries"){
   return ' data-flow-scope="'+esc(scope)+'" data-flow-owner-id="'+esc(ownerId)+'" data-flow-item-id="'+esc(itemId)+'" data-flow-key="'+esc(flowKey)+'"';
 }
+function renderMiniAdvanced(owner,scope,ownerId,itemId,flowKey,targetKind,targetId){
+  const kind=targetKind==="option"?"mini-option":"mini-entry";
+  const attrs=flowData(scope,ownerId,itemId,flowKey)+' data-mini-owner-id="'+esc(targetId)+'"';
+  return '<details class="advanced mini-advanced"><summary>조건 / 효과</summary>'+
+    renderConditions(owner,kind,attrs)+
+    renderQuickEffects(owner,kind,attrs)+
+    renderVariableEffects(owner,kind,attrs)+
+    renderItemEffects(owner,kind,attrs)+
+  '</details>';
+}
+
 function renderInteractionFlow(entries,scope,ownerId,itemId="",depth=0,flowKey="entries"){
   entries=Array.isArray(entries)?entries:[];
   const attrs=flowData(scope,ownerId,itemId,flowKey);
   const list=entries.length?entries.map((entry,index)=>{
     let body="";
     if(entry.type==="dialogue"){
-      body='<div class="mini-flow-fields"><input '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="speaker" value="'+esc(entry.speaker||"")+'" placeholder="화자 (비우면 현재 캐릭터)"><textarea '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="text" placeholder="대사">'+esc(entry.text||"")+'</textarea></div>';
+      body='<div class="mini-flow-fields"><input '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="speaker" value="'+esc(entry.speaker||"")+'" placeholder="화자 (비우면 현재 캐릭터)"><textarea '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="text" placeholder="대사">'+esc(entry.text||"")+'</textarea></div>'+
+        renderMiniAdvanced(entry,scope,ownerId,itemId,flowKey,"entry",entry.id);
     }else if(entry.type==="narration"){
-      body='<div class="mini-flow-fields"><textarea '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="text" placeholder="지문">'+esc(entry.text||"")+'</textarea></div>';
+      body='<div class="mini-flow-fields"><textarea '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="text" placeholder="지문">'+esc(entry.text||"")+'</textarea></div>'+
+        renderMiniAdvanced(entry,scope,ownerId,itemId,flowKey,"entry",entry.id);
     }else{
       body='<div class="mini-flow-fields"><textarea '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="prompt" placeholder="선택지 질문 / 상황">'+esc(entry.prompt||"")+'</textarea>'+
-      '<div class="mini-options">'+entry.options.map(option=>
-        '<article class="mini-option"><div class="mini-option-head"><input '+attrs+' data-mini-option-id="'+esc(option.id)+'" data-mini-option-field="label" value="'+esc(option.label||"")+'" placeholder="선택지 문구"><select '+attrs+' data-mini-option-id="'+esc(option.id)+'" data-mini-option-field="exit"><option value="continue" '+(option.exitMode!=="end"?"selected":"")+'>분기 뒤 계속</option><option value="end" '+(option.exitMode==="end"?"selected":"")+'>상호작용 종료</option></select><button class="icon-button" type="button" data-action="mini-delete-option" '+attrs+' data-mini-option-id="'+esc(option.id)+'">×</button></div>'+
-        renderInteractionFlow(option.entries,scope,ownerId,itemId,depth+1,flowKey)+
-        '<div class="mini-add-row"><button class="small-button" type="button" data-action="mini-add-branch" data-type="dialogue" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 대사</button><button class="small-button" type="button" data-action="mini-add-branch" data-type="narration" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 지문</button><button class="small-button" type="button" data-action="mini-add-branch" data-type="choice" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 선택지</button></div></article>'
-      ).join("")+'</div>'+
-      '<button class="small-button" type="button" data-action="mini-add-option" '+attrs+' data-mini-entry-id="'+esc(entry.id)+'">+ 선택지 항목</button></div>';
+        renderMiniAdvanced(entry,scope,ownerId,itemId,flowKey,"entry",entry.id)+
+        '<div class="mini-options">'+entry.options.map(option=>
+          '<article class="mini-option"><div class="mini-option-head"><input '+attrs+' data-mini-option-id="'+esc(option.id)+'" data-mini-option-field="label" value="'+esc(option.label||"")+'" placeholder="선택지 문구"><select '+attrs+' data-mini-option-id="'+esc(option.id)+'" data-mini-option-field="exit"><option value="continue" '+(option.exitMode!=="end"?"selected":"")+'>분기 뒤 계속</option><option value="end" '+(option.exitMode==="end"?"selected":"")+'>상호작용 종료</option></select><button class="icon-button" type="button" data-action="mini-delete-option" '+attrs+' data-mini-option-id="'+esc(option.id)+'">×</button></div>'+
+          renderMiniAdvanced(option,scope,ownerId,itemId,flowKey,"option",option.id)+
+          renderInteractionFlow(option.entries,scope,ownerId,itemId,depth+1,flowKey)+
+          '<div class="mini-add-row"><button class="small-button" type="button" data-action="mini-add-branch" data-type="dialogue" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 대사</button><button class="small-button" type="button" data-action="mini-add-branch" data-type="narration" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 지문</button><button class="small-button" type="button" data-action="mini-add-branch" data-type="choice" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 선택지</button></div></article>'
+        ).join("")+'</div>'+
+        '<button class="small-button" type="button" data-action="mini-add-option" '+attrs+' data-mini-entry-id="'+esc(entry.id)+'">+ 선택지 항목</button></div>';
     }
     return '<article class="mini-flow-entry depth-'+Math.min(depth,3)+'"><header><span>'+(index+1)+' · '+esc(entry.type.toUpperCase())+'</span><button class="icon-button" type="button" data-action="mini-delete-entry" '+attrs+' data-mini-entry-id="'+esc(entry.id)+'">×</button></header>'+body+'</article>';
   }).join(""):'<div class="editor-note">아직 흐름이 없습니다.</div>';
@@ -2212,13 +2227,25 @@ function handleEditorField(e){
     }
     return;
   }
-  const kind=t.dataset.condKind||t.dataset.affcondKind||t.dataset.emocondKind||t.dataset.fxKind||t.dataset.afffxKind||t.dataset.emofxKind||t.dataset.itemfxKind;
+  const kind=t.dataset.condKind||t.dataset.itemcondKind||t.dataset.askcondKind||t.dataset.affcondKind||t.dataset.emocondKind||t.dataset.fxKind||t.dataset.afffxKind||t.dataset.emofxKind||t.dataset.itemfxKind;
   if(kind){
     const owner=getSelectedOwner(kind,t);if(!owner)return;
     if(t.dataset.condField){
       if(t.dataset.condField==="variableId"&&!t.value){owner.condition=null;return}
       owner.condition ||= {variableId:"",operator:"==",value:""};
       owner.condition[t.dataset.condField]=t.value;return;
+    }
+    if(t.dataset.itemcondField){
+      if(t.dataset.itemcondField==="itemId"&&!t.value){owner.itemCondition=null;return}
+      owner.itemCondition ||= {itemId:"",operator:">=",value:1};
+      owner.itemCondition[t.dataset.itemcondField]=t.dataset.itemcondField==="value"?Math.max(0,Number(t.value)||0):t.value;
+      return;
+    }
+    if(t.dataset.askcondField){
+      if(t.dataset.askcondField==="askId"&&!t.value){owner.askCondition=null;return}
+      owner.askCondition ||= {askId:"",status:"asked"};
+      owner.askCondition[t.dataset.askcondField]=t.value;
+      return;
     }
     if(t.dataset.affcondField){
       if(t.dataset.affcondField==="characterId"&&!t.value){owner.affectionCondition=null;return}

@@ -1472,21 +1472,60 @@ function renderAskEditor(){
     '</div>';
 }
 function renderItemEditor(){
-  editorBody.innerHTML=editorHead("ITEM","아이템 설정","아이템의 컬렉션 소속과, 이 아이템을 각 캐릭터에게 줬을 때의 반응을 따로 관리합니다.",'<button class="small-button" data-action="new-item">+ 아이템</button>')+
+  const q=editorItemQuery.trim().toLowerCase();
+  const categories=editorDraft.itemCategories?.length?editorDraft.itemCategories:["기타"];
+  const visible=editorDraft.items.filter(i=>{
+    if(editorItemCharacterFilter!=="ALL"&&i.collectionCharacterId!==editorItemCharacterFilter)return false;
+    if(editorItemRarityFilter!=="ALL"&&i.rarity!==editorItemRarityFilter)return false;
+    if(editorItemCategoryFilter!=="ALL"&&i.category!==editorItemCategoryFilter)return false;
+    if(q){
+      const text=[i.name,i.description,i.category,i.rarity,itemSourceLabel(i,editorDraft),getCharacterDraft(i.collectionCharacterId)?.name]
+        .join(" ").toLowerCase();
+      if(!text.includes(q))return false;
+    }
+    return true;
+  });
+
+  editorBody.innerHTML=editorHead("ITEM","아이템 설정","아이템의 분류·획득 방식·컬렉션 소속과 캐릭터별 선물 반응을 관리합니다.",'<button class="small-button" data-action="new-item">+ 아이템</button>')+
+    '<section class="settings-card item-category-manager"><div class="manager-list-head"><div><h3>CATEGORIES</h3><p class="muted">희귀도와 별개인 물건 종류입니다.</p></div></div>'+
+      '<div class="category-list">'+categories.map(cat=>'<span class="category-tag">'+esc(cat)+(cat!=="기타"?'<button type="button" data-action="delete-item-category" data-id="'+esc(cat)+'">×</button>':'')+'</span>').join("")+'</div>'+
+      '<div class="category-add-row"><input id="newItemCategoryInput" placeholder="새 아이템 카테고리"><button class="small-button" type="button" data-action="add-item-category">추가</button></div>'+
+    '</section>'+
+    '<div class="item-editor-toolbar">'+
+      '<input data-item-editor-filter="query" value="'+esc(editorItemQuery)+'" placeholder="아이템 검색 · 이름 / 설명 / 캐릭터 / 획득처">'+
+      '<select data-item-editor-filter="character"><option value="ALL">모든 캐릭터</option>'+editorDraft.characters.map(ch=>'<option value="'+esc(ch.id)+'" '+(editorItemCharacterFilter===ch.id?"selected":"")+'>'+esc(ch.name)+'</option>').join("")+'</select>'+
+      '<select data-item-editor-filter="rarity"><option value="ALL">모든 희귀도</option>'+RARITIES.map(r=>'<option value="'+r+'" '+(editorItemRarityFilter===r?"selected":"")+'>'+r+'</option>').join("")+'</select>'+
+      '<select data-item-editor-filter="category"><option value="ALL">모든 카테고리</option>'+categories.map(cat=>'<option value="'+esc(cat)+'" '+(editorItemCategoryFilter===cat?"selected":"")+'>'+esc(cat)+'</option>').join("")+'</select>'+
+      '<span class="item-filter-count">'+visible.length+' / '+editorDraft.items.length+'</span>'+
+    '</div>'+
     '<div class="item-editor-grid">'+
-    (editorDraft.items.length?editorDraft.items.map(i=>'<div class="item-row interaction-editor-row" data-item-id="'+esc(i.id)+'">'+
-      '<select data-item-bind="collectionCharacterId">'+charOptions(i.collectionCharacterId,"컬렉션 소속")+'</select>'+
-      '<input data-item-bind="name" value="'+esc(i.name)+'" placeholder="아이템 이름">'+
-      '<select data-item-bind="rarity">'+RARITIES.map(r=>'<option '+(i.rarity===r?"selected":"")+'>'+r+'</option>').join("")+'</select>'+
-      '<input data-item-bind="category" value="'+esc(i.category)+'" placeholder="카테고리">'+
-      '<input type="number" min=".01" step=".01" data-item-bind="weight" value="'+i.weight+'">'+
-      '<button class="danger-button" data-action="delete-item">×</button>'+
-      '<div class="full-row interaction-response-editor">'+
-        '<div class="inline-grid"><label class="checkline"><input type="checkbox" data-item-bind="gachaEnabled" '+(i.gachaEnabled?"checked":"")+'> 가챠 포함</label><label class="checkline"><input type="checkbox" data-item-bind="enabled" '+(i.enabled?"checked":"")+'> 사용</label></div>'+
-        '<label class="field full"><span>아이템 설명</span><textarea data-item-bind="description">'+esc(i.description)+'</textarea></label>'+
-        '<div class="reaction-manager"><div class="manager-list-head"><div><strong>CHARACTER REACTIONS</strong><p class="muted">같은 아이템을 여러 캐릭터에게 줄 수 있고, 캐릭터마다 다른 흐름을 설정합니다.</p></div><button class="small-button" type="button" data-action="new-item-reaction" data-item-id="'+esc(i.id)+'">+ 캐릭터 반응</button></div>'+
-        (i.reactions.length?i.reactions.map(r=>'<article class="item-reaction-card" data-item-id="'+esc(i.id)+'" data-reaction-id="'+esc(r.id)+'"><div class="item-reaction-head"><select data-reaction-bind="characterId">'+charOptions(r.characterId,"선물 대상")+'</select><label class="field"><span>호감도</span><input type="number" min="-100" max="100" data-reaction-bind="affectionDelta" value="'+r.affectionDelta+'"></label><label class="field"><span>감정</span><select data-reaction-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(r.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label><label class="field"><span>강도</span><input type="number" min="0" max="100" data-reaction-bind="emotionIntensity" value="'+r.emotionIntensity+'"></label><button class="danger-button" type="button" data-action="delete-item-reaction">×</button></div>'+interactionFlowEditor(r.entries,"item-reaction",r.id,i.id)+'</article>').join(""):'<div class="editor-note">캐릭터별 반응이 없습니다. 추가하지 않아도 아이템은 누구에게나 줄 수 있지만 기본 무반응 지문이 나옵니다.</div>')+
-        '</div></div></div>').join(""):'<div class="editor-note">아이템이 없습니다.</div>')+
+    (visible.length?visible.map(i=>{
+      const configured=new Set(i.reactions.map(r=>r.characterId).filter(id=>editorDraft.characters.some(ch=>ch.id===id))).size;
+      const categoryOptions=[...new Set([...categories,i.category].filter(Boolean))];
+      return '<div class="item-row interaction-editor-row" data-item-id="'+esc(i.id)+'">'+
+        '<select data-item-bind="collectionCharacterId">'+charOptions(i.collectionCharacterId,"컬렉션 소속")+'</select>'+
+        '<input data-item-bind="name" value="'+esc(i.name)+'" placeholder="아이템 이름">'+
+        '<select data-item-bind="rarity">'+RARITIES.map(r=>'<option '+(i.rarity===r?"selected":"")+'>'+r+'</option>').join("")+'</select>'+
+        '<select data-item-bind="category">'+categoryOptions.map(cat=>'<option value="'+esc(cat)+'" '+(i.category===cat?"selected":"")+'>'+esc(cat)+'</option>').join("")+'</select>'+
+        '<select data-item-bind="acquisitionMode"><option value="repeatable" '+(i.acquisitionMode==="repeatable"?"selected":"")+'>REPEATABLE</option><option value="unique" '+(i.acquisitionMode==="unique"?"selected":"")+'>UNIQUE</option></select>'+
+        '<button class="danger-button" data-action="delete-item">×</button>'+
+        '<div class="full-row item-meta-strip"><span>'+esc(itemSourceLabel(i,editorDraft))+'</span><span>'+configured+' / '+editorDraft.characters.length+' REACTIONS</span><span>OWNED ×'+itemCount(i.id,editorDraft)+'</span></div>'+
+        '<div class="full-row interaction-response-editor">'+
+          '<div class="inline-grid"><label class="checkline"><input type="checkbox" data-item-bind="gachaEnabled" '+(i.gachaEnabled?"checked":"")+'> 가챠 포함</label><label class="checkline"><input type="checkbox" data-item-bind="enabled" '+(i.enabled?"checked":"")+'> 사용</label><label class="field"><span>가챠 가중치</span><input type="number" min=".01" step=".01" data-item-bind="weight" value="'+i.weight+'"></label></div>'+
+          '<label class="field full"><span>아이템 설명</span><textarea data-item-bind="description">'+esc(i.description)+'</textarea></label>'+
+          '<div class="reaction-manager"><div class="manager-list-head"><div><strong>CHARACTER REACTIONS</strong><p class="muted">같은 아이템을 여러 캐릭터에게 줄 수 있습니다. 취향은 기본 호감도 변화값을 자동 제안합니다.</p></div><button class="small-button" type="button" data-action="new-item-reaction" data-item-id="'+esc(i.id)+'">+ 캐릭터 반응</button></div>'+
+          (i.reactions.length?i.reactions.map(r=>'<article class="item-reaction-card" data-item-id="'+esc(i.id)+'" data-reaction-id="'+esc(r.id)+'"><div class="item-reaction-head">'+
+            '<select data-reaction-bind="characterId">'+charOptions(r.characterId,"선물 대상")+'</select>'+
+            '<label class="field"><span>취향</span><select data-reaction-bind="preference">'+GIFT_PREFERENCES.map(p=>'<option value="'+p[0]+'" '+(r.preference===p[0]?"selected":"")+'>'+p[0]+'</option>').join("")+'</select></label>'+
+            '<label class="field"><span>호감도</span><input type="number" min="-100" max="100" data-reaction-bind="affectionDelta" value="'+r.affectionDelta+'"></label>'+
+            '<label class="field"><span>감정</span><select data-reaction-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(r.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
+            '<label class="field"><span>강도</span><input type="number" min="0" max="100" data-reaction-bind="emotionIntensity" value="'+r.emotionIntensity+'"></label>'+
+            '<button class="danger-button" type="button" data-action="delete-item-reaction">×</button></div>'+
+            interactionFlowEditor(r.entries,"item-reaction",r.id,i.id)+'</article>').join(""):'<div class="editor-note">캐릭터별 반응이 없습니다. 설정하지 않은 캐릭터에게도 줄 수 있지만 기본 무반응 지문이 나옵니다.</div>')+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join(""):'<div class="editor-note">현재 필터에 맞는 아이템이 없습니다.</div>')+
     '</div>';
 }
 function renderGachaEditor(){
@@ -1706,6 +1745,25 @@ editorBody.addEventListener("click",e=>{
     editorDraft.asks=editorDraft.asks.filter(a=>a.id!==row?.dataset.askId);
     renderAskEditor();return;
   }
+  if(a==="add-item-category"){
+    const input=$("#newItemCategoryInput",editorBody);
+    const value=input?.value.trim();
+    if(value&&!editorDraft.itemCategories.includes(value)){
+      editorDraft.itemCategories.push(value);
+      renderItemEditor();
+    }
+    return;
+  }
+  if(a==="delete-item-category"){
+    const value=b.dataset.id;
+    if(value&&value!=="기타"){
+      editorDraft.itemCategories=editorDraft.itemCategories.filter(cat=>cat!==value);
+      editorDraft.items.forEach(item=>{if(item.category===value)item.category="기타"});
+      if(editorItemCategoryFilter===value)editorItemCategoryFilter="ALL";
+      renderItemEditor();
+    }
+    return;
+  }
   if(a==="new-item"){
     editorDraft.items.push(normalizeItem({id:uid("item"),collectionCharacterId:editorDraft.characters[0]?.id||""}));
     renderItemEditor();return;
@@ -1746,6 +1804,20 @@ editorBody.addEventListener("change",handleEditorField);
 function handleEditorField(e){
   const t=e.target;
 
+  if(t.dataset.itemEditorFilter){
+    const kind=t.dataset.itemEditorFilter;
+    if(kind==="query")editorItemQuery=t.value;
+    if(kind==="character")editorItemCharacterFilter=t.value;
+    if(kind==="rarity")editorItemRarityFilter=t.value;
+    if(kind==="category")editorItemCategoryFilter=t.value;
+    const pos=editorBody.scrollTop;
+    renderItemEditor();
+    editorBody.scrollTop=pos;
+    const search=$('[data-item-editor-filter="query"]',editorBody);
+    if(kind==="query"&&search){search.focus();try{search.setSelectionRange(search.value.length,search.value.length)}catch{}}
+    return;
+  }
+
   if(t.dataset.miniEntryField){
     const owner=getInteractionFlowOwner(t.dataset.flowScope,t.dataset.flowOwnerId,t.dataset.flowItemId);
     const ctx=owner?findFlowEntryContext(owner.entries,t.dataset.miniEntryId):null;
@@ -1768,6 +1840,12 @@ function handleEditorField(e){
     const reaction=item?.reactions.find(r=>r.id===reactionCard.dataset.reactionId);
     if(!reaction)return;
     const k=t.dataset.reactionBind;
+    if(k==="preference"){
+      reaction.preference=t.value;
+      reaction.affectionDelta=GIFT_PREFERENCES.find(p=>p[0]===t.value)?.[1]??reaction.affectionDelta;
+      renderItemEditor();
+      return;
+    }
     if(k==="affectionDelta")reaction[k]=clamp(t.value,-100,100,0);
     else if(k==="emotionIntensity")reaction[k]=clamp(t.value,0,100,0);
     else reaction[k]=t.value;

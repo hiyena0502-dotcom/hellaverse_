@@ -5,31 +5,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b080a" />
   <title>Hellaverse</title>
-  <link rel="stylesheet" href="css/app.css?v=202" />
+  <link rel="stylesheet" href="css/app.css?v=210" />
 </head>
 <body>
   <section id="startScreen" class="title-screen">
-    <div class="title-panel">
+    <form id="startForm" class="title-panel">
       <p class="title-kicker">HELLAVERSE</p>
       <h1>ENTER THE LOBBY</h1>
-      <p class="title-sub">플레이어 정보를 정한 뒤 대화할 캐릭터를 선택합니다.</p>
+      <p class="title-sub">이름과 출신을 정한 뒤 대화할 캐릭터를 선택합니다.</p>
 
       <label class="start-field">
         <span>NAME</span>
-        <input id="playerNameInput" type="text" maxlength="24" placeholder="이름을 입력하세요" />
+        <input id="playerNameInput" type="text" maxlength="24" placeholder="이름을 입력하세요" autocomplete="off" />
       </label>
 
       <div class="start-field">
         <span>ORIGIN</span>
-        <div class="origin-choice" id="originChoice">
-          <button type="button" data-origin="hellborn">HELLBORN</button>
-          <button type="button" data-origin="heaven">HEAVEN</button>
+        <div class="origin-groups" id="originChoice">
+          <section class="origin-group">
+            <div class="origin-group-head"><strong>지옥 출신</strong><small>HELL</small></div>
+            <div class="origin-choice">
+              <button type="button" data-origin="sinner"><b>죄인</b><small>SINNER</small></button>
+              <button type="button" data-origin="hellborn"><b>헬본</b><small>HELLBORN</small></button>
+            </div>
+          </section>
+          <section class="origin-group">
+            <div class="origin-group-head"><strong>천국 출신</strong><small>HEAVEN</small></div>
+            <div class="origin-choice">
+              <button type="button" data-origin="angel"><b>천사</b><small>ANGEL</small></button>
+              <button type="button" data-origin="winner"><b>위너</b><small>WINNER</small></button>
+            </div>
+          </section>
         </div>
       </div>
 
-      <button id="enterGameButton" class="title-enter" type="button">ENTER</button>
-      <p id="startHint" class="title-hint">이름과 소속을 선택하세요.</p>
-    </div>
+      <button id="enterGameButton" class="title-enter" type="submit">ENTER</button>
+      <p id="startHint" class="title-hint">이름과 출신을 선택하세요.</p>
+    </form>
   </section>
 
   <div id="gameShell" class="site-shell" hidden>
@@ -72,14 +84,20 @@
           <button type="button" class="editor-nav active" data-editor-tab="dialogue">
             <span>01</span><strong>대화 이벤트</strong><small>캐릭터 · 이벤트 · 선택지</small>
           </button>
+          <button type="button" class="editor-nav" data-editor-tab="ask">
+            <span>02</span><strong>ASK 설정</strong><small>질문 · 연결 이벤트</small>
+          </button>
+          <button type="button" class="editor-nav" data-editor-tab="item">
+            <span>03</span><strong>아이템 설정</strong><small>캐릭터별 아이템 · 인벤토리</small>
+          </button>
           <button type="button" class="editor-nav" data-editor-tab="gacha">
-            <span>02</span><strong>가챠 설정</strong><small>비용 · 확률 · 풀</small>
+            <span>04</span><strong>가챠 설정</strong><small>비용 · 확률 · 아이템 풀</small>
           </button>
           <button type="button" class="editor-nav" data-editor-tab="thought">
-            <span>03</span><strong>THOUGHT 설정</strong><small>카테고리 · 빈도 · 문장</small>
+            <span>05</span><strong>THOUGHT 설정</strong><small>카테고리 · 빈도 · 문장</small>
           </button>
           <button type="button" class="editor-nav" data-editor-tab="collection">
-            <span>04</span><strong>컬렉션 설정</strong><small>아이템 · 희귀도 · 잠금</small>
+            <span>06</span><strong>컬렉션 설정</strong><small>캐릭터별 아카이브 표시</small>
           </button>
         </aside>
 
@@ -88,6 +106,6 @@
     </section>
   </div>
 
-  <script src="js/site-runtime.js?v=202"></script>
+  <script src="js/site-runtime.js?v=210"></script>
 </body>
 </html>

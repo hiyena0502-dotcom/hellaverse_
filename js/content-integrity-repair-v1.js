@@ -160,8 +160,11 @@ function run(){
   for(const item of s.collectionItems){const n=clean(item?.name||item?.title).toLowerCase();if(!n)continue;const rows=byName.get(n)||[];rows.push(item);byName.set(n,rows)}
   for(const [name,rows] of byName){const owners=[...new Set(rows.map(x=>String(x?.characterId||'')))];if(rows.length>1&&owners.length>1)push(warnings,'SAME_NAME_DIFFERENT_OWNERS','collection',name,'owners: '+owners.join(', '))}
 
-  const report={version:1,at:new Date().toISOString(),counts:{characters:valid.size,dialogues:s.dialogues.length,collectionItems:s.collectionItems.length,rewards:Array.isArray(s.rewards)?s.rewards.length:0,thoughts:Array.isArray(s.thoughts)?s.thoughts.length:0,gifts:Array.isArray(s.gifts)?s.gifts.length:0},fixed,warnings,summary:{fixed:fixed.length,warnings:warnings.length}};
-  try{const prev=JSON.parse(localStorage.getItem(REPORT_KEY)||'null');if(!prev||reportSignature(prev)!==reportSignature(report))localStorage.setItem(REPORT_KEY,JSON.stringify(report));else localStorage.setItem(REPORT_KEY,JSON.stringify({...prev,at:report.at}))}catch{try{localStorage.setItem(REPORT_KEY,JSON.stringify(report))}catch{}}
+  let prev=null;try{prev=JSON.parse(localStorage.getItem(REPORT_KEY)||'null')}catch{}
+  const lastFixed=fixed.length?fixed:(Array.isArray(prev?.lastFixed)?prev.lastFixed:[]);
+  const lastFixedAt=fixed.length?new Date().toISOString():String(prev?.lastFixedAt||'');
+  const report={version:1,at:new Date().toISOString(),counts:{characters:valid.size,dialogues:s.dialogues.length,collectionItems:s.collectionItems.length,rewards:Array.isArray(s.rewards)?s.rewards.length:0,thoughts:Array.isArray(s.thoughts)?s.thoughts.length:0,gifts:Array.isArray(s.gifts)?s.gifts.length:0},fixed,warnings,lastFixed,lastFixedAt,summary:{fixed:fixed.length,lastFixed:lastFixed.length,warnings:warnings.length}};
+  try{if(!prev||reportSignature(prev)!==reportSignature(report)||JSON.stringify(prev?.lastFixed||[])!==JSON.stringify(lastFixed))localStorage.setItem(REPORT_KEY,JSON.stringify(report));else localStorage.setItem(REPORT_KEY,JSON.stringify({...prev,...report,lastFixed,lastFixedAt}))}catch{try{localStorage.setItem(REPORT_KEY,JSON.stringify(report))}catch{}}
   if(changed)write(s);
  }catch(error){console.warn('Hellaverse content integrity audit failed safely.',error)}
  finally{running=false}

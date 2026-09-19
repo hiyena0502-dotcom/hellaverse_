@@ -96,7 +96,7 @@ await loadClassic('js/dialogue-continuity-controller-v6.js?v=6');
 await loadClassic('js/room-exit-transition.js?v=4');
 await loadStableCore();
 await loadClassic('js/event-progression-runtime-v1.js?v=2');
-await loadClassic('js/character-ambient-100-runtime-v1.js?v=8');
+await loadClassic('js/character-ambient-100-runtime-v1.js?v=9');
 await loadClassic('js/hazbin-fanon-dialogue-cleanup-v1.js?v=1');
 
 await loadClassic('js/dialogue-token-renderer.js?v=7');
@@ -133,7 +133,8 @@ const scripts=[
   ['classic','js/collection-gacha-editor.js?v=4'],
   ['classic','js/collection-reveal-line-bridge.js?v=1'],
   ['classic','js/collection-emoji-corrections.js?v=2'],
-  ['classic','js/ux/runtime-diagnostics.js?v=9'],
+  ['classic','js/content-integrity-repair-v1.js?v=1'],
+  ['classic','js/ux/runtime-diagnostics.js?v=10'],
   ['classic','js/final-ux-cleanup.js?v=15'],
 ];
 

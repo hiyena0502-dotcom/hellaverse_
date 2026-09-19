@@ -1193,7 +1193,13 @@ function playGachaAnimation(results){
   box.innerHTML='<div class="gacha-summon"><span class="gacha-sigil">✦</span><b>SUMMONING</b><small>ARCHIVE LINK</small></div>';
   setTimeout(()=>{
     stage.classList.add("is-reveal");
-    box.innerHTML=results.map((i,index)=>'<div class="gacha-result-card gacha-reveal-card rarity-'+esc(i.rarity)+'" style="animation-delay:'+(index*80)+'ms"><span>'+esc(i.rarity)+'</span><strong>'+esc(i.name)+'</strong><small>'+esc(getCharacter(i.collectionCharacterId)?.name||"UNASSIGNED")+'</small></div>').join("");
+    box.innerHTML=results.map((result,index)=>{
+      const i=result.item;
+      return '<div class="gacha-result-card gacha-reveal-card rarity-'+esc(i.rarity)+' '+(result.isNew?"is-new":"")+'" style="animation-delay:'+(index*80)+'ms">'+
+        (result.isNew?'<span class="gacha-new-badge">NEW</span>':'')+
+        '<span>'+esc(i.rarity)+'</span><strong>'+esc(i.name)+'</strong>'+
+        '<small>'+esc(getCharacter(i.collectionCharacterId)?.name||"UNASSIGNED")+' · ×'+result.count+'</small></div>';
+    }).join("");
     setTimeout(()=>{
       gachaAnimating=false;
       stage.classList.remove("is-drawing","is-reveal");
@@ -1209,23 +1215,30 @@ function clearGachaHistory(){
 }
 function drawGacha(count){
   if(gachaAnimating)return;
-  const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled);
-  if(!pool.length){showToast("가챠 풀이 비어 있습니다.");return}
+  const initialPool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||itemCount(i.id)===0));
+  if(!initialPool.length){showToast("현재 뽑을 수 있는 가챠 아이템이 없습니다.");return}
   const cost=count===10?state.gacha.tenCost:state.gacha.singleCost;
   if(state.gacha.balance<cost){showToast(state.gacha.currencyName+"이 부족합니다.");return}
   state.gacha.balance-=cost;
   const results=[];
-  for(let i=0;i<count;i++){
+
+  for(let n=0;n<count;n++){
+    const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||itemCount(i.id)===0));
+    if(!pool.length)break;
     const rarity=chooseWeighted(RARITIES,r=>state.gacha.rarityWeights[r])||"COMMON";
     const candidates=pool.filter(x=>x.rarity===rarity);
     const item=chooseWeighted(candidates.length?candidates:pool,x=>x.weight);
     if(!item)continue;
-    addItem(item.id,1,state);
-    results.push(item);
+
+    const acquired=acquireItem(item.id,1,"GACHA",state,{notify:false});
+    if(!acquired.gained)continue;
+    results.push({item,isNew:acquired.isNew,count:acquired.count});
     state.gacha.history.push({name:item.name,rarity:item.rarity,itemId:item.id,at:Date.now()});
   }
+
   state.gacha.history=state.gacha.history.slice(-50);
   saveState();
+  if(!results.length){showToast("획득 가능한 아이템이 없습니다.");renderGacha();return}
   gachaAnimating=true;
   renderGacha();
   playGachaAnimation(results);

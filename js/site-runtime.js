@@ -569,6 +569,19 @@ function itemSourceLabel(item,source=state){
   const s=itemSourceTypes(item,source);
   return s.includes("GACHA")&&s.includes("DIALOGUE")?"BOTH":s[0];
 }
+function collectionProgressForCharacter(characterId,source=state){
+  const eligible=source.items.filter(i=>i.enabled&&i.collectionCharacterId===characterId&&(!i.secret||hasEverAcquired(i.id,source)));
+  const acquired=eligible.filter(i=>hasEverAcquired(i.id,source)).length;
+  const total=eligible.length;
+  return {acquired,total,percent:total?Math.round(acquired/total*100):0};
+}
+function collectionOverallProgress(source=state){
+  const eligible=source.items.filter(i=>i.enabled&&(!i.secret||hasEverAcquired(i.id,source)));
+  const acquired=eligible.filter(i=>hasEverAcquired(i.id,source)).length;
+  const total=eligible.length;
+  return {acquired,total,percent:total?Math.round(acquired/total*100):0};
+}
+
 
 
 function conditionPasses(c){
@@ -925,7 +938,7 @@ function renderHome(){
     '</section>';
 }
 function renderGacha(){
-  const availablePool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||itemCount(i.id)===0));
+  const availablePool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||!hasEverAcquired(i.id)));
   const hasRepeatable=availablePool.some(i=>i.acquisitionMode==="repeatable");
   const canTen=hasRepeatable||availablePool.length>=10;
   const total=RARITIES.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1;
@@ -964,16 +977,17 @@ function renderCollection(){
   const chars=enabledCharacters();
   const categories=[...new Set(state.items.map(i=>i.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ko"));
   const query=collectionQuery.trim().toLowerCase();
-  let items=state.items.filter(i=>i.enabled).filter(i=>{
-    const count=itemCount(i.id),isNew=state.newItemIds.includes(i.id),source=itemSourceLabel(i);
-    if(!state.collectionSettings.showLocked&&count<=0)return false;
+  const visibleCatalog=state.items.filter(i=>i.enabled&&(!i.secret||hasEverAcquired(i.id)));
+  let items=visibleCatalog.filter(i=>{
+    const acquired=hasEverAcquired(i.id),isNew=state.newItemIds.includes(i.id),source=itemSourceLabel(i);
+    if(!state.collectionSettings.showLocked&&!acquired)return false;
     if(collectionFilter!=="ALL"&&i.collectionCharacterId!==collectionFilter)return false;
     if(collectionRarity!=="ALL"&&i.rarity!==collectionRarity)return false;
     if(collectionCategory!=="ALL"&&i.category!==collectionCategory)return false;
     if(collectionSource!=="ALL"&&source!==collectionSource)return false;
     if(collectionStatus==="NEW"&&!isNew)return false;
-    if(collectionStatus==="OWNED"&&count<=0)return false;
-    if(collectionStatus==="LOCKED"&&count>0)return false;
+    if(collectionStatus==="OWNED"&&!acquired)return false;
+    if(collectionStatus==="LOCKED"&&acquired)return false;
     if(query){
       const text=[i.name,i.description,i.category,i.rarity,source,getCharacter(i.collectionCharacterId)?.name].join(" ").toLowerCase();
       if(!text.includes(query))return false;
@@ -990,14 +1004,14 @@ function renderCollection(){
   });
 
   const card=i=>{
-    const count=itemCount(i.id),unlocked=count>0,isNew=state.newItemIds.includes(i.id),source=itemSourceLabel(i);
-    return '<button class="collection-card rarity-'+esc(i.rarity)+' '+(unlocked?"":"locked")+' '+(isNew?"is-new":"")+'" type="button" data-action="collection-detail" data-id="'+esc(i.id)+'">'+
+    const count=itemCount(i.id),acquired=hasEverAcquired(i.id),isNew=state.newItemIds.includes(i.id),source=itemSourceLabel(i);
+    return '<button class="collection-card rarity-'+esc(i.rarity)+' '+(acquired?"":"locked")+' '+(isNew?"is-new":"")+'" type="button" data-action="collection-detail" data-id="'+esc(i.id)+'">'+
       (isNew?'<span class="collection-new-badge">NEW</span>':'')+
       '<em>'+esc(i.category)+'</em><span class="rarity">'+esc(i.rarity)+'</span>'+
-      '<strong>'+(unlocked?esc(i.name):"LOCKED")+'</strong>'+
-      '<div class="collection-card-meta"><span>'+esc(source)+'</span><span>'+esc(i.acquisitionMode.toUpperCase())+'</span></div>'+
-      '<p>'+(unlocked?esc(i.description||"설명 없음"):"아직 획득하지 않은 아이템입니다.")+'</p>'+
-      (unlocked&&state.collectionSettings.showOwnedCount?'<small>OWNED ×'+count+'</small>':'')+
+      '<strong>'+(acquired?esc(i.name):"LOCKED")+'</strong>'+
+      '<div class="collection-card-meta"><span>'+esc(source)+'</span><span>'+esc(i.acquisitionMode.toUpperCase())+'</span>'+(i.secret?'<span>SECRET</span>':'')+'</div>'+
+      '<p>'+(acquired?esc(i.description||"설명 없음"):"아직 획득하지 않은 아이템입니다.")+'</p>'+
+      (acquired&&state.collectionSettings.showOwnedCount?'<small>ARCHIVED · INVENTORY ×'+count+'</small>':'')+
     '</button>';
   };
 
@@ -1009,15 +1023,18 @@ function renderCollection(){
   }else{
     const groups=chars
       .filter(ch=>collectionFilter==="ALL"||ch.id===collectionFilter)
-      .map(ch=>({character:ch,items:items.filter(i=>i.collectionCharacterId===ch.id)}))
-      .filter(g=>g.items.length);
+      .map(ch=>({character:ch,items:items.filter(i=>i.collectionCharacterId===ch.id),progress:collectionProgressForCharacter(ch.id)}))
+      .filter(g=>g.items.length||g.progress.total);
     const unassigned=items.filter(i=>!getCharacter(i.collectionCharacterId));
-    body=groups.map(g=>'<section class="collection-preview-group"><h3>'+esc(g.character.name)+'</h3><div class="collection-grid">'+g.items.map(card).join("")+'</div></section>').join("");
+    body=groups.map(g=>'<section class="collection-preview-group"><div class="collection-group-head"><h3>'+esc(g.character.name)+'</h3><span>'+g.progress.acquired+' / '+g.progress.total+' · '+g.progress.percent+'%</span></div><div class="collection-progress-track"><div style="width:'+g.progress.percent+'%"></div></div><div class="collection-grid">'+g.items.map(card).join("")+'</div></section>').join("");
     if(unassigned.length)body+='<section class="collection-preview-group"><h3>UNASSIGNED</h3><div class="collection-grid">'+unassigned.map(card).join("")+'</div></section>';
   }
 
+  const overall=collectionOverallProgress();
+  const charProgress=chars.map(ch=>({ch,p:collectionProgressForCharacter(ch.id)}));
   pageRoot.innerHTML=
-    '<section><div class="page-head"><div><p class="page-kicker">COLLECTION</p><h1>CHARACTER ARCHIVE</h1></div><p>획득한 아이템과 아직 잠긴 아이템을 캐릭터별로 정리합니다.</p></div>'+
+    '<section><div class="page-head"><div><p class="page-kicker">COLLECTION</p><h1>CHARACTER ARCHIVE</h1></div><p>획득 기록은 아이템을 사용해도 유지됩니다. SECRET은 발견 전까지 아카이브에 나타나지 않습니다.</p></div>'+
+    '<div class="collection-completion"><div class="collection-completion-main"><strong>'+overall.percent+'%</strong><span>'+overall.acquired+' / '+overall.total+' ARCHIVED</span></div><div class="collection-progress-track"><div style="width:'+overall.percent+'%"></div></div><div class="collection-character-progress">'+charProgress.map(x=>'<span>'+esc(x.ch.name)+' · '+x.p.acquired+'/'+x.p.total+' · '+x.p.percent+'%</span>').join("")+'</div></div>'+
     '<div class="collection-viewbar"><div class="collection-view-buttons"><button class="filter-chip '+(state.collectionSettings.view==="grouped"?"active":"")+'" data-action="collection-view" data-view="grouped">캐릭터별</button><button class="filter-chip '+(state.collectionSettings.view==="all"?"active":"")+'" data-action="collection-view" data-view="all">전체</button></div>'+
       '<input data-collection-control="query" value="'+esc(collectionQuery)+'" placeholder="컬렉션 검색">'+
       '<select data-collection-control="rarity"><option value="ALL">모든 희귀도</option>'+RARITIES.map(r=>'<option value="'+r+'" '+(collectionRarity===r?"selected":"")+'>'+r+'</option>').join("")+'</select>'+
@@ -1027,7 +1044,7 @@ function renderCollection(){
       '<select data-collection-control="sort"><option value="recent" '+(sort==="recent"?"selected":"")+'>최근 획득</option><option value="rarity" '+(sort==="rarity"?"selected":"")+'>희귀도</option><option value="name" '+(sort==="name"?"selected":"")+'>이름</option><option value="count" '+(sort==="count"?"selected":"")+'>보유 수</option></select>'+
     '</div>'+
     '<div class="collection-toolbar"><button class="filter-chip '+(collectionFilter==="ALL"?"active":"")+'" data-action="collection-filter" data-id="ALL">ALL</button>'+chars.map(ch=>'<button class="filter-chip '+(collectionFilter===ch.id?"active":"")+'" data-action="collection-filter" data-id="'+esc(ch.id)+'">'+esc(ch.name)+'</button>').join("")+'</div>'+
-    '<div class="collection-summary">'+items.length+' ITEMS · '+state.newItemIds.filter(id=>itemCount(id)>0).length+' NEW · '+state.items.filter(i=>itemCount(i.id)>0).length+' OWNED</div>'+
+    '<div class="collection-summary">'+items.length+' VISIBLE · '+state.newItemIds.filter(id=>hasEverAcquired(id)).length+' NEW · '+visibleCatalog.filter(i=>hasEverAcquired(i.id)).length+' ARCHIVED</div>'+
     body+'</section>';
 }
 
@@ -1155,7 +1172,7 @@ function renderRoom(){
     '<button class="room-mode-button '+(roomMode==="ask"?"active":"")+'" type="button" data-action="room-mode" data-mode="ask" '+(interactionLocked?"disabled":"")+'>ASK</button>'+
     '<button class="room-mode-button '+(roomMode==="inventory"?"active":"")+'" type="button" data-action="room-mode" data-mode="inventory" '+(interactionLocked?"disabled":"")+'>INVENTORY</button></div>'+
     (roomMode==="talk"&&eventOptions.length&&!interactionLocked?'<select id="roomEventSelect" style="width:auto;min-width:190px">'+eventOptions.map(e=>'<option value="'+esc(e.id)+'" '+(ev?.id===e.id?"selected":"")+'>'+esc(e.name)+'</option>').join("")+'</select>':'')+
-    '<div class="room-actions"><button class="text-link" type="button" data-action="show-log">LOG</button><button class="text-link" type="button" data-action="show-affection">AFFECTION</button><button class="text-link" type="button" data-action="show-emotion">EMOTION</button></div></div>'+
+    '<div class="room-actions"><button class="text-link" type="button" data-action="show-log">LOG</button><button class="text-link" type="button" data-action="show-history">HISTORY</button><button class="text-link" type="button" data-action="show-affection">AFFECTION</button><button class="text-link" type="button" data-action="show-emotion">EMOTION</button></div></div>'+
     '<div class="room-stage"><div class="room-art">'+art+'</div><div id="roomDynamic"></div>'+
     (roomMode==="talk"&&!activeInteractionReaction?'<div class="room-control-bar"><button type="button" data-action="toggle-auto" class="'+(autoMode?"active":"")+'">AUTO</button><button type="button" data-action="open-play-settings">SET</button></div>':'')+
     '</div></section>';
@@ -1324,6 +1341,16 @@ function showEmotion(){
 function showLog(){
   openModal("DIALOGUE LOG",'<div class="log-list">'+(session.log.length?session.log.slice().reverse().map(x=>'<article class="log-row"><small>'+esc(x.eventName)+(x.speaker?' · '+esc(x.speaker):'')+'</small><p>'+esc(x.text)+'</p></article>').join(""):'<p class="muted">아직 기록이 없습니다.</p>')+'</div>');
 }
+function showInteractionHistory(){
+  const rows=(state.interactionHistory||[]).slice().reverse();
+  openModal("INTERACTION HISTORY",'<div class="interaction-history-list">'+(rows.length?rows.map(h=>{
+    const ch=getCharacter(h.characterId);
+    const title=h.kind==="gift"?"GIFT · "+(h.label||itemById(h.itemId)?.name||"ITEM"):"ASK · "+(h.label||state.asks.find(a=>a.id===h.askId)?.label||"QUESTION");
+    const detail=h.kind==="gift"?(h.preference||"")+" · "+(h.flowType||""):"ASKED";
+    return '<article class="interaction-history-row"><div><small>'+esc(new Date(h.at).toLocaleString("ko-KR"))+'</small><strong>'+esc(title)+'</strong></div><div><span>'+esc(ch?.name||"UNKNOWN")+'</span><b>'+esc(detail)+'</b></div></article>';
+  }).join(""):'<p class="muted">아직 ASK나 선물 기록이 없습니다.</p>')+'</div>');
+}
+
 function showPlaySettings(){
   openModal("PLAY SETTINGS",'<div class="settings-grid"><label class="field"><span>텍스트 속도</span><input id="prefTextSpeed" type="range" min="0" max="80" step="1" value="'+prefs.textSpeed+'"></label><label class="field"><span>AUTO 대기</span><input id="prefAutoDelay" type="range" min="250" max="3000" step="50" value="'+prefs.autoDelay+'"></label><label class="checkline"><input id="prefStageClick" type="checkbox" '+(prefs.stageClick?"checked":"")+'> 대화 영역 클릭으로 진행</label></div>');
 }
@@ -1376,7 +1403,7 @@ function clearGachaHistory(){
 }
 function drawGacha(count){
   if(gachaAnimating)return;
-  const initialPool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||itemCount(i.id)===0));
+  const initialPool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||!hasEverAcquired(i.id)));
   if(!initialPool.length){showToast("현재 뽑을 수 있는 가챠 아이템이 없습니다.");return}
   if(count===10&&!initialPool.some(i=>i.acquisitionMode==="repeatable")&&initialPool.length<10){
     showToast("10회 뽑기에 필요한 획득 가능 아이템이 부족합니다.");
@@ -1388,7 +1415,7 @@ function drawGacha(count){
   const results=[];
 
   for(let n=0;n<count;n++){
-    const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||itemCount(i.id)===0));
+    const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled&&(i.acquisitionMode!=="unique"||!hasEverAcquired(i.id)));
     if(!pool.length)break;
     const rarity=chooseWeighted(RARITIES,r=>state.gacha.rarityWeights[r])||"COMMON";
     const candidates=pool.filter(x=>x.rarity===rarity);
@@ -1409,7 +1436,8 @@ function drawGacha(count){
 }
 function collectionDetail(id){
   const i=itemById(id);if(!i)return;
-  const count=itemCount(i.id),unlocked=count>0;
+  const count=itemCount(i.id),unlocked=hasEverAcquired(i.id);
+  if(i.secret&&!unlocked)return;
   const wasNew=state.newItemIds.includes(i.id);
   if(wasNew){
     markItemSeen(i.id,state);
@@ -1418,10 +1446,18 @@ function collectionDetail(id){
   }
   const sources=itemSourceTypes(i).join(" + ");
   const recent=state.itemHistory.filter(h=>h.itemId===i.id).slice(-5).reverse();
+  const giftArchive=enabledCharacters().map(ch=>{
+    const reaction=i.reactions.find(r=>r.characterId===ch.id);
+    const discovered=isGiftPreferenceDiscovered(i.id,ch.id);
+    const label=discovered?(reaction?.preference||"NO SPECIAL REACTION"):"???";
+    const times=giftInteractionCount(i.id,ch.id);
+    return '<div class="gift-archive-row"><span>'+esc(ch.name)+'</span><b>'+esc(label)+'</b><small>'+(times?times+' GIFTS':'UNTRIED')+'</small></div>';
+  }).join("");
   openModal(unlocked?i.name:"LOCKED",unlocked?
-    '<p class="label">'+esc(i.rarity)+' · '+esc(i.category)+'</p>'+
+    '<p class="label">'+esc(i.rarity)+' · '+esc(i.category)+(i.secret?' · SECRET':'')+'</p>'+
     '<p style="line-height:1.7">'+esc(i.description||"설명 없음")+'</p>'+
-    '<div class="collection-detail-meta"><span>COLLECTION · '+esc(getCharacter(i.collectionCharacterId)?.name||"미지정")+'</span><span>'+esc(sources)+'</span><span>'+esc(i.acquisitionMode.toUpperCase())+'</span>'+(state.collectionSettings.showOwnedCount?'<span>OWNED ×'+count+'</span>':'')+'</div>'+
+    '<div class="collection-detail-meta"><span>COLLECTION · '+esc(getCharacter(i.collectionCharacterId)?.name||"미지정")+'</span><span>'+esc(sources)+'</span><span>'+esc(i.acquisitionMode.toUpperCase())+'</span><span>'+esc(i.giftUseMode.toUpperCase())+'</span>'+(state.collectionSettings.showOwnedCount?'<span>INVENTORY ×'+count+'</span>':'')+'</div>'+
+    '<section class="gift-archive"><h3>GIFT REACTIONS</h3>'+giftArchive+'</section>'+
     (recent.length?'<div class="collection-history-mini">'+recent.map(h=>'<div><span>'+esc(h.source)+'</span><b>+'+h.amount+'</b></div>').join("")+'</div>':'')
     :'<p class="muted">아직 획득하지 않은 아이템입니다.</p>');
 }
@@ -1892,6 +1928,7 @@ pageRoot.addEventListener("click",e=>{
   else if(a==="show-affection")showAffection();
   else if(a==="show-emotion")showEmotion();
   else if(a==="show-log")showLog();
+  else if(a==="show-history")showInteractionHistory();
   else if(a==="open-play-settings")showPlaySettings();
   else if(a==="toggle-auto"){autoMode=!autoMode;b.classList.toggle("active",autoMode);if(autoMode)scheduleAuto();else clearAuto()}
   else if(a==="advance-dialogue")advanceDialogue(false);

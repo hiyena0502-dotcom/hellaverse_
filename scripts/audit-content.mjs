@@ -1,9 +1,17 @@
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 
-const parts=[];
-for(let i=1;i<=11;i++) parts.push(fs.readFileSync('js/default-content/default-content-v2.part'+i+'.txt','utf8').trim());
-const data=JSON.parse(zlib.inflateSync(Buffer.from(parts.join('').replace(/\s+/g,''),'base64')).toString('utf8'));
+function loadPacked(prefix,count){
+  const parts=[];
+  for(let i=1;i<=count;i++) parts.push(fs.readFileSync(prefix+i+'.txt','utf8').trim());
+  const joined=parts.join('').replace(/\s+/g,'');
+  const buf=Buffer.from(joined,'base64');
+  return {parts,lengths:parts.map(x=>x.length),joinedLength:joined.length,compressedBytes:buf.length,data:JSON.parse(zlib.inflateSync(buf).toString('utf8'))};
+}
+let loaded=null,v2Error='';
+try{loaded=loadPacked('js/default-content/default-content-v2.part',11)}
+catch(error){v2Error=String(error?.message||error);console.log('V2_LOAD_ERROR='+v2Error);console.log('V2_PART_LENGTHS='+JSON.stringify(Array.from({length:11},(_,i)=>fs.readFileSync('js/default-content/default-content-v2.part'+(i+1)+'.txt','utf8').trim().length)));try{const v1=loadPacked('js/default-content/default-content-v1.part',2);console.log('V1_FALLBACK='+JSON.stringify({lengths:v1.lengths,joinedLength:v1.joinedLength,compressedBytes:v1.compressedBytes,counts:{characters:v1.data.characters?.length,dialogues:v1.data.dialogues?.length,collectionItems:v1.data.collectionItems?.length,gifts:v1.data.gifts?.length,rewards:v1.data.rewards?.length,thoughts:v1.data.thoughts?.length}}));loaded=v1}catch(error2){console.log('V1_LOAD_ERROR='+String(error2?.message||error2));throw error}}
+const data=loaded.data;
 const chars=Array.isArray(data.characters)?data.characters:[];
 const dialogues=Array.isArray(data.dialogues)?data.dialogues:[];
 const items=Array.isArray(data.collectionItems)?data.collectionItems:[];

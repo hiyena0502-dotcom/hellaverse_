@@ -499,14 +499,14 @@ function renderHome(){
     '</section>';
 }
 function renderGacha(){
-  const pool=state.collection.filter(i=>i.gachaEnabled);
+  const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled);
   const total=RARITIES.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1;
   const history=state.gacha.history.slice(-8).reverse();
   pageRoot.innerHTML=
-    '<section><div class="page-head"><div><p class="page-kicker">GACHA</p><h1>ARCHIVE DRAW</h1></div><p>컬렉션 설정에서 가챠 포함으로 지정한 항목을 추첨합니다.</p></div>'+
+    '<section><div class="page-head"><div><p class="page-kicker">GACHA</p><h1>ARCHIVE DRAW</h1></div><p>아이템 설정에서 가챠 포함으로 지정한 아이템을 추첨합니다. 획득한 아이템은 컬렉션과 인벤토리에 기록됩니다.</p></div>'+
     '<div class="gacha-layout">'+
       '<div class="gacha-stage"><div><p class="gacha-balance">'+esc(state.gacha.currencyName)+' · '+state.gacha.balance+'</p><h2>DRAW THE ARCHIVE</h2>'+
-      '<p>'+pool.length+'개의 컬렉션 항목이 현재 풀에 등록되어 있습니다.</p><div id="gachaResult" class="gacha-result-grid"></div>'+
+      '<p>'+pool.length+'개의 아이템이 현재 가챠 풀에 등록되어 있습니다.</p><div id="gachaResult" class="gacha-result-grid"></div>'+
       '<div class="draw-actions"><button class="gold-button" type="button" data-action="draw-gacha" data-count="1" '+(!state.gacha.enabled||!pool.length?"disabled":"")+'>1 DRAW · '+state.gacha.singleCost+'</button>'+
       '<button class="gold-button" type="button" data-action="draw-gacha" data-count="10" '+(!state.gacha.enabled||!pool.length?"disabled":"")+'>10 DRAW · '+state.gacha.tenCost+'</button></div></div></div>'+
       '<aside class="gacha-side"><div class="info-card"><h3>RATES</h3>'+RARITIES.map(r=>'<div class="rate-row"><span>'+r+'</span><b>'+((state.gacha.rarityWeights[r]/total)*100).toFixed(1)+'%</b></div>').join("")+'</div>'+
@@ -528,23 +528,40 @@ function renderThought(){
     '</section>';
 }
 function renderCollection(){
-  const categories=["ALL",...[...new Set(state.collection.map(i=>i.category).filter(Boolean))]];
-  const items=state.collection.filter(i=>collectionFilter==="ALL"||i.category===collectionFilter);
+  const chars=enabledCharacters();
+  const filterChars=["ALL",...chars.map(c=>c.id)];
+  const groups=chars
+    .filter(ch=>collectionFilter==="ALL"||collectionFilter===ch.id)
+    .map(ch=>({
+      character:ch,
+      items:state.items.filter(i=>i.enabled&&i.characterId===ch.id)
+        .filter(i=>state.collectionSettings.showLocked||itemCount(i.id)>0)
+    }))
+    .filter(g=>g.items.length || collectionFilter!=="ALL");
+
   pageRoot.innerHTML=
-    '<section><div class="page-head"><div><p class="page-kicker">COLLECTION</p><h1>ROYAL ARCHIVE</h1></div><p>가챠로 획득하거나 기본 해금한 항목을 확인합니다.</p></div>'+
-    '<div class="collection-toolbar">'+categories.map(c=>'<button class="filter-chip '+(collectionFilter===c?"active":"")+'" data-action="collection-filter" data-id="'+esc(c)+'">'+esc(c)+'</button>').join("")+'</div>'+
-    (items.length?'<div class="collection-grid">'+items.map(i=>{
-      const unlocked=i.unlocked||i.owned>0;
-      return '<button class="collection-card rarity-'+esc(i.rarity)+' '+(unlocked?"":"locked")+'" type="button" data-action="collection-detail" data-id="'+esc(i.id)+'">'+
-        '<em>'+esc(i.category)+'</em><span class="rarity">'+esc(i.rarity)+'</span><strong>'+(unlocked?esc(i.name):"LOCKED")+'</strong><p>'+(unlocked?esc(i.description||"설명 없음"):"아직 획득하지 않은 컬렉션입니다.")+'</p>'+
-        (unlocked&&i.owned?'<small>OWNED ×'+i.owned+'</small>':'')+'</button>';
-    }).join("")+'</div>':'<div class="empty-panel"><div><h2>컬렉션이 비어 있습니다.</h2><p>EDITOR → 컬렉션 설정에서 항목을 추가하세요.</p></div></div>')+
+    '<section><div class="page-head"><div><p class="page-kicker">COLLECTION</p><h1>CHARACTER ARCHIVE</h1></div><p>캐릭터마다 가진 고유 아이템을 모아두는 기록입니다. 가챠에서 얻은 아이템이 자동으로 해금됩니다.</p></div>'+
+    '<div class="collection-toolbar">'+filterChars.map(id=>{
+      const label=id==="ALL"?"ALL":getCharacter(id)?.name||"UNKNOWN";
+      return '<button class="filter-chip '+(collectionFilter===id?"active":"")+'" data-action="collection-filter" data-id="'+esc(id)+'">'+esc(label)+'</button>';
+    }).join("")+'</div>'+
+    (groups.length?groups.map(g=>'<section class="collection-preview-group"><h3>'+esc(g.character.name)+'</h3><div class="collection-grid">'+
+      (g.items.length?g.items.map(i=>{
+        const count=itemCount(i.id);
+        const unlocked=count>0;
+        return '<button class="collection-card rarity-'+esc(i.rarity)+' '+(unlocked?"":"locked")+'" type="button" data-action="collection-detail" data-id="'+esc(i.id)+'">'+
+          '<em>'+esc(i.category)+'</em><span class="rarity">'+esc(i.rarity)+'</span><strong>'+(unlocked?esc(i.name):"LOCKED")+'</strong>'+
+          '<p>'+(unlocked?esc(i.description||"설명 없음"):"아직 획득하지 않은 아이템입니다.")+'</p>'+
+          (unlocked&&state.collectionSettings.showOwnedCount?'<small>OWNED ×'+count+'</small>':'')+'</button>';
+      }).join(""):'<p class="muted">표시할 아이템이 없습니다.</p>')+
+      '</div></section>').join(""):'<div class="empty-panel"><div><h2>컬렉션이 비어 있습니다.</h2><p>EDITOR → 아이템 설정에서 캐릭터별 아이템을 추가하세요.</p></div></div>')+
     '</section>';
 }
 
 function startDialogue(characterId,eventId){
   const ch=getCharacter(characterId);if(!ch)return;
   selectedCharacterId=ch.id;
+  roomMode="talk";
   const ev=eventId?getEvent(eventId):eventsForCharacter(ch.id)[0];
   playback=ev?{
     characterId:ch.id,eventId:ev.id,
@@ -638,12 +655,20 @@ function renderRoom(){
   const eventOptions=eventsForCharacter(ch.id);
   pageRoot.innerHTML=
     '<section class="room-page"><div class="room-hud"><button class="text-link" type="button" data-action="back-home">← HOME</button><strong>'+esc(ch.name)+'</strong>'+
-    (eventOptions.length?'<select id="roomEventSelect" style="width:auto;min-width:190px">'+eventOptions.map(e=>'<option value="'+esc(e.id)+'" '+(ev?.id===e.id?"selected":"")+'>'+esc(e.name)+'</option>').join("")+'</select>':'<span>NO EVENT</span>')+
+    '<div class="room-mode-bar"><button class="room-mode-button '+(roomMode==="talk"?"active":"")+'" type="button" data-action="room-mode" data-mode="talk">TALK</button>'+
+    '<button class="room-mode-button '+(roomMode==="ask"?"active":"")+'" type="button" data-action="room-mode" data-mode="ask">ASK</button>'+
+    '<button class="room-mode-button '+(roomMode==="inventory"?"active":"")+'" type="button" data-action="room-mode" data-mode="inventory">INVENTORY</button></div>'+
+    (roomMode==="talk"&&eventOptions.length?'<select id="roomEventSelect" style="width:auto;min-width:190px">'+eventOptions.map(e=>'<option value="'+esc(e.id)+'" '+(ev?.id===e.id?"selected":"")+'>'+esc(e.name)+'</option>').join("")+'</select>':'')+
     '<div class="room-actions"><button class="text-link" type="button" data-action="show-log">LOG</button><button class="text-link" type="button" data-action="show-affection">AFFECTION</button><button class="text-link" type="button" data-action="show-emotion">EMOTION</button></div></div>'+
-    '<div class="room-stage"><div class="room-art">'+art+'</div><div id="roomDynamic"></div><div class="room-control-bar"><button type="button" data-action="toggle-auto" class="'+(autoMode?"active":"")+'">AUTO</button><button type="button" data-action="open-play-settings">SET</button></div></div></section>';
-  renderRoomBeat();
+    '<div class="room-stage"><div class="room-art">'+art+'</div><div id="roomDynamic"></div>'+
+    (roomMode==="talk"?'<div class="room-control-bar"><button type="button" data-action="toggle-auto" class="'+(autoMode?"active":"")+'">AUTO</button><button type="button" data-action="open-play-settings">SET</button></div>':'')+
+    '</div></section>';
+  if(roomMode==="ask")renderAskPanel();
+  else if(roomMode==="inventory")renderInventoryPanel();
+  else renderRoomBeat();
 }
 function renderRoomBeat(){
+  if(roomMode!=="talk")return;
   if(playback?.characterId && playback.characterId!==selectedCharacterId){
     selectedCharacterId=playback.characterId;
     renderRoom();
@@ -654,7 +679,7 @@ function renderRoomBeat(){
     dynamic.innerHTML='<div class="room-empty"><h2>등록된 이벤트가 없습니다.</h2><p>편집기에서 이 캐릭터의 이벤트를 추가하세요.</p></div>';return;
   }
   if(!settlePlayback()){
-    dynamic.innerHTML='<div class="room-empty"><h2>이벤트가 끝났습니다.</h2><p>다른 이벤트를 선택하거나 HOME으로 돌아갈 수 있습니다.</p></div>';clearTyping();clearAuto();return;
+    dynamic.innerHTML='<div class="room-empty"><h2>이벤트가 끝났습니다.</h2><p>다른 이벤트를 선택하거나 ASK / INVENTORY를 이용할 수 있습니다.</p></div>';clearTyping();clearAuto();return;
   }
   const frame=playback.frames.at(-1),entry=frameEntries(frame)[frame.index];
   if(entry.type==="choice"){
@@ -674,6 +699,43 @@ function renderRoomBeat(){
     $("#dialogueText").textContent=typing.done?typing.full:typing.full.slice(0,typing.index);
     scheduleAuto();
   }
+}
+
+function renderAskPanel(){
+  clearTyping();clearAuto();
+  const dynamic=$("#roomDynamic");if(!dynamic)return;
+  const ch=getCharacter(selectedCharacterId);if(!ch)return;
+  const affection=Number(session.affection[ch.id]??ch.affectionStart);
+  const asks=asksForCharacter(ch.id).filter(a=>affection>=a.minAffection);
+  dynamic.innerHTML='<section class="ask-panel"><div class="inventory-character-head"><div><p class="page-kicker">ASK</p><h2>무엇을 물어볼까?</h2></div><p>'+esc(ch.name)+'</p></div><div class="ask-list">'+
+    (asks.length?asks.map(a=>'<button class="ask-entry" type="button" data-action="ask-topic" data-id="'+esc(a.id)+'"><span>'+esc(a.label)+'</span><small>ASK</small></button>').join(""):'<div class="editor-note">현재 사용할 수 있는 질문이 없습니다.</div>')+
+    '</div></section>';
+}
+function startAsk(id){
+  const ask=state.asks.find(a=>a.id===id&&a.enabled);if(!ask)return;
+  const ch=getCharacter(ask.characterId);if(!ch||selectedCharacterId!==ch.id)return;
+  const affection=Number(session.affection[ch.id]??ch.affectionStart);
+  if(affection<ask.minAffection){showToast("아직 물어볼 수 없습니다.");return}
+  const ev=getEvent(ask.eventId);
+  if(!ev){showToast("ASK에 연결된 이벤트가 없습니다.");return}
+  startDialogue(ch.id,ev.id);
+}
+function renderInventoryPanel(){
+  clearTyping();clearAuto();
+  const dynamic=$("#roomDynamic");if(!dynamic)return;
+  const ch=getCharacter(selectedCharacterId);if(!ch)return;
+  const items=itemsForCharacter(ch.id).filter(i=>itemCount(i.id)>0);
+  dynamic.innerHTML='<section class="inventory-panel"><div class="inventory-character-head"><div><p class="page-kicker">INVENTORY</p><h2>'+esc(ch.name)+' ITEMS</h2></div><p>보유 아이템만 표시됩니다.</p></div><div class="inventory-list">'+
+    (items.length?items.map(i=>'<button class="inventory-entry" type="button" data-action="inventory-item" data-id="'+esc(i.id)+'"><span><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+'</small></span><span class="count">×'+itemCount(i.id)+'</span></button>').join(""):'<div class="editor-note">이 캐릭터의 보유 아이템이 없습니다. 가챠에서 획득하면 여기에 나타납니다.</div>')+
+    '</div></section>';
+}
+function useInventoryItem(id){
+  const item=itemById(id);if(!item||item.characterId!==selectedCharacterId||itemCount(id)<=0)return;
+  if(item.inventoryEventId&&getEvent(item.inventoryEventId)){
+    startDialogue(selectedCharacterId,item.inventoryEventId);
+    return;
+  }
+  collectionDetail(id);
 }
 function chName(id){return getCharacter(id)?.name||"UNKNOWN"}
 function advanceDialogue(fromAuto=false){
@@ -738,7 +800,7 @@ function chooseWeighted(items,getWeight){
   return items.at(-1);
 }
 function drawGacha(count){
-  const pool=state.collection.filter(i=>i.gachaEnabled);
+  const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled);
   if(!pool.length){showToast("가챠 풀이 비어 있습니다.");return}
   const cost=count===10?state.gacha.tenCost:state.gacha.singleCost;
   if(state.gacha.balance<cost){showToast(state.gacha.currencyName+"이 부족합니다.");return}
@@ -749,19 +811,20 @@ function drawGacha(count){
     const candidates=pool.filter(x=>x.rarity===rarity);
     const item=chooseWeighted(candidates.length?candidates:pool,x=>x.weight);
     if(!item)continue;
-    item.unlocked=true;item.owned=(item.owned||0)+1;
+    addItem(item.id,1,state);
     results.push(item);
-    state.gacha.history.push({name:item.name,rarity:item.rarity,at:Date.now()});
+    state.gacha.history.push({name:item.name,rarity:item.rarity,itemId:item.id,at:Date.now()});
   }
   state.gacha.history=state.gacha.history.slice(-50);saveState();
   renderGacha();
   const box=$("#gachaResult");
-  if(box)box.innerHTML=results.map(i=>'<div class="gacha-result-card rarity-'+esc(i.rarity)+'"><span>'+esc(i.rarity)+'</span><strong>'+esc(i.name)+'</strong></div>').join("");
+  if(box)box.innerHTML=results.map(i=>'<div class="gacha-result-card rarity-'+esc(i.rarity)+'"><span>'+esc(i.rarity)+'</span><strong>'+esc(i.name)+'</strong><small>'+esc(getCharacter(i.characterId)?.name||"UNKNOWN")+'</small></div>').join("");
 }
 function collectionDetail(id){
-  const i=state.collection.find(x=>x.id===id);if(!i)return;
-  const unlocked=i.unlocked||i.owned>0;
-  openModal(unlocked?i.name:"LOCKED",unlocked?'<p class="label">'+esc(i.rarity)+' · '+esc(i.category)+'</p><p style="line-height:1.7">'+esc(i.description||"설명 없음")+'</p><p class="muted">'+esc(getCharacter(i.characterId)?.name||"공용")+(i.owned?' · OWNED ×'+i.owned:'')+'</p>':'<p class="muted">아직 획득하지 않은 컬렉션입니다.</p>');
+  const i=itemById(id);if(!i)return;
+  const count=itemCount(i.id);
+  const unlocked=count>0;
+  openModal(unlocked?i.name:"LOCKED",unlocked?'<p class="label">'+esc(i.rarity)+' · '+esc(i.category)+'</p><p style="line-height:1.7">'+esc(i.description||"설명 없음")+'</p><p class="muted">'+esc(getCharacter(i.characterId)?.name||"캐릭터 미지정")+(state.collectionSettings.showOwnedCount?' · OWNED ×'+count:'')+'</p>':'<p class="muted">아직 가챠에서 획득하지 않은 아이템입니다.</p>');
 }
 
 /* EDITOR */
@@ -773,7 +836,8 @@ function openEditor(){
   selectedEditorEventId=editorDraft.events[0]?.id||"";
   selectedEntryId="";
   selectedThoughtId=editorDraft.thoughts[0]?.id||"";
-  selectedCollectionId=editorDraft.collection[0]?.id||"";
+  selectedAskId=editorDraft.asks[0]?.id||"";
+  selectedItemId=editorDraft.items[0]?.id||"";
   editorOverlay.hidden=false;document.body.style.overflow="hidden";
   renderEditor();
 }
@@ -794,6 +858,8 @@ function saveEditor(){
 function renderEditor(){
   $$(".editor-nav").forEach(b=>b.classList.toggle("active",b.dataset.editorTab===editorTab));
   if(editorTab==="dialogue")renderDialogueEditor();
+  else if(editorTab==="ask")renderAskEditor();
+  else if(editorTab==="item")renderItemEditor();
   else if(editorTab==="gacha")renderGachaEditor();
   else if(editorTab==="thought")renderThoughtEditor();
   else renderCollectionEditor();
@@ -825,7 +891,7 @@ function renderCharacterManager(){
 function characterForm(c){
   return '<div class="form-grid">'+
     '<label class="field"><span>이름</span><input data-bind="char-name" value="'+esc(c.name)+'"></label>'+
-    '<label class="field"><span>소속</span><select data-bind="char-origin">'+ORIGINS.map(o=>'<option value="'+o[0]+'" '+(c.origin===o[0]?"selected":"")+'>'+o[1]+'</option>').join("")+'</select></label>'+
+    '<label class="field"><span>출신 분류</span><select data-bind="char-origin">'+ORIGINS.map(o=>'<option value="'+o[0]+'" '+(c.origin===o[0]?"selected":"")+'>'+o[1]+'</option>').join("")+'</select></label>'+
     '<label class="field"><span>역할 / 설명</span><input data-bind="char-role" value="'+esc(c.role)+'" placeholder="예: 호텔 관리자"></label>'+
     '<label class="field"><span>이미지 URL</span><input data-bind="char-image" value="'+esc(c.image)+'" placeholder="https://..."></label>'+
     '<label class="field full"><span>HOME 소개 문구</span><textarea data-bind="char-quote">'+esc(c.quote)+'</textarea></label>'+
@@ -930,13 +996,29 @@ function getSelectedOwner(kind,element){
   return choice?.type==="choice"?choice.options.find(o=>o.id===card.dataset.optionId)||null:null;
 }
 
+
+function renderAskEditor(){
+  editorBody.innerHTML=editorHead("ASK","ASK 설정","ROOM의 ASK 목록을 관리합니다. 각 질문은 기존 대화 이벤트 하나에 연결됩니다.",'<button class="small-button" data-action="new-ask">+ 질문</button>')+
+    '<div class="ask-editor-grid">'+
+    (editorDraft.asks.length?editorDraft.asks.map(a=>'<div class="ask-row" data-ask-id="'+esc(a.id)+'"><select data-ask-bind="characterId">'+charOptions(a.characterId,"캐릭터 선택")+'</select><input data-ask-bind="label" value="'+esc(a.label)+'" placeholder="질문 문구"><select data-ask-bind="eventId">'+eventOptions(a.eventId,"연결 이벤트 선택",editorDraft)+'</select><label class="field"><span>최소 호감도</span><input type="number" min="0" max="100" data-ask-bind="minAffection" value="'+a.minAffection+'"></label><span><label class="checkline"><input type="checkbox" data-ask-bind="enabled" '+(a.enabled?"checked":"")+'> 사용</label><button class="danger-button" data-action="delete-ask">×</button></span></div>').join(""):'<div class="editor-note">등록된 ASK가 없습니다. 질문을 추가하고 대화 이벤트에 연결하세요.</div>')+
+    '</div>';
+}
+function renderItemEditor(){
+  editorBody.innerHTML=editorHead("ITEM","아이템 설정","캐릭터마다 여러 아이템을 만들 수 있습니다. 가챠에서 획득하면 INVENTORY와 COLLECTION에 기록됩니다.",'<button class="small-button" data-action="new-item">+ 아이템</button>')+
+    '<div class="item-editor-grid">'+
+    (editorDraft.items.length?editorDraft.items.map(i=>'<div class="item-row" data-item-id="'+esc(i.id)+'"><select data-item-bind="characterId">'+charOptions(i.characterId,"캐릭터 선택")+'</select><input data-item-bind="name" value="'+esc(i.name)+'" placeholder="아이템 이름"><select data-item-bind="rarity">'+RARITIES.map(r=>'<option '+(i.rarity===r?"selected":"")+'>'+r+'</option>').join("")+'</select><input data-item-bind="category" value="'+esc(i.category)+'" placeholder="카테고리"><input type="number" min=".01" step=".01" data-item-bind="weight" value="'+i.weight+'"><button class="danger-button" data-action="delete-item">×</button>'+
+      '<div class="full-row form-grid"><label class="field"><span>INVENTORY 선택 시 이벤트</span><select data-item-bind="inventoryEventId">'+eventOptions(i.inventoryEventId,"이벤트 없음",editorDraft)+'</select></label><label class="checkline"><input type="checkbox" data-item-bind="gachaEnabled" '+(i.gachaEnabled?"checked":"")+'> 가챠 포함</label><label class="checkline"><input type="checkbox" data-item-bind="enabled" '+(i.enabled?"checked":"")+'> 사용</label><label class="field full"><span>설명</span><textarea data-item-bind="description">'+esc(i.description)+'</textarea></label></div>'+
+    '</div>').join(""):'<div class="editor-note">아이템이 없습니다.</div>')+
+    '</div>';
+}
 function renderGachaEditor(){
   const total=RARITIES.reduce((s,r)=>s+Number(editorDraft.gacha.rarityWeights[r]||0),0)||1;
-  editorBody.innerHTML=editorHead("GACHA","가챠 설정","컬렉션의 가챠 풀과 추첨 비용·확률을 관리합니다.")+
+  const pool=editorDraft.items.filter(i=>i.enabled&&i.gachaEnabled);
+  editorBody.innerHTML=editorHead("GACHA","가챠 설정","아이템 설정의 가챠 포함 항목을 대상으로 비용·확률을 관리합니다.")+
   '<div class="settings-grid"><section class="settings-card"><h3>BASIC</h3><div class="form-grid"><label class="checkline"><input type="checkbox" data-gacha-bind="enabled" '+(editorDraft.gacha.enabled?"checked":"")+'> 가챠 사용</label><label class="field"><span>재화 이름</span><input data-gacha-bind="currencyName" value="'+esc(editorDraft.gacha.currencyName)+'"></label><label class="field"><span>현재 재화</span><input type="number" min="0" data-gacha-bind="balance" value="'+editorDraft.gacha.balance+'"></label><label class="field"><span>1회 비용</span><input type="number" min="0" data-gacha-bind="singleCost" value="'+editorDraft.gacha.singleCost+'"></label><label class="field"><span>10회 비용</span><input type="number" min="0" data-gacha-bind="tenCost" value="'+editorDraft.gacha.tenCost+'"></label></div></section>'+
   '<section class="settings-card"><h3>RARITY WEIGHT</h3><div class="rarity-editor">'+RARITIES.map(r=>'<label class="rarity-edit-row"><span>'+r+' · '+((editorDraft.gacha.rarityWeights[r]/total)*100).toFixed(1)+'%</span><input type="number" min="0" step="1" data-rarity="'+r+'" value="'+editorDraft.gacha.rarityWeights[r]+'"></label>').join("")+'</div></section></div>'+
-  '<div class="settings-card" style="margin-top:14px"><h3>POOL</h3><p class="muted">가챠 풀의 실제 항목은 컬렉션 설정에서 “가챠 포함”을 켜서 관리합니다.</p><div class="table-editor">'+
-  (editorDraft.collection.filter(i=>i.gachaEnabled).length?editorDraft.collection.filter(i=>i.gachaEnabled).map(i=>'<div class="table-row"><span>'+esc(i.name)+'</span><span>'+esc(i.rarity)+'</span><span>WEIGHT '+i.weight+'</span><span>'+esc(getCharacterDraft(i.characterId)?.name||"공용")+'</span><span></span></div>').join(""):'<div class="editor-note">현재 가챠 풀에 등록된 컬렉션이 없습니다.</div>')+'</div></div>';
+  '<div class="settings-card" style="margin-top:14px"><h3>ITEM POOL</h3><p class="muted">아이템 설정에서 “가챠 포함”을 켠 항목입니다.</p><div class="table-editor">'+
+  (pool.length?pool.map(i=>'<div class="table-row"><span>'+esc(i.name)+'</span><span>'+esc(i.rarity)+'</span><span>WEIGHT '+i.weight+'</span><span>'+esc(getCharacterDraft(i.characterId)?.name||"캐릭터 미지정")+'</span><span></span></div>').join(""):'<div class="editor-note">현재 가챠 풀에 등록된 아이템이 없습니다.</div>')+'</div></div>';
 }
 function renderThoughtEditor(){
   editorBody.innerHTML=editorHead("THOUGHT","Thought 설정","캐릭터별 생각, 카테고리, 등장 빈도를 관리합니다.",'<button class="small-button" data-action="new-thought">+ Thought</button>')+
@@ -944,9 +1026,13 @@ function renderThoughtEditor(){
   '<div class="table-editor">'+(editorDraft.thoughts.length?editorDraft.thoughts.map(t=>'<div class="table-row thought-row" data-thought-id="'+esc(t.id)+'"><select data-thought-bind="characterId">'+charOptions(t.characterId,"캐릭터")+'</select><select data-thought-bind="category">'+editorDraft.thoughtSettings.categories.map(c=>'<option '+(t.category===c?"selected":"")+'>'+esc(c)+'</option>').join("")+'</select><select data-thought-bind="frequency">'+FREQUENCIES.map(f=>'<option value="'+f[0]+'" '+(t.frequency===f[0]?"selected":"")+'>'+f[1]+'</option>').join("")+'</select><select data-thought-bind="rarity">'+RARITIES.map(r=>'<option '+(t.rarity===r?"selected":"")+'>'+r+'</option>').join("")+'</select><textarea data-thought-bind="text">'+esc(t.text)+'</textarea><span><label class="checkline"><input type="checkbox" data-thought-bind="enabled" '+(t.enabled?"checked":"")+'> 사용</label><button class="danger-button" data-action="delete-thought">×</button></span></div>').join(""):'<div class="editor-note">Thought가 없습니다.</div>')+'</div>';
 }
 function renderCollectionEditor(){
-  editorBody.innerHTML=editorHead("COLLECTION","컬렉션 설정","아이템, 희귀도, 가챠 포함 여부와 기본 잠금을 관리합니다.",'<button class="small-button" data-action="new-collection">+ 컬렉션</button>')+
-  '<div class="table-editor">'+(editorDraft.collection.length?editorDraft.collection.map(i=>'<div class="table-row" data-item-id="'+esc(i.id)+'"><input data-item-bind="name" value="'+esc(i.name)+'"><select data-item-bind="rarity">'+RARITIES.map(r=>'<option '+(i.rarity===r?"selected":"")+'>'+r+'</option>').join("")+'</select><input data-item-bind="category" value="'+esc(i.category)+'"><span><label class="checkline"><input type="checkbox" data-item-bind="gachaEnabled" '+(i.gachaEnabled?"checked":"")+'> 가챠</label><label class="checkline"><input type="checkbox" data-item-bind="unlocked" '+(i.unlocked?"checked":"")+'> 기본 해금</label></span><button class="danger-button" data-action="delete-collection">×</button>'+
-  '<div style="grid-column:1/-1" class="form-grid"><label class="field"><span>캐릭터</span><select data-item-bind="characterId">'+charOptions(i.characterId,"공용")+'</select></label><label class="field"><span>가챠 가중치</span><input type="number" min=".01" step=".01" data-item-bind="weight" value="'+i.weight+'"></label><label class="field full"><span>설명</span><textarea data-item-bind="description">'+esc(i.description)+'</textarea></label></div></div>').join(""):'<div class="editor-note">컬렉션이 없습니다.</div>')+'</div>';
+  const chars=editorDraft.characters;
+  editorBody.innerHTML=editorHead("COLLECTION","컬렉션 설정","컬렉션은 아이템 정의가 아니라, 가챠로 얻은 캐릭터별 아이템의 아카이브입니다.")+
+    '<div class="settings-grid"><section class="settings-card"><h3>DISPLAY</h3><label class="checkline"><input type="checkbox" data-collection-setting="showLocked" '+(editorDraft.collectionSettings.showLocked?"checked":"")+'> 미획득 아이템도 LOCKED로 표시</label><label class="checkline"><input type="checkbox" data-collection-setting="showOwnedCount" '+(editorDraft.collectionSettings.showOwnedCount?"checked":"")+'> 보유 개수 표시</label></section>'+
+    '<section class="settings-card"><h3>SUMMARY</h3><p class="muted">아이템 추가·희귀도·가챠 여부는 “아이템 설정”에서 관리합니다.</p><p>'+editorDraft.items.length+' ITEMS · '+Object.values(editorDraft.inventoryCounts).filter(n=>Number(n)>0).length+' DISCOVERED</p></section></div>'+
+    (chars.length?chars.map(ch=>'<section class="collection-preview-group"><h3>'+esc(ch.name)+'</h3><div class="collection-preview-items">'+
+      (editorDraft.items.filter(i=>i.characterId===ch.id).length?editorDraft.items.filter(i=>i.characterId===ch.id).map(i=>'<div class="collection-preview-item"><b>'+esc(i.name)+'</b><small>'+esc(i.rarity)+' · '+esc(i.category)+'</small><div>현재 보유 '+itemCount(i.id,editorDraft)+'</div></div>').join(""):'<div class="editor-note">이 캐릭터의 아이템이 없습니다.</div>')+
+      '</div></section>').join(""):'<div class="editor-note">캐릭터가 없습니다.</div>');
 }
 
 /* APP EVENTS */

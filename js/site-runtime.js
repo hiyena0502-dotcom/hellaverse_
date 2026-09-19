@@ -4,7 +4,12 @@
 const STATE_KEY = "hellaverse-studio-state-v2";
 const PREFS_KEY = "hellaverse-studio-prefs-v2";
 const RARITIES = ["COMMON","UNCOMMON","RARE","EPIC","LEGENDARY","MISTIC"];
-const ORIGINS = [["hellborn","HELLBORN"],["heaven","HEAVEN"]];
+const ORIGINS = [
+  ["sinner","죄인 · SINNER","hell"],
+  ["hellborn","헬본 · HELLBORN","hell"],
+  ["angel","천사 · ANGEL","heaven"],
+  ["winner","위너 · WINNER","heaven"]
+];
 const EMOTIONS = [
   ["calm","평온"],["joy","기쁨"],["embarrassed","당황"],["sad","슬픔"],
   ["angry","화남"],["anxious","불안"],["curious","호기심"],["guarded","경계"]
@@ -22,7 +27,10 @@ const clamp = (v,min,max,fallback=0) => {
   return Number.isFinite(n) ? Math.min(max,Math.max(min,n)) : fallback;
 };
 const emotionLabel = id => EMOTIONS.find(x=>x[0]===id)?.[1] || "평온";
-const originLabel = id => ORIGINS.find(x=>x[0]===id)?.[1] || "HELLBORN";
+const originLabel = id => ORIGINS.find(x=>x[0]===id)?.[1] || "헬본 · HELLBORN";
+const originRealm = id => ORIGINS.find(x=>x[0]===id)?.[2] || "hell";
+const validOrigin = id => ORIGINS.some(x=>x[0]===id);
+const normalizeOrigin = id => id==="heaven" ? "angel" : validOrigin(id) ? id : "hellborn";
 
 function defaultState(){
   return {
@@ -30,7 +38,10 @@ function defaultState(){
     characters:[],
     events:[],
     variables:[],
-    collection:[],
+    asks:[],
+    items:[],
+    inventoryCounts:{},
+    collectionSettings:{showLocked:true,showOwnedCount:true},
     thoughts:[],
     thoughtSettings:{categories:[...DEFAULT_CATEGORIES]},
     gacha:{
@@ -50,7 +61,7 @@ function normalizeCharacter(c={}){
   return {
     id:c.id || uid("char"),
     name:c.name || "새 캐릭터",
-    origin:c.origin === "heaven" ? "heaven" : "hellborn",
+    origin:normalizeOrigin(c.origin),
     role:c.role || "",
     quote:c.quote || "",
     image:c.image || "",
@@ -145,18 +156,30 @@ function normalizeVariable(v={}){
   const type=["number","boolean","string"].includes(v.type)?v.type:"number";
   return {id:v.id||uid("var"),name:v.name||"새 변수",type,defaultValue:v.defaultValue??(type==="boolean"?"false":"0")};
 }
+function normalizeAsk(a={}){
+  return {
+    id:a.id||uid("ask"),
+    characterId:a.characterId||"",
+    label:a.label||a.question||"새 질문",
+    eventId:a.eventId||"",
+    minAffection:clamp(a.minAffection,0,100,0),
+    enabled:a.enabled!==false
+  };
+}
 function normalizeItem(i={}){
   return {
     id:i.id||uid("item"),
-    name:i.name||"새 컬렉션",
+    name:i.name||"새 아이템",
     category:i.category||"기타",
     rarity:RARITIES.includes(i.rarity)?i.rarity:"COMMON",
     characterId:i.characterId||"",
     description:i.description||"",
-    unlocked:Boolean(i.unlocked),
-    owned:Math.max(0,Number(i.owned)||0),
     gachaEnabled:i.gachaEnabled!==false,
-    weight:Math.max(.01,Number(i.weight)||1)
+    inventoryEventId:i.inventoryEventId||i.eventId||"",
+    enabled:i.enabled!==false,
+    weight:Math.max(.01,Number(i.weight)||1),
+    legacyOwned:Math.max(0,Number(i.owned)||0),
+    legacyUnlocked:Boolean(i.unlocked)
   };
 }
 function normalizeThought(t={}){
@@ -173,15 +196,32 @@ function normalizeThought(t={}){
 function normalizeState(raw){
   const d=defaultState();
   const s=raw&&typeof raw==="object"?raw:{};
+  const rawItems=Array.isArray(s.items) ? s.items : Array.isArray(s.collection) ? s.collection : [];
+  const items=rawItems.map(normalizeItem);
+  const inventoryCounts={...(s.inventoryCounts&&typeof s.inventoryCounts==="object"?s.inventoryCounts:{})};
+  items.forEach(item=>{
+    if(inventoryCounts[item.id]===undefined && (item.legacyOwned>0 || item.legacyUnlocked)){
+      inventoryCounts[item.id]=Math.max(1,item.legacyOwned||0);
+    }
+    delete item.legacyOwned;
+    delete item.legacyUnlocked;
+  });
+  const rawOrigin=s.profile?.origin;
   return {
     profile:{
       name:String(s.profile?.name||""),
-      origin:["hellborn","heaven"].includes(s.profile?.origin)?s.profile.origin:""
+      origin:rawOrigin ? normalizeOrigin(rawOrigin) : ""
     },
     characters:Array.isArray(s.characters)?s.characters.map(normalizeCharacter):[],
     events:Array.isArray(s.events)?s.events.map(normalizeEvent):[],
     variables:Array.isArray(s.variables)?s.variables.map(normalizeVariable):[],
-    collection:Array.isArray(s.collection)?s.collection.map(normalizeItem):[],
+    asks:Array.isArray(s.asks)?s.asks.map(normalizeAsk):[],
+    items,
+    inventoryCounts:Object.fromEntries(Object.entries(inventoryCounts).map(([id,n])=>[id,Math.max(0,Number(n)||0)])),
+    collectionSettings:{
+      showLocked:s.collectionSettings?.showLocked!==false,
+      showOwnedCount:s.collectionSettings?.showOwnedCount!==false
+    },
     thoughts:Array.isArray(s.thoughts)?s.thoughts.map(normalizeThought):[],
     thoughtSettings:{
       categories:Array.isArray(s.thoughtSettings?.categories)&&s.thoughtSettings.categories.length
@@ -220,6 +260,7 @@ let homeIndex=0;
 let thoughtFilter="ALL";
 let collectionFilter="ALL";
 let pendingOrigin=state.profile.origin || "";
+let roomMode="talk";
 let editorDraft=null;
 let editorTab="dialogue";
 let dialogueSubtab="characters";
@@ -227,7 +268,8 @@ let selectedEditorCharacterId="";
 let selectedEditorEventId="";
 let selectedEntryId="";
 let selectedThoughtId="";
-let selectedCollectionId="";
+let selectedAskId="";
+let selectedItemId="";
 
 let session=createSession();
 let playback=null;
@@ -238,6 +280,7 @@ let toastTimer=null;
 
 const startScreen=$("#startScreen");
 const gameShell=$("#gameShell");
+const startForm=$("#startForm");
 const playerNameInput=$("#playerNameInput");
 const originChoice=$("#originChoice");
 const enterGameButton=$("#enterGameButton");
@@ -280,6 +323,20 @@ function enabledCharacters(source=state){return source.characters.filter(c=>c.en
 function getEvent(id, source=state){return source.events.find(e=>e.id===id)||null}
 function eventsForCharacter(charId, source=state){return source.events.filter(e=>e.characterId===charId)}
 function variableById(id,source=state){return source.variables.find(v=>v.id===id)||null}
+function itemById(id,source=state){return source.items.find(i=>i.id===id)||null}
+function itemCount(id,source=state){return Math.max(0,Number(source.inventoryCounts?.[id])||0)}
+function addItem(id,count=1,source=state){
+  const item=itemById(id,source);if(!item)return 0;
+  source.inventoryCounts ||= {};
+  source.inventoryCounts[id]=itemCount(id,source)+Math.max(0,Number(count)||0);
+  return source.inventoryCounts[id];
+}
+function asksForCharacter(charId,source=state){
+  return source.asks.filter(a=>a.characterId===charId&&a.enabled);
+}
+function itemsForCharacter(charId,source=state){
+  return source.items.filter(i=>i.characterId===charId&&i.enabled);
+}
 
 function conditionPasses(c){
   if(!c?.variableId)return true;
@@ -379,19 +436,21 @@ function closeModal(){modalRoot.innerHTML=""}
 
 function renderStart(){
   playerNameInput.value=state.profile.name||"";
-  pendingOrigin=state.profile.origin||pendingOrigin||"";
+  pendingOrigin=validOrigin(state.profile.origin)?state.profile.origin:(validOrigin(pendingOrigin)?pendingOrigin:"");
   $$("[data-origin]",originChoice).forEach(b=>b.classList.toggle("active",b.dataset.origin===pendingOrigin));
+  startHint.textContent="";
   startScreen.hidden=false;gameShell.hidden=true;
 }
 function enterGame(){
   const name=playerNameInput.value.trim();
-  if(!name||!pendingOrigin){startHint.textContent="이름과 소속을 모두 선택하세요.";return}
+  if(!name||!validOrigin(pendingOrigin)){startHint.textContent="이름과 출신을 모두 선택하세요.";return false}
   state.profile={name,origin:pendingOrigin};saveState();
   startScreen.hidden=true;gameShell.hidden=false;
   updatePlayerBadge();
   const chars=enabledCharacters();
   if(chars.length&&!getCharacter(selectedCharacterId))selectedCharacterId=chars[0].id;
   currentPage="home";renderNav();renderPage();
+  return true;
 }
 function updatePlayerBadge(){playerBadge.textContent=(state.profile.name||"PLAYER")+" · "+originLabel(state.profile.origin)}
 function renderNav(){

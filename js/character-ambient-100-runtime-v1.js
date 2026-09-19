@@ -1,9 +1,9 @@
 (()=>{
 'use strict';
-if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V8__)return;
-window.__HELLAVERSE_AMBIENT100_RUNTIME_V8__=1;
+if(window.__HELLAVERSE_AMBIENT100_RUNTIME_V9__)return;
+window.__HELLAVERSE_AMBIENT100_RUNTIME_V9__=1;
 
-const K='hellaverse_dialogue_state_v1',PACK='ambient100-v8';
+const K='hellaverse_dialogue_state_v1',PACK='ambient100-v9';
 const EXCLUDED=new Set(['eve','lilith-morningstar','speaker-of-god','michael','gabriel','azrael','saint-peter','st-peter','peter']);
 const FORMAL_PLAYER_TARGETS=new Set([
  'lucifer-morningstar','alastor','husk','sir-pentious','sera','adam','vox','valentino',
@@ -16,7 +16,25 @@ const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
 const split=v=>Array.isArray(v)?v.map(String).map(clean).filter(Boolean):String(v||'').split(/[\n,;/|]+/).map(clean).filter(Boolean);
 const read=()=>{try{return JSON.parse(localStorage.getItem(K)||'{}')||{}}catch{return{}}};
 const write=(s,source='ambient100-runtime')=>{try{const value=JSON.stringify(s);localStorage.setItem(K,value);try{window.dispatchEvent(new StorageEvent('storage',{key:K,newValue:value,storageArea:localStorage,url:location.href}))}catch{}window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source,clearDirty:false}}));return true}catch(error){console.warn('Ambient 100 dialogue pool could not be saved safely.',error);return false}};
-const repl=(s,vars)=>String(s||'').replace(/\{(\w+)\}/g,(_,k)=>vars[k]??'');
+const hasBatchim=v=>{const s=clean(v),ch=s.charCodeAt(s.length-1);return ch>=0xAC00&&ch<=0xD7A3?((ch-0xAC00)%28)!==0:false};
+const withJosa=(v,a,b)=>{v=clean(v);return v+(hasBatchim(v)?a:b)};
+const repl=(s,vars)=>{
+ let out=String(s||''),topic=clean(vars?.topic||'');
+ if(topic){
+  out=out
+   .replaceAll('{topic}이라는',withJosa(topic,'이라는','라는'))
+   .replaceAll('{topic}이란',withJosa(topic,'이란','란'))
+   .replaceAll('{topic}을',withJosa(topic,'을','를'))
+   .replaceAll('{topic}를',withJosa(topic,'을','를'))
+   .replaceAll('{topic}은',withJosa(topic,'은','는'))
+   .replaceAll('{topic}는',withJosa(topic,'은','는'))
+   .replaceAll('{topic}이',withJosa(topic,'이','가'))
+   .replaceAll('{topic}가',withJosa(topic,'이','가'))
+   .replaceAll('{topic}과',withJosa(topic,'과','와'))
+   .replaceAll('{topic}와',withJosa(topic,'과','와'));
+ }
+ return out.replace(/\{(\w+)\}/g,(_,k)=>vars[k]??'');
+};
 const slug=v=>clean(v).toLowerCase().normalize('NFKD').replace(/[^a-z0-9가-힣]+/g,'-').replace(/^-|-$/g,'')||'topic';
 
 const P={

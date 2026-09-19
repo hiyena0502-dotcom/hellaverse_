@@ -1218,51 +1218,99 @@ function getSelectedOwner(kind,element){
 }
 
 
+function getInteractionFlowOwner(scope,ownerId,itemId=""){
+  if(scope==="ask")return editorDraft.asks.find(a=>a.id===ownerId)||null;
+  if(scope==="item-reaction"){
+    const item=editorDraft.items.find(i=>i.id===itemId);
+    return item?.reactions.find(r=>r.id===ownerId)||null;
+  }
+  return null;
+}
+function findFlowEntryContext(entries,id,ancestors=[]){
+  for(let i=0;i<entries.length;i++){
+    const entry=entries[i];
+    if(entry.id===id)return{entry,list:entries,index:i,ancestors};
+    if(entry.type==="choice"){
+      for(const option of entry.options){
+        const found=findFlowEntryContext(option.entries,id,[...ancestors,{entry,option}]);
+        if(found)return found;
+      }
+    }
+  }
+  return null;
+}
+function findFlowOption(entries,id){
+  for(const entry of entries){
+    if(entry.type!=="choice")continue;
+    for(const option of entry.options){
+      if(option.id===id)return option;
+      const nested=findFlowOption(option.entries,id);
+      if(nested)return nested;
+    }
+  }
+  return null;
+}
+function flowData(scope,ownerId,itemId=""){
+  return ' data-flow-scope="'+esc(scope)+'" data-flow-owner-id="'+esc(ownerId)+'" data-flow-item-id="'+esc(itemId)+'"';
+}
+function renderInteractionFlow(entries,scope,ownerId,itemId="",depth=0){
+  const attrs=flowData(scope,ownerId,itemId);
+  const list=entries.length?entries.map((entry,index)=>{
+    let body="";
+    if(entry.type==="dialogue"){
+      body='<div class="mini-flow-fields"><input '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="speaker" value="'+esc(entry.speaker||"")+'" placeholder="화자 (비우면 현재 캐릭터)"><textarea '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="text" placeholder="대사">'+esc(entry.text||"")+'</textarea></div>';
+    }else if(entry.type==="narration"){
+      body='<div class="mini-flow-fields"><textarea '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="text" placeholder="지문">'+esc(entry.text||"")+'</textarea></div>';
+    }else{
+      body='<div class="mini-flow-fields"><textarea '+attrs+' data-mini-entry-id="'+esc(entry.id)+'" data-mini-entry-field="prompt" placeholder="선택지 질문 / 상황">'+esc(entry.prompt||"")+'</textarea>'+
+        '<div class="mini-options">'+entry.options.map(option=>
+          '<article class="mini-option"><div class="mini-option-head"><input '+attrs+' data-mini-option-id="'+esc(option.id)+'" data-mini-option-field="label" value="'+esc(option.label||"")+'" placeholder="선택지 문구"><select '+attrs+' data-mini-option-id="'+esc(option.id)+'" data-mini-option-field="exit"><option value="continue" '+(option.exitMode!=="end"?"selected":"")+'>분기 뒤 계속</option><option value="end" '+(option.exitMode==="end"?"selected":"")+'>상호작용 종료</option></select><button class="icon-button" type="button" data-action="mini-delete-option" '+attrs+' data-mini-option-id="'+esc(option.id)+'">×</button></div>'+
+          renderInteractionFlow(option.entries,scope,ownerId,itemId,depth+1)+
+          '<div class="mini-add-row"><button class="small-button" type="button" data-action="mini-add-branch" data-type="dialogue" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 대사</button><button class="small-button" type="button" data-action="mini-add-branch" data-type="narration" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 지문</button><button class="small-button" type="button" data-action="mini-add-branch" data-type="choice" '+attrs+' data-parent-option-id="'+esc(option.id)+'">+ 선택지</button></div></article>'
+        ).join("")+'</div>'+
+        '<button class="small-button" type="button" data-action="mini-add-option" '+attrs+' data-mini-entry-id="'+esc(entry.id)+'">+ 선택지 항목</button></div>';
+    }
+    return '<article class="mini-flow-entry depth-'+Math.min(depth,3)+'"><header><span>'+(index+1)+' · '+esc(entry.type.toUpperCase())+'</span><button class="icon-button" type="button" data-action="mini-delete-entry" '+attrs+' data-mini-entry-id="'+esc(entry.id)+'">×</button></header>'+body+'</article>';
+  }).join(""):'<div class="editor-note">아직 흐름이 없습니다.</div>';
+  return '<div class="mini-flow-list">'+list+'</div>';
+}
+function interactionFlowEditor(entries,scope,ownerId,itemId=""){
+  const attrs=flowData(scope,ownerId,itemId);
+  return '<section class="mini-flow-editor"><div class="mini-flow-title"><div><strong>REACTION FLOW</strong><small>대사 · 지문 · 선택지를 원하는 순서로 구성합니다.</small></div><div class="mini-add-row"><button class="small-button" type="button" data-action="mini-add-entry" data-type="dialogue" '+attrs+'>+ 대사</button><button class="small-button" type="button" data-action="mini-add-entry" data-type="narration" '+attrs+'>+ 지문</button><button class="small-button" type="button" data-action="mini-add-entry" data-type="choice" '+attrs+'>+ 선택지</button></div></div>'+renderInteractionFlow(entries,scope,ownerId,itemId)+'</section>';
+}
 function renderAskEditor(){
-  editorBody.innerHTML=editorHead("ASK","ASK 설정","질문을 했을 때의 호감도·감정·직접 반응을 설정합니다. 필요하면 별도 이벤트를 대화 중간에 삽입할 수 있으며, 끝나면 원래 대화 위치로 돌아옵니다.",'<button class="small-button" data-action="new-ask">+ 질문</button>')+
+  editorBody.innerHTML=editorHead("ASK","ASK 설정","질문마다 호감도·감정 변화와 대사/지문/선택지 흐름을 직접 구성합니다.",'<button class="small-button" data-action="new-ask">+ 질문</button>')+
     '<div class="ask-editor-grid">'+
     (editorDraft.asks.length?editorDraft.asks.map(a=>'<div class="ask-row interaction-editor-row" data-ask-id="'+esc(a.id)+'">'+
-      '<select data-ask-bind="characterId">'+charOptions(a.characterId,"캐릭터 선택")+'</select>'+
+      '<select data-ask-bind="characterId">'+charOptions(a.characterId,"질문 대상")+'</select>'+
       '<input data-ask-bind="label" value="'+esc(a.label)+'" placeholder="질문 문구">'+
       '<label class="field"><span>최소 호감도</span><input type="number" min="0" max="100" data-ask-bind="minAffection" value="'+a.minAffection+'"></label>'+
       '<label class="checkline"><input type="checkbox" data-ask-bind="enabled" '+(a.enabled?"checked":"")+'> 사용</label>'+
       '<button class="danger-button" data-action="delete-ask">×</button>'+
-      '<div class="full-row interaction-response-editor">'+
-        '<div class="interaction-effect-grid">'+
-          '<label class="field"><span>호감도 변화</span><input type="number" min="-100" max="100" data-ask-bind="affectionDelta" value="'+a.affectionDelta+'"></label>'+
-          '<label class="field"><span>감정 변화</span><select data-ask-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(a.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
-          '<label class="field"><span>감정 강도</span><input type="number" min="0" max="100" data-ask-bind="emotionIntensity" value="'+a.emotionIntensity+'"></label>'+
-          '<label class="field"><span>반응 형식</span><select data-ask-bind="reactionType"><option value="dialogue" '+(a.reactionType==="dialogue"?"selected":"")+'>캐릭터 대사</option><option value="narration" '+(a.reactionType==="narration"?"selected":"")+'>나레이션</option></select></label>'+
-        '</div>'+
-        '<label class="field"><span>직접 반응 문장</span><textarea data-ask-bind="reactionText" placeholder="질문 직후 나올 대사 또는 나레이션">'+esc(a.reactionText)+'</textarea></label>'+
-        '<label class="field"><span>반응 뒤 삽입 이벤트 (선택 · 종료 후 기존 대화 복귀)</span><select data-ask-bind="eventId">'+eventOptions(a.eventId,"후속 이벤트 없음",editorDraft)+'</select></label>'+
-      '</div>'+
-    '</div>').join(""):'<div class="editor-note">등록된 ASK가 없습니다. 질문을 추가한 뒤 반응을 설정하세요.</div>')+
+      '<div class="full-row interaction-response-editor"><div class="interaction-effect-grid">'+
+        '<label class="field"><span>상호작용 호감도 변화</span><input type="number" min="-100" max="100" data-ask-bind="affectionDelta" value="'+a.affectionDelta+'"></label>'+
+        '<label class="field"><span>감정 변화</span><select data-ask-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(a.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
+        '<label class="field"><span>감정 강도</span><input type="number" min="0" max="100" data-ask-bind="emotionIntensity" value="'+a.emotionIntensity+'"></label>'+
+      '</div>'+interactionFlowEditor(a.entries,"ask",a.id)+'</div>'+
+    '</div>').join(""):'<div class="editor-note">등록된 ASK가 없습니다.</div>')+
     '</div>';
 }
 function renderItemEditor(){
-  editorBody.innerHTML=editorHead("ITEM","아이템 설정","아이템을 캐릭터에게 줬을 때의 호감도·감정·직접 반응을 설정합니다. 필요하면 별도 이벤트를 대화 중간에 삽입하고, 끝나면 원래 대화 위치로 돌아옵니다.",'<button class="small-button" data-action="new-item">+ 아이템</button>')+
+  editorBody.innerHTML=editorHead("ITEM","아이템 설정","아이템의 컬렉션 소속과, 이 아이템을 각 캐릭터에게 줬을 때의 반응을 따로 관리합니다.",'<button class="small-button" data-action="new-item">+ 아이템</button>')+
     '<div class="item-editor-grid">'+
     (editorDraft.items.length?editorDraft.items.map(i=>'<div class="item-row interaction-editor-row" data-item-id="'+esc(i.id)+'">'+
-      '<select data-item-bind="characterId">'+charOptions(i.characterId,"캐릭터 선택")+'</select>'+
+      '<select data-item-bind="collectionCharacterId">'+charOptions(i.collectionCharacterId,"컬렉션 소속")+'</select>'+
       '<input data-item-bind="name" value="'+esc(i.name)+'" placeholder="아이템 이름">'+
       '<select data-item-bind="rarity">'+RARITIES.map(r=>'<option '+(i.rarity===r?"selected":"")+'>'+r+'</option>').join("")+'</select>'+
       '<input data-item-bind="category" value="'+esc(i.category)+'" placeholder="카테고리">'+
       '<input type="number" min=".01" step=".01" data-item-bind="weight" value="'+i.weight+'">'+
       '<button class="danger-button" data-action="delete-item">×</button>'+
       '<div class="full-row interaction-response-editor">'+
-        '<div class="interaction-effect-grid">'+
-          '<label class="field"><span>호감도 변화</span><input type="number" min="-100" max="100" data-item-bind="affectionDelta" value="'+i.affectionDelta+'"></label>'+
-          '<label class="field"><span>감정 변화</span><select data-item-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(i.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
-          '<label class="field"><span>감정 강도</span><input type="number" min="0" max="100" data-item-bind="emotionIntensity" value="'+i.emotionIntensity+'"></label>'+
-          '<label class="field"><span>반응 형식</span><select data-item-bind="reactionType"><option value="dialogue" '+(i.reactionType==="dialogue"?"selected":"")+'>캐릭터 대사</option><option value="narration" '+(i.reactionType==="narration"?"selected":"")+'>나레이션</option></select></label>'+
-        '</div>'+
-        '<label class="field full"><span>아이템을 줬을 때 직접 반응</span><textarea data-item-bind="reactionText" placeholder="캐릭터 대사 또는 나레이션">'+esc(i.reactionText)+'</textarea></label>'+
-        '<label class="field"><span>반응 뒤 삽입 이벤트 (선택 · 종료 후 기존 대화 복귀)</span><select data-item-bind="inventoryEventId">'+eventOptions(i.inventoryEventId,"후속 이벤트 없음",editorDraft)+'</select></label>'+
         '<div class="inline-grid"><label class="checkline"><input type="checkbox" data-item-bind="gachaEnabled" '+(i.gachaEnabled?"checked":"")+'> 가챠 포함</label><label class="checkline"><input type="checkbox" data-item-bind="enabled" '+(i.enabled?"checked":"")+'> 사용</label></div>'+
         '<label class="field full"><span>아이템 설명</span><textarea data-item-bind="description">'+esc(i.description)+'</textarea></label>'+
-      '</div>'+
-    '</div>').join(""):'<div class="editor-note">아이템이 없습니다.</div>')+
+        '<div class="reaction-manager"><div class="manager-list-head"><div><strong>CHARACTER REACTIONS</strong><p class="muted">같은 아이템을 여러 캐릭터에게 줄 수 있고, 캐릭터마다 다른 흐름을 설정합니다.</p></div><button class="small-button" type="button" data-action="new-item-reaction" data-item-id="'+esc(i.id)+'">+ 캐릭터 반응</button></div>'+
+        (i.reactions.length?i.reactions.map(r=>'<article class="item-reaction-card" data-item-id="'+esc(i.id)+'" data-reaction-id="'+esc(r.id)+'"><div class="item-reaction-head"><select data-reaction-bind="characterId">'+charOptions(r.characterId,"선물 대상")+'</select><label class="field"><span>호감도</span><input type="number" min="-100" max="100" data-reaction-bind="affectionDelta" value="'+r.affectionDelta+'"></label><label class="field"><span>감정</span><select data-reaction-bind="emotionState"><option value="">변경 없음</option>'+EMOTIONS.map(x=>'<option value="'+x[0]+'" '+(r.emotionState===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label><label class="field"><span>강도</span><input type="number" min="0" max="100" data-reaction-bind="emotionIntensity" value="'+r.emotionIntensity+'"></label><button class="danger-button" type="button" data-action="delete-item-reaction">×</button></div>'+interactionFlowEditor(r.entries,"item-reaction",r.id,i.id)+'</article>').join(""):'<div class="editor-note">캐릭터별 반응이 없습니다. 추가하지 않아도 아이템은 누구에게나 줄 수 있지만 기본 무반응 지문이 나옵니다.</div>')+
+        '</div></div></div>').join(""):'<div class="editor-note">아이템이 없습니다.</div>')+
     '</div>';
 }
 function renderGachaEditor(){

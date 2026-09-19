@@ -1600,3 +1600,11 @@ details.advanced summary{cursor:pointer;color:var(--gold);font-size:.72rem}
   .category-add-row{display:grid;grid-template-columns:1fr auto}
   .item-acquire-toast{right:16px;left:16px;bottom:16px;max-width:none}
 }
+
+.gacha-pool-note{
+  margin:12px auto 0;
+  max-width:48ch;
+  color:var(--muted);
+  font-size:.68rem;
+  line-height:1.5
+}

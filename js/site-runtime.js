@@ -49,6 +49,11 @@ function defaultState(){
     inventoryCounts:{},
     newItemIds:[],
     itemHistory:[],
+    discoveredGiftReactionKeys:[],
+    giftInteractionCounts:{},
+    askedAskIds:[],
+    unlockedAskIds:[],
+    interactionHistory:[],
     collectionSettings:{showLocked:true,showOwnedCount:true,view:"grouped",sort:"recent"},
     thoughts:[],
     thoughtSettings:{categories:[...DEFAULT_CATEGORIES]},
@@ -96,6 +101,14 @@ function normalizeItemEffects(arr){
     amount:Math.max(1,Number(x.amount)||1)
   })) : [];
 }
+function normalizeItemCondition(c){
+  if(!c || typeof c!=="object")return null;
+  return {itemId:c.itemId||"",operator:c.operator||">=",value:Math.max(0,Number(c.value)||0)};
+}
+function normalizeAskCondition(c){
+  if(!c || typeof c!=="object")return null;
+  return {askId:c.askId||"",status:["asked","not-asked","unlocked","locked"].includes(c.status)?c.status:"asked"};
+}
 function normalizeAffectionCondition(c){
   if(!c || typeof c!=="object") return null;
   return {characterId:c.characterId||c.targetId||"",operator:c.operator||">=",value:clamp(c.value,0,100,0)};
@@ -130,6 +143,8 @@ function normalizeEntry(entry={}){
     condition:normalizeCondition(entry.condition),
     effects:normalizeEffects(entry.effects),
     itemEffects:normalizeItemEffects(entry.itemEffects),
+    itemCondition:normalizeItemCondition(entry.itemCondition),
+    askCondition:normalizeAskCondition(entry.askCondition),
     affectionCondition:normalizeAffectionCondition(entry.affectionCondition),
     affectionEffects:normalizeAffectionEffects(entry.affectionEffects),
     emotionCondition:normalizeEmotionCondition(entry.emotionCondition),
@@ -147,6 +162,8 @@ function normalizeEntry(entry={}){
         condition:normalizeCondition(o.condition),
         effects:normalizeEffects(o.effects),
         itemEffects:normalizeItemEffects(o.itemEffects),
+        itemCondition:normalizeItemCondition(o.itemCondition),
+        askCondition:normalizeAskCondition(o.askCondition),
         affectionCondition:normalizeAffectionCondition(o.affectionCondition),
         affectionEffects:normalizeAffectionEffects(o.affectionEffects),
         emotionCondition:normalizeEmotionCondition(o.emotionCondition),
@@ -198,6 +215,12 @@ function normalizeAsk(a={}){
     characterId:a.characterId||"",
     label:a.label||a.question||"새 질문",
     minAffection:clamp(a.minAffection,0,100,0),
+    startLocked:Boolean(a.startLocked),
+    unlockMinAffection:clamp(a.unlockMinAffection,0,100,0),
+    unlockCondition:normalizeCondition(a.unlockCondition),
+    unlockItemCondition:normalizeItemCondition(a.unlockItemCondition),
+    unlockAskCondition:normalizeAskCondition(a.unlockAskCondition),
+    unlockEmotionCondition:normalizeEmotionCondition(a.unlockEmotionCondition),
     affectionDelta:clamp(a.affectionDelta ?? a.reactionAffectionDelta,-100,100,0),
     emotionState:EMOTIONS.some(x=>x[0]===a.emotionState) ? a.emotionState : "",
     emotionIntensity:clamp(a.emotionIntensity ?? a.reactionEmotionIntensity,0,100,0),
@@ -222,7 +245,12 @@ function normalizeItemReaction(r={},fallbackCharacterId=""){
     affectionDelta:clamp(r.affectionDelta ?? r.giftAffectionDelta,-100,100,0),
     emotionState:EMOTIONS.some(x=>x[0]===r.emotionState) ? r.emotionState : "",
     emotionIntensity:clamp(r.emotionIntensity ?? r.giftEmotionIntensity,0,100,0),
-    entries
+    firstEntries:Array.isArray(r.firstEntries)?r.firstEntries.map(normalizeEntry):entries.map(normalizeEntry),
+    repeatEntries:Array.isArray(r.repeatEntries)?r.repeatEntries.map(normalizeEntry):entries.map(normalizeEntry),
+    specialEntries:Array.isArray(r.specialEntries)?r.specialEntries.map(normalizeEntry):[],
+    specialMinAffection:clamp(r.specialMinAffection,0,100,0),
+    specialEmotionState:EMOTIONS.some(x=>x[0]===r.specialEmotionState)?r.specialEmotionState:"",
+    specialEmotionIntensity:clamp(r.specialEmotionIntensity,0,100,0)
   };
 }
 function normalizeItem(i={}){
@@ -246,6 +274,8 @@ function normalizeItem(i={}){
     collectionCharacterId,
     description:i.description||"",
     acquisitionMode:i.acquisitionMode==="unique"?"unique":"repeatable",
+    giftUseMode:i.giftUseMode==="consume"?"consume":"keep",
+    secret:Boolean(i.secret),
     gachaEnabled:i.gachaEnabled!==false,
     enabled:i.enabled!==false,
     weight:Math.max(.01,Number(i.weight)||1),
@@ -297,6 +327,13 @@ function normalizeState(raw){
     inventoryCounts:Object.fromEntries(Object.entries(inventoryCounts).map(([id,n])=>[id,Math.max(0,Number(n)||0)])),
     newItemIds:Array.isArray(s.newItemIds)?[...new Set(s.newItemIds.map(String))]:[],
     itemHistory:Array.isArray(s.itemHistory)?s.itemHistory.slice(-500):[],
+    discoveredGiftReactionKeys:Array.isArray(s.discoveredGiftReactionKeys)?[...new Set(s.discoveredGiftReactionKeys.map(String))]:[],
+    giftInteractionCounts:s.giftInteractionCounts&&typeof s.giftInteractionCounts==="object"
+      ? Object.fromEntries(Object.entries(s.giftInteractionCounts).map(([k,v])=>[k,Math.max(0,Number(v)||0)]))
+      : {},
+    askedAskIds:Array.isArray(s.askedAskIds)?[...new Set(s.askedAskIds.map(String))]:[],
+    unlockedAskIds:Array.isArray(s.unlockedAskIds)?[...new Set(s.unlockedAskIds.map(String))]:[],
+    interactionHistory:Array.isArray(s.interactionHistory)?s.interactionHistory.slice(-500):[],
     collectionSettings:{
       showLocked:s.collectionSettings?.showLocked!==false,
       showOwnedCount:s.collectionSettings?.showOwnedCount!==false,

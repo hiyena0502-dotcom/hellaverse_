@@ -1892,6 +1892,8 @@ editorBody.addEventListener("click",e=>{
     item.reactions.push(normalizeItemReaction({
       id:uid("item-reaction"),
       characterId:editorDraft.characters[0]?.id||"",
+      preference:"NEUTRAL",
+      affectionDelta:1,
       entries:[]
     }));
     renderItemEditor();return;

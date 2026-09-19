@@ -1329,10 +1329,10 @@ function renderOptionCard(choice,o,index){
   return '<article class="option-card" data-option-id="'+esc(o.id)+'"><div class="option-main"><div class="inline-grid"><label class="field"><span>문구</span><input data-option-field="label" value="'+esc(o.label)+'"></label><label class="field"><span>분기 종료 후</span><select data-option-field="exit"><option value="continue" '+(!o.targetEventId&&o.exitMode!=="end"?"selected":"")+'>상위 흐름 계속</option><option value="end" '+(!o.targetEventId&&o.exitMode==="end"?"selected":"")+'>현재 이벤트 종료</option>'+editorDraft.events.map(ev=>'<option value="event:'+esc(ev.id)+'" '+(o.targetEventId===ev.id?"selected":"")+'>이벤트 이동 · '+esc(ev.name)+'</option>').join("")+'</select></label><div class="icon-actions"><button class="icon-button" data-action="move-option" data-dir="-1" '+(index===0?"disabled":"")+'>↑</button><button class="icon-button" data-action="move-option" data-dir="1" '+(index===choice.options.length-1?"disabled":"")+'>↓</button><button class="icon-button" data-action="delete-option">×</button></div></div>'+
     '<div class="branch-list">'+(o.entries.length?o.entries.map((be,bi)=>'<div class="branch-row"><button data-action="select-entry" data-id="'+esc(be.id)+'">'+esc(be.type.toUpperCase())+' · '+esc(entryLabel(be))+'</button><span class="icon-actions"><button class="icon-button" data-action="move-branch" data-index="'+bi+'" data-dir="-1" '+(bi===0?"disabled":"")+'>↑</button><button class="icon-button" data-action="move-branch" data-index="'+bi+'" data-dir="1" '+(bi===o.entries.length-1?"disabled":"")+'>↓</button><button class="icon-button" data-action="delete-branch" data-index="'+bi+'">×</button></span></div>').join(""):'<div class="editor-note">분기 뒤에 바로 상위 흐름으로 돌아갑니다.</div>')+'</div>'+
     '<div class="flow-adds"><button data-action="add-branch" data-type="dialogue">+ 대사</button><button data-action="add-branch" data-type="narration">+ 지문</button><button data-action="add-branch" data-type="choice">+ 선택지</button></div></div>'+
-    '<div class="option-effects">'+renderQuickEffects(o,"option")+'<details class="advanced"><summary>고급 조건 / 변수</summary>'+renderConditions(o,"option")+renderVariableEffects(o,"option")+'</details></div></article>';
+    '<div class="option-effects">'+renderQuickEffects(o,"option")+'<details class="advanced"><summary>고급 조건 / 변수 / 아이템</summary>'+renderConditions(o,"option")+renderVariableEffects(o,"option")+renderItemEffects(o,"option")+'</details></div></article>';
 }
 function renderAdvanced(owner,kind){
-  return '<details class="advanced"><summary>고급 · 조건 / 호감도 / 감정 / 변수</summary>'+renderConditions(owner,kind)+renderQuickEffects(owner,kind)+renderVariableEffects(owner,kind)+'</details>';
+  return '<details class="advanced"><summary>고급 · 조건 / 호감도 / 감정 / 변수 / 아이템</summary>'+renderConditions(owner,kind)+renderQuickEffects(owner,kind)+renderVariableEffects(owner,kind)+renderItemEffects(owner,kind)+'</details>';
 }
 function renderConditions(o,kind){
   const c=o.condition||{variableId:"",operator:"==",value:""};
@@ -1359,6 +1359,18 @@ function renderVariableEffects(o,kind){
   (o.effects.length?o.effects.map(x=>'<div class="effect-row" data-fx-id="'+esc(x.id)+'"><select data-fx-kind="'+kind+'" data-fx-field="variableId">'+variableOptions(x.variableId)+'</select><select data-fx-kind="'+kind+'" data-fx-field="operation"><option value="set" '+(x.operation==="set"?"selected":"")+'>대입</option><option value="add" '+(x.operation==="add"?"selected":"")+'>더하기</option><option value="subtract" '+(x.operation==="subtract"?"selected":"")+'>빼기</option><option value="toggle" '+(x.operation==="toggle"?"selected":"")+'>토글</option></select><input data-fx-kind="'+kind+'" data-fx-field="value" value="'+esc(x.value)+'"><button class="icon-button" data-action="delete-fx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">효과 없음</div>')+
   '<button class="small-button" data-action="add-fx" data-kind="'+kind+'">+ 변수 효과</button></div></div>';
 }
+function itemOptions(selected=""){
+  return '<option value="">아이템 선택</option>'+editorDraft.items.map(i=>
+    '<option value="'+esc(i.id)+'" '+(i.id===selected?"selected":"")+'>'+esc(i.name)+' · '+esc(i.rarity)+'</option>'
+  ).join("");
+}
+function renderItemEffects(o,kind){
+  const list=o.itemEffects||[];
+  return '<div class="editor-block"><h4>아이템 지급</h4><div class="effect-stack">'+
+    (list.length?list.map(x=>'<div class="effect-row" data-itemfx-id="'+esc(x.id)+'"><select data-itemfx-kind="'+kind+'" data-itemfx-field="itemId">'+itemOptions(x.itemId)+'</select><input type="number" min="1" step="1" data-itemfx-kind="'+kind+'" data-itemfx-field="amount" value="'+x.amount+'"><span class="muted">'+esc(itemById(x.itemId,editorDraft)?.acquisitionMode==="unique"?"UNIQUE":"REPEATABLE")+'</span><button class="icon-button" data-action="delete-itemfx" data-kind="'+kind+'">×</button></div>').join(""):'<div class="editor-note">지급 없음</div>')+
+    '<button class="small-button" data-action="add-itemfx" data-kind="'+kind+'">+ 아이템 지급</button></div></div>';
+}
+
 function getSelectedOwner(kind,element){
   if(kind==="entry")return findEntryContext(selectedEntryId)?.entry||null;
   const card=element.closest("[data-option-id]");if(!card)return null;
@@ -1667,20 +1679,22 @@ editorBody.addEventListener("click",e=>{
     [option.entries[i],option.entries[ni]]=[option.entries[ni],option.entries[i]];renderEventManager();return;
   }
   if(a==="delete-branch"&&option){option.entries.splice(Number(b.dataset.index),1);renderEventManager();return}
-  if(["add-fx","add-afffx","add-emofx"].includes(a)){
+  if(["add-fx","add-afffx","add-emofx","add-itemfx"].includes(a)){
     const owner=getSelectedOwner(b.dataset.kind,b);if(!owner)return;
     if(a==="add-fx")owner.effects.push({id:uid("fx"),variableId:editorDraft.variables[0]?.id||"",operation:"set",value:"0"});
     if(a==="add-afffx")owner.affectionEffects.push({id:uid("afx"),characterId:editorDraft.characters[0]?.id||"",amount:1});
     if(a==="add-emofx"){const c=editorDraft.characters[0];owner.emotionEffects.push({id:uid("efx"),characterId:c?.id||"",state:c?.emotionDefault||"calm",intensity:c?.emotionIntensity||0})}
+    if(a==="add-itemfx"){owner.itemEffects ||= [];owner.itemEffects.push({id:uid("itemfx"),itemId:editorDraft.items[0]?.id||"",amount:1})}
     renderEventManager();return;
   }
-  if(["delete-fx","delete-afffx","delete-emofx"].includes(a)){
-    const kind=b.dataset.kind||b.closest("[data-fx-kind],[data-afffx-kind],[data-emofx-kind]")?.dataset?.kind;
+  if(["delete-fx","delete-afffx","delete-emofx","delete-itemfx"].includes(a)){
+    const kind=b.dataset.kind||b.closest("[data-fx-kind],[data-afffx-kind],[data-emofx-kind],[data-itemfx-kind]")?.dataset?.kind;
     const owner=getSelectedOwner(kind||"entry",b);if(!owner)return;
-    const fr=b.closest("[data-fx-id]"),ar=b.closest("[data-afffx-id]"),er=b.closest("[data-emofx-id]");
+    const fr=b.closest("[data-fx-id]"),ar=b.closest("[data-afffx-id]"),er=b.closest("[data-emofx-id]"),ir=b.closest("[data-itemfx-id]");
     if(fr)owner.effects=owner.effects.filter(x=>x.id!==fr.dataset.fxId);
     if(ar)owner.affectionEffects=owner.affectionEffects.filter(x=>x.id!==ar.dataset.afffxId);
     if(er)owner.emotionEffects=owner.emotionEffects.filter(x=>x.id!==er.dataset.emofxId);
+    if(ir)owner.itemEffects=(owner.itemEffects||[]).filter(x=>x.id!==ir.dataset.itemfxId);
     renderEventManager();return;
   }
   if(a==="new-ask"){
@@ -1795,7 +1809,7 @@ function handleEditorField(e){
     }
     return;
   }
-  const kind=t.dataset.condKind||t.dataset.affcondKind||t.dataset.emocondKind||t.dataset.fxKind||t.dataset.afffxKind||t.dataset.emofxKind;
+  const kind=t.dataset.condKind||t.dataset.affcondKind||t.dataset.emocondKind||t.dataset.fxKind||t.dataset.afffxKind||t.dataset.emofxKind||t.dataset.itemfxKind;
   if(kind){
     const owner=getSelectedOwner(kind,t);if(!owner)return;
     if(t.dataset.condField){
@@ -1813,7 +1827,7 @@ function handleEditorField(e){
       owner.emotionCondition ||= {characterId:"",state:"",intensityOperator:">=",intensityValue:0};
       owner.emotionCondition[t.dataset.emocondField]=t.dataset.emocondField==="intensityValue"?clamp(t.value,0,100,0):t.value;return;
     }
-    const fxr=t.closest("[data-fx-id]"),afr=t.closest("[data-afffx-id]"),emr=t.closest("[data-emofx-id]");
+    const fxr=t.closest("[data-fx-id]"),afr=t.closest("[data-afffx-id]"),emr=t.closest("[data-emofx-id]"),ifr=t.closest("[data-itemfx-id]");
     if(fxr){
       const fx=owner.effects.find(x=>x.id===fxr.dataset.fxId);if(fx)fx[t.dataset.fxField]=t.value;return;
     }
@@ -1822,6 +1836,11 @@ function handleEditorField(e){
     }
     if(emr){
       const fx=owner.emotionEffects.find(x=>x.id===emr.dataset.emofxId);if(fx)fx[t.dataset.emofxField]=t.dataset.emofxField==="intensity"?clamp(t.value,0,100,0):t.value;return;
+    }
+    if(ifr){
+      const fx=(owner.itemEffects||[]).find(x=>x.id===ifr.dataset.itemfxId);
+      if(fx)fx[t.dataset.itemfxField]=t.dataset.itemfxField==="amount"?Math.max(1,Number(t.value)||1):t.value;
+      return;
     }
   }
   if(t.dataset.gachaBind){

@@ -1,149 +1,3083 @@
-(()=>{
-if(window.__HELLAVERSE_SITE_RUNTIME_V67__)return;
-window.__HELLAVERSE_SITE_RUNTIME_V67__=1;
+const STORAGE_KEY = "hellaverse-studio-state-v1";
+const PREFS_KEY = "hellaverse-studio-prefs-v1";
 
-const K='hellaverse_dialogue_state_v1';
-const PM='hellaverse_dialogue_render_meta_v1';
-const PP='hellaverse_conversation_progress_v1';
-const RP='hellaverse_reward_pages_ui_v4';
-const LUCIFER='lucifer-morningstar';
-const LEGACY_LUCIFER_ASK_HIDE=new Set(['lucifer-ask-hotel-dislike','lucifer-ask-charlie-child','lucifer-ask-hotel-reason','lucifer-ask-fatherhood','lucifer-ask-alone']);
-const ASK_OPENING_EFFECTS={
-  'lucifer-ask-rude-charlie-0':{delta:-3,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.family_disrespected']},
-  'lucifer-ask-rude-charlie-20':{delta:-2,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.family_disrespected']},
-  'lucifer-ask-rude-charlie-50':{delta:-1,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.family_disrespected']},
-  'lucifer-ask-rude-charlie-80':{delta:-1,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.family_disrespected']},
-  'lucifer-ask-rude-dream-0':{delta:-3,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.charlie_dream_disrespected']},
-  'lucifer-ask-rude-dream-20':{delta:-2,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.charlie_dream_disrespected']},
-  'lucifer-ask-rude-dream-50':{delta:-1,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.charlie_dream_disrespected']},
-  'lucifer-ask-rude-dream-80':{delta:-1,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.charlie_dream_disrespected']},
-  'lucifer-ask-rude-alastor-0':{delta:-3,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.alastor_comparison_insult']},
-  'lucifer-ask-rude-alastor-20':{delta:-2,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.alastor_comparison_insult']},
-  'lucifer-ask-rude-alastor-50':{delta:-2,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.alastor_comparison_insult']},
-  'lucifer-ask-rude-alastor-80':{delta:-1,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.alastor_comparison_insult']},
-  'lucifer-ask-rude-lilith-0':{delta:-3,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.family_disrespected']},
-  'lucifer-ask-rude-lilith-20':{delta:-3,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.family_disrespected']},
-  'lucifer-ask-rude-lilith-50':{delta:-2,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.family_disrespected']},
-  'lucifer-ask-rude-lilith-80':{delta:-1,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.family_disrespected']},
-  'lucifer-ask-rude-heaven-0':{delta:-3,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.past_disrespected']},
-  'lucifer-ask-rude-heaven-20':{delta:-2,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.past_disrespected']},
-  'lucifer-ask-rude-heaven-50':{delta:-1,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.past_disrespected']},
-  'lucifer-ask-rude-heaven-80':{delta:-1,mood:'ANNOYED',flags:['lucifer.player_offended_him','lucifer.past_disrespected']}
-};
-const $=(s,r=document)=>r.querySelector(s);
-const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-const esc=(v='')=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const CLEAN_RESET_KEY = "hellaverse-studio-clean-reset-v1";
 
-function read(k,f=null){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch{return f}}
-function write(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}
-function split(v){return Array.isArray(v)?v.map(String).map(x=>x.trim()).filter(Boolean):String(v||'').split(/[\n,;/|]+/).map(x=>x.trim()).filter(Boolean)}
-function saveFile(name,data){const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),500)}
-function exportBackup(){const state=read(K,{})||{},out={...state};if(!out.conversationProgress){const p=read(PP,null);if(p)out.conversationProgress=p}if(!out.dialogueMeta){const m=read(PM,null);if(m)out.dialogueMeta=m}out.backupFormat='hellaverse-v67';out.backupCreatedAt=new Date().toISOString();saveFile('hellaverse-dialogue-backup.json',out)}
-function restoreLegacy(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result),p=d?.conversationProgress||null,m=d?.dialogueMeta||d?.dialogueRenderMeta||null;p?localStorage.setItem(PP,JSON.stringify(p)):localStorage.removeItem(PP);m?localStorage.setItem(PM,JSON.stringify(m)):localStorage.removeItem(PM)}catch{}};r.readAsText(file)}
+(function purgeLegacyHellaverseDataOnce() {
+  try {
+    if (localStorage.getItem(CLEAN_RESET_KEY) === "1") return;
 
-function c(id,text,response,delta=0,opts={}){return{id,type:opts.type==='action'?'action':'speech',text,playerLine:text,response,affectionDelta:Number(delta||0),requiredAffection:0,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',lockDisplay:'disabled',setFlags:opts.setFlags||'',removeFlags:opts.removeFlags||'',addMemoryTitle:opts.addMemoryTitle||'',addMemorySummary:opts.addMemorySummary||'',addMemoryTags:opts.addMemoryTags||'',moodChange:opts.moodChange||'',unlockItemId:'',nextNodeId:opts.nextNodeId||'',endConversation:!opts.nextNodeId}}
-function askScene(id,title,min,max,narration,reaction,choices,topics=[],type='PERSONAL'){return{id,characterId:LUCIFER,title,kind:'ASK',repeatable:true,requiredAffection:min,maxAffection:max,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority:0,probability:100,opening:narration,openingType:'narration',sceneRole:'ASK',conversationType:type,topics,followUpTopics:topics,exitLine:'',after:'',used:false,nodes:[{id:'start',speaker:'character',text:reaction,choices:choices.map((x,i)=>c(`${id}-c${i+1}`,x.text,x.response,x.delta||0,x))}],openingNodeId:'start'}}
-function talkScene(id,title,min,max,opening,nodes,topics=[],type='PERSONAL',priority=18){return{id,characterId:LUCIFER,title,kind:'TALK',repeatable:false,requiredAffection:min,maxAffection:max,requiredStage:'',requiredMood:'ANY',requiredFlags:'',blockedFlags:'',requiredMemoryTags:'',blockedMemoryTags:'',requiredItemIds:'',priority,probability:100,opening,openingType:'narration',sceneRole:'CONVERSATION',conversationType:type,topics,followUpTopics:topics,exitLine:'',after:'',used:false,nodes,openingNodeId:nodes[0]?.id||'start',_authoredAffection:true}}
-function addSceneIfMissing(state,scene,meta){if(state.dialogues.some(x=>x?.id===scene.id))return false;state.dialogues.push(scene);meta[scene.id]={...(meta[scene.id]||{}),openingType:'narration',sceneRole:scene.sceneRole,conversationType:scene.conversationType,topics:scene.topics||[],followUpTopics:scene.followUpTopics||[],nodes:Object.fromEntries((scene.nodes||[]).map(n=>[n.id,{speaker:n.speaker||'character'}]))};return true}
-function ensureEvent(state,id,name,description,type='MILESTONE'){state.events=Array.isArray(state.events)?state.events:[];const i=state.events.findIndex(e=>e?.id===id),next={...(i>=0?state.events[i]:{}),id,name,description,type,characterId:LUCIFER,namespace:'lucifer'};if(i>=0)state.events[i]=next;else state.events.push(next)}
-function fourthChoiceFor(title,sceneId){if(/릴리스|천국|멀어져|과거|추락|싸웠|못 한 말/.test(title))return c(`${sceneId}-c4-extra`,'말하고 싶은 만큼만 말해요.','루시퍼가 잠깐 당신을 본다. "그 말은 기억해둘게. 선을 정해주는 질문은 생각보다 드물거든."',1);if(/알래스터/.test(title))return c(`${sceneId}-c4-extra`,'둘이 친해질 가능성은 정말 없겠네요.','"가능성은 모든 곳에 있다지만... 그건 굳이 실험하고 싶지 않은 가능성이네."',0);if(/찰리/.test(title))return c(`${sceneId}-c4-extra`,'찰리를 아끼는 건 확실히 알겠어요.','그의 표정이 아주 조금 풀린다. "그건 의심할 필요 없어."',1);if(/호텔/.test(title))return c(`${sceneId}-c4-extra`,'그래도 호텔에 있는 건 싫지 않죠?','"시끄럽고 예측 불가능하고 일이 많지. ...그러니까 예전보다 훨씬 살아 있는 곳이기도 하고."',1);return c(`${sceneId}-c4-extra`,'그럼 이 질문은 여기까지만 할게요.','"좋아. 다음 질문은 조금 덜 위험한 걸로 골라도 되고."',0)}
-function ensureLuciferExpansion(){
-  const state=read(K,{})||{};state.dialogues=Array.isArray(state.dialogues)?state.dialogues:[];state.affection=state.affection&&typeof state.affection==='object'?state.affection:{};state.moods=state.moods&&typeof state.moods==='object'?state.moods:{};state.flags=state.flags&&typeof state.flags==='object'?state.flags:{};const meta=read(PM,{})||{};let changed=false;
-  for(const scene of state.dialogues){if(scene?.characterId!==LUCIFER||String(scene.kind||'').toUpperCase()!=='ASK'||!String(scene.id||'').startsWith('lucifer-ask-'))continue;const node=(scene.nodes||[])[0];if(!node||!Array.isArray(node.choices)||node.choices.length!==3)continue;node.choices.push(fourthChoiceFor(String(scene.title||''),String(scene.id||'')));changed=true}
+    const keep = new Set([STORAGE_KEY, PREFS_KEY, CLEAN_RESET_KEY]);
+    const legacyExact = new Set([
+      "hellaverse_dialogue_state_v1",
+      "dialogue-lab-state-v1",
+      "dialogue-lab-prefs-v1",
+      "dialogue-lab-sample-events-v2",
+      "dialogue-lab-sample-content-v3",
+      "dialogue-lab-sample-affection-v5",
+      "dialogue-lab-sample-emotion-v6"
+    ]);
 
-  const asks=[
-    askScene('lucifer-ask-s1-first-hotel','처음 호텔에 왔던 날, 찰리를 보고 무슨 생각했어요?',0,100,'당신이 호텔 초창기 이야기를 꺼내자 루시퍼의 시선이 잠깐 로비 쪽으로 향한다.','"처음엔 걱정이 먼저였어. 찰리가 너무 많은 걸 혼자 짊어지고 있었으니까. 그래도 그 애가 그 정도로 진지하게 원한다면, 적어도 내가 문부터 닫을 이유는 없었지."',[{text:'처음부터 도와주고 싶었던 거예요?',response:'"돕고 싶었지. 다만 겁이 그보다 먼저 튀어나왔던 거고."',delta:1,setFlags:'lucifer.s1_hotel_discussed'},{text:'찰리가 예전의 당신처럼 보여서요?',response:'그가 작게 웃는다. "그게 제일 곤란한 부분이야. 너무 닮아서 응원하고 싶고, 너무 닮아서 겁도 나."',delta:1,setFlags:'lucifer.s1_hotel_discussed'},{text:'그래도 처음엔 꽤 부정적이었잖아요.',response:'"맞아. 가능성을 싫어해서가 아니라, 가능성을 믿었다가 부서지는 게 어떤 건지 알아서 그랬어."',delta:0,setFlags:'lucifer.s1_hotel_discussed'},{text:'지금은 그때랑 생각이 달라요?',response:'"훨씬. 이제는 걱정만 하는 것보다 옆에서 도와주는 쪽을 고르려고 해."',delta:1,setFlags:'lucifer.s1_hotel_discussed'}],['season1','hotel','charlie','optimism'],'RELATIONSHIP'),
-    askScene('lucifer-ask-s1-reconcile-low','찰리와 다시 가까워졌던 날, 아직 기억나요?',0,39,'아버지와 딸이 다시 서로를 향해 한 걸음 내디뎠던 날을 묻자 루시퍼가 평소보다 천천히 숨을 내쉰다.','"잊기 어렵지. 오래 피했던 말을 겨우 꺼냈고, 찰리가 그걸 들어줬으니까. 자세한 건... 아직 조금 민망하네."',[{text:'그래도 잘 말했잖아요.',response:'"결과만 보면 그렇지. 그 전까지 너무 오래 걸렸지만."',delta:1,setFlags:'lucifer.s1_reconciliation_discussed'},{text:'찰리가 먼저 손 내밀어줘서 다행이네요.',response:'"응. 그 애가 몇 번이나 손을 내밀었는지 생각하면 내가 더 잘해야지."',delta:1,setFlags:'lucifer.s1_reconciliation_discussed'},{text:'그날도 무서웠어요?',response:'"무서웠어. 기대하는 순간 다시 잃을 수도 있으니까."',delta:0,setFlags:'lucifer.s1_reconciliation_discussed'},{text:'그럼 여기까지만 들을게요.',response:'"고마워. 언젠가는 내가 먼저 더 얘기할지도 모르지."',delta:1,setFlags:'lucifer.s1_reconciliation_discussed'}],['season1','charlie','family','reconciliation'],'RELATIONSHIP'),
-    askScene('lucifer-ask-s1-reconcile-high','찰리와 다시 가까워졌던 날, 아직 기억나요?',40,100,'이제 이 기억을 묻는 질문에 루시퍼는 농담으로 도망가지 않는다.','"응. 그날은 내가 찰리한테 무슨 말을 해줘야 하는지보다, 그 애 말을 제대로 듣는 게 먼저라는 걸 다시 배운 날이야. 서로 사랑한다는 걸 알아도 말하지 않으면 너무 많은 게 어긋나더라."',[{text:'그래도 다시 말할 수 있게 됐잖아요.',response:'"그래. 그게 제일 큰 차이지."',delta:2,setFlags:'lucifer.s1_reconciliation_discussed'},{text:'그 뒤로 찰리를 더 도와주려 한 거군요.',response:'"응. 말로 끝내고 싶지 않았어."',delta:2,setFlags:'lucifer.s1_reconciliation_discussed'},{text:'그날의 당신도 꽤 용기 있었네요.',response:'루시퍼가 잠깐 멈춘다. "...그 평가는 나쁘지 않네."',delta:1,setFlags:'lucifer.s1_reconciliation_discussed'},{text:'찰리도 그 순간을 소중하게 생각할 것 같아요.',response:'"그랬으면 좋겠어. 난 확실히 그래."',delta:2,setFlags:'lucifer.s1_reconciliation_discussed'}],['season1','charlie','family','reconciliation'],'RELATIONSHIP'),
-    askScene('lucifer-ask-s1-alastor','알래스터와 처음부터 왜 그렇게 사이가 안 좋았어요?',0,100,'알래스터의 이름이 나오자 루시퍼의 표정이 아주 솔직하게 구겨진다.','"처음부터? 음, 첫인상이 아주 훌륭하게 최악이었거든. 지나치게 태연하고, 남의 공간에서 자기 자리인 것처럼 굴고, 무엇보다 찰리 주변에서 너무 자연스럽게 영향력을 행사하려 해."',[{text:'질투도 조금 있었어요?',response:'"질투? 아니. 경계심. ...좋아, 아주 조금은 짜증 섞인 경계심."',delta:0,setFlags:'lucifer.s1_alastor_discussed'},{text:'알래스터가 무례해서 싫은 거네요.',response:'"정확해. 예의 없는 자신감은 매력이 아니라 피곤함이야."',delta:1,setFlags:'lucifer.s1_alastor_discussed'},{text:'찰리에게 위험할까 봐요?',response:'루시퍼의 장난기가 잠깐 사라진다. "그 가능성을 무시할 생각은 없어."',delta:1,setFlags:'lucifer.s1_alastor_discussed'},{text:'둘이 친해지는 건 상상이 안 돼요.',response:'"상상력은 좋은 데 쓰자."',delta:0,setFlags:'lucifer.s1_alastor_discussed'}],['season1','alastor','charlie','hotel'],'CASUAL'),
-    askScene('lucifer-ask-s1-heaven-contact','찰리를 위해 천국 쪽에 손을 써준 건 왜였어요?',0,100,'찰리를 위해 자신이 불편해하는 영역까지 손을 뻗었던 일을 묻자 루시퍼가 지팡이 끝을 천천히 굴린다.','"내가 그곳을 편하게 생각하느냐와 찰리가 기회를 받을 자격이 있느냐는 별개의 문제니까. 도울 수 있는 방법이 있는데 내 기분 때문에 막고 싶진 않았어."',[{text:'그건 꽤 큰 결심이었겠네요.',response:'"맞아. 그래서 티를 덜 냈지. 티 내면 더 큰 결심처럼 보이잖아."',delta:1,setFlags:'lucifer.s1_heaven_help_discussed'},{text:'찰리의 꿈을 진짜 믿었던 거네요.',response:'"적어도 시험해볼 가치가 있다는 건 믿었어. 지금은 그보다 더 믿고 있고."',delta:1,setFlags:'lucifer.s1_heaven_help_discussed'},{text:'천국이 불편해도 찰리가 먼저였군요.',response:'"부모가 가끔 그런 비효율적인 선택을 하더라고."',delta:1,setFlags:'lucifer.s1_heaven_help_discussed'},{text:'그 얘긴 더 안 물을게요.',response:'"배려 고마워. 필요하면 내가 먼저 말할게."',delta:1,setFlags:'lucifer.s1_heaven_help_discussed'}],['season1','heaven','charlie','support'],'RELATIONSHIP'),
-    askScene('lucifer-ask-s1-rebuild','호텔이 무너졌던 뒤에도 다시 세우자고 한 이유는요?',0,100,'한 번 무너진 호텔을 다시 세웠던 일을 꺼내자 루시퍼는 잠시 천장을 올려다본다.','"찰리가 아직 포기하지 않았는데 내가 먼저 끝났다고 선언할 이유가 없었지. 건물은 다시 세우면 돼. 사람 마음이 완전히 꺾이는 것보다 그쪽이 훨씬 쉬워."',[{text:'그때 꽤 든든했겠네요.',response:'"그랬다면 다행이지. 실제로는 먼지투성이였지만."',delta:1,setFlags:'lucifer.s1_rebuild_discussed'},{text:'당신도 호텔을 자기 일처럼 본 거네요.',response:'"찰리 일이면 어느 정도는 내 일이기도 하니까."',delta:1,setFlags:'lucifer.s1_rebuild_discussed'},{text:'무너져도 다시 만들 수 있다는 거네요.',response:'그가 고개를 끄덕인다. "그래. 그건 내가 꽤 좋아하는 결론이야."',delta:2,setFlags:'lucifer.s1_rebuild_discussed'},{text:'찰리가 포기했으면요?',response:'"그땐 포기하고 싶은 건지, 잠깐 쉬고 싶은 건지부터 물었을 거야."',delta:1,setFlags:'lucifer.s1_rebuild_discussed'}],['season1','hotel','rebuild','optimism'],'RELATIONSHIP'),
-    askScene('lucifer-ask-s2-argument-low','찰리와 최근 크게 싸웠던 일, 아직 마음에 남아 있어요?',0,49,'최근 찰리와 충돌했던 일을 꺼내자 루시퍼가 잠깐 입술을 다문다.','"남아 있지. 화해는 했지만, 화해했다고 모든 말이 끝난 건 아니잖아. 내가 더 잘 들었어야 했던 부분도 있고."',[{text:'아직 못 한 말이 있어요?',response:'"있어. 다만 그건 먼저 찰리한테 해야 할 말이겠지."',delta:1,setFlags:'lucifer.s2_argument_discussed'},{text:'그래도 화해해서 다행이에요.',response:'"응. 그건 정말 그래."',delta:1,setFlags:'lucifer.s2_argument_discussed'},{text:'누가 더 잘못했다고 생각해요?',response:'"점수표 만들 생각은 없어. 가족 싸움은 그렇게 정리하면 더 엉켜."',delta:0,setFlags:'lucifer.s2_argument_discussed'},{text:'그럼 더 캐묻진 않을게요.',response:'"고마워. 아직은 그게 좋겠네."',delta:1,setFlags:'lucifer.s2_argument_discussed'}],['season2','charlie','argument','family'],'PERSONAL'),
-    askScene('lucifer-ask-s2-argument-high','찰리와 최근 크게 싸웠던 일, 아직 마음에 남아 있어요?',50,100,'이제 루시퍼는 최근의 충돌을 실패 하나로만 정리하지 않는다.','"응. 그 싸움은 마음에 남아 있어. 그래도 예전과 다른 건, 이번엔 서로 화난 채로 멀어지는 걸 결말로 두지 않았다는 거야. 아직 못 한 말은 있어도 다시 말할 기회가 있다는 걸 알고 있고."',[{text:'예전보다 관계가 달라진 거네요.',response:'"많이. 싸우지 않는 관계보다, 싸운 뒤 돌아오는 관계가 더 현실적일 때도 있더라."',delta:2,setFlags:'lucifer.s2_argument_discussed'},{text:'찰리에게 먼저 말할 거예요?',response:'"그래야지. 이번엔 미루는 게 배려라고 착각하지 않으려고."',delta:2,setFlags:'lucifer.s2_argument_discussed'},{text:'당신도 상처받았죠?',response:'그가 잠시 시선을 피한다. "...응. 그래도 그게 찰리를 탓할 이유는 아니야."',delta:1,setFlags:'lucifer.s2_argument_discussed'},{text:'둘이 다시 잘 얘기했으면 좋겠어요.',response:'"나도. 그리고 이번엔 진짜 끝까지 들을 생각이야."',delta:2,setFlags:'lucifer.s2_argument_discussed'}],['season2','charlie','argument','family'],'RELATIONSHIP'),
-    askScene('lucifer-ask-s2-unsaid-low','화해한 뒤에도 찰리에게 못 한 말이 있어요?',0,59,'질문에 루시퍼가 작게 헛웃음을 흘린다.','"당연히 있지. 가족끼리는 이상하게 중요한 말일수록 타이밍을 놓치더라. 그래도 지금은 예전처럼 영원히 미룰 생각은 없어."',[{text:'무슨 말인데요?',response:'"그건 찰리한테 먼저. 순서는 지켜야지."',delta:0,setFlags:'lucifer.s2_unsaid_discussed'},{text:'이번엔 말할 수 있을 것 같아요?',response:'"응. 적어도 도망갈 핑계를 찾진 않을 거야."',delta:1,setFlags:'lucifer.s2_unsaid_discussed'},{text:'찰리도 기다릴 것 같아요.',response:'"...그럴 수도 있겠지. 그래서 더 늦추면 안 되고."',delta:1,setFlags:'lucifer.s2_unsaid_discussed'},{text:'그럼 나중에 결과만 알려줘요.',response:'그가 웃는다. "그건 꽤 합리적인 거래네."',delta:1,setFlags:'lucifer.s2_unsaid_discussed'}],['season2','charlie','unfinished','family'],'PERSONAL'),
-    askScene('lucifer-ask-s2-unsaid-high','화해한 뒤에도 찰리에게 못 한 말이 있어요?',60,100,'이제는 루시퍼가 대답을 완전히 감추지는 않는다.','"있어. 미안하다는 말만으로는 부족한 것들. 자랑스럽다는 말, 걱정 때문에 통제하려 들고 싶지 않다는 말, 그리고 그 애가 나 없이도 잘해낼 수 있다는 걸 알면서도 곁에 있고 싶다는 말."',[{text:'그건 꼭 말해줘요.',response:'"응. 이번엔 그럴 거야."',delta:2,setFlags:'lucifer.s2_unsaid_discussed'},{text:'찰리가 들으면 좋아할 것 같아요.',response:'"좋아하면서 울 수도 있겠지. ...나도 같이 울 가능성이 높고."',delta:2,setFlags:'lucifer.s2_unsaid_discussed'},{text:'당신도 많이 달라졌네요.',response:'루시퍼가 천천히 웃는다. "그 말을 좋은 뜻으로 받을게."',delta:2,setFlags:'lucifer.s2_unsaid_discussed'},{text:'그 말을 준비하는 동안 옆에 있어도 돼요?',response:'그가 당신을 잠깐 바라본다. "...그래. 그건 꽤 도움이 될 것 같아."',delta:2,setFlags:'lucifer.s2_unsaid_discussed'}],['season2','charlie','unfinished','family'],'RELATIONSHIP')
-  ];
-  for(const s of asks)changed=addSceneIfMissing(state,s,meta)||changed;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (!key || keep.has(key)) continue;
 
-  const rudeBands=[{suffix:'0',min:0,max:19},{suffix:'20',min:20,max:49},{suffix:'50',min:50,max:79},{suffix:'80',min:80,max:100}];
-  const rudeDefs=[
-    {key:'charlie',title:'찰리를 너무 오래 방치한 거 아닌가요?',topic:['charlie','family','boundary'],reactions:['루시퍼의 표정에서 장난기가 즉시 사라진다. "그걸 그렇게 단순하게 말하지 마. 내 잘못은 내가 알아. 그렇다고 찰리가 버려진 아이였던 것처럼 네가 함부로 정리하는 건 싫어."','그가 눈을 가늘게 뜬다. "내가 멀어졌던 건 후회해. 하지만 네가 찰리를 깎아내리는 방식으로 그 얘길 꺼내면 대화는 여기서부터 달라져."','루시퍼가 길게 숨을 내쉰다. "네가 왜 묻는지는 알겠어. 그래도 그 표현은 싫다. 내 실수와 찰리의 가치를 한 문장에 섞지 마."','그가 잠시 당신을 본다. 상처받은 기색을 숨기진 않는다. "너라서 설명은 할 수 있어. 그래도 그 말은 아파. 다음엔 내 잘못을 묻더라도 찰리를 그 안에 끌어내리지 마."']},
-    {key:'dream',title:'찰리의 꿈, 솔직히 실패할 것 같지 않아요?',topic:['charlie','hotel','dream','boundary'],reactions:['루시퍼의 미소가 딱 멈춘다. "실패할 수 있다는 걱정과 실패할 거라고 비웃는 건 전혀 다른 말이야. 난 후자에 동의할 생각 없어."','그가 지팡이를 한 번 바닥에 짚는다. "그 애가 위험할까 봐 걱정하는 건 나도 해. 하지만 꿈 자체를 깎아내리는 건 다른 문제야."','루시퍼가 당신을 똑바로 본다. "네가 현실적인 걱정을 말하려는 거라면 표현을 바꿔. 찰리의 꿈은 적어도 존중받을 가치가 있어."','그가 작게 한숨 쉰다. "네가 날 떠보는 건 알겠는데, 이건 좋은 장난이 아니야. 난 그 애가 성공할 가능성을 돕는 쪽에 서 있어."']},
-    {key:'alastor',title:'알래스터보다 당신이 호텔에 한 게 적은 거 아닌가요?',topic:['alastor','hotel','boundary'],reactions:['루시퍼가 몇 초 동안 말이 없다. "...굳이 그 남자와 나를 비교하면서 시작했어야 했나? 아주 효율적으로 사람 기분을 망치는 질문이네."','그의 눈썹이 꿈틀한다. "도움의 양을 재고 싶으면 장부를 가져와. 알래스터를 기준으로 내 가족 얘기까지 평가하는 건 사양할게."','루시퍼가 헛웃음을 친다. "네가 무슨 뜻으로 묻는지는 알겠어. 그래도 알래스터를 들이밀면 내가 좋은 표정은 못 하지."','그가 한숨을 쉬고 당신을 본다. "너니까 대답은 하겠는데, 다음에는 그 이름 없이 물어봐. 내가 찰리에게 한 일은 경쟁 점수표가 아니야."']},
-    {key:'lilith',title:'릴리스가 떠난 것도 결국 당신 탓 아닌가요?',topic:['lilith','family','boundary'],reactions:['루시퍼의 표정이 굳는다. "그건 질문이 아니라 판결에 가깝네. 우리 관계를 네가 아는 몇 조각으로 결론 내리지 마."','그가 시선을 떼며 낮게 말한다. "내 잘못이 없었다고 할 생각은 없어. 그래도 릴리스와 나 사이를 한 사람 탓으로 정리하는 건 무례해."','루시퍼가 잠시 침묵한다. "너한테 더 많은 걸 말해왔지만, 그렇다고 이 부분이 덜 아픈 건 아니야. 표현은 고쳐줬으면 해."','그가 상처받은 얼굴로 웃지도 못한 채 당신을 본다. "너라서 화내고 끝내고 싶진 않아. 하지만 그 말은 선을 넘었어."']},
-    {key:'heaven',title:'천국에서 추락한 건 결국 당신이 잘못해서잖아요?',topic:['heaven','past','boundary'],reactions:['루시퍼의 눈빛이 차갑게 가라앉는다. "내가 한 선택의 책임은 알아. 네가 모르는 전부를 지운 채 한 문장으로 유죄 판결할 필요는 없어."','그가 한 박자 늦게 대답한다. "책임을 인정하는 것과 네가 상처를 함부로 단정하는 건 다른 문제야."','루시퍼가 조용히 숨을 내쉰다. "네가 궁금한 건 이해해. 하지만 이미 답을 정해놓고 묻는 질문은 대화가 아니지."','그가 당신을 오래 바라본다. "너한텐 많은 걸 말할 수 있어. 그래서 더 솔직히 말할게. 그 표현은 아프고, 싫어."']}
-  ];
-  for(const def of rudeDefs){for(let i=0;i<rudeBands.length;i++){const b=rudeBands[i],id=`lucifer-ask-rude-${def.key}-${b.suffix}`,scene=askScene(id,def.title,b.min,b.max,'질문이 끝나는 순간 방 안의 공기가 눈에 띄게 달라진다.',def.reactions[i],[{text:'...말이 너무 심했네요. 미안해요.',response:'루시퍼는 바로 웃지는 않지만 어깨의 힘을 조금 뺀다. "그래. 그 사과는 받을게."',delta:1,moodChange:'NORMAL',removeFlags:'lucifer.player_offended_him'},{text:'비난하려던 건 아니었어요.',response:'"그럼 다음에는 비난처럼 들리지 않게 물어봐. 말은 생각보다 오래 남으니까."',delta:0},{text:'그래도 틀린 말은 아니잖아요.',response:'그의 표정이 다시 굳는다. "지금은 그 태도가 더 문제네."',delta:-2,moodChange:'ANNOYED',setFlags:'lucifer.player_offended_him'},{text:'그렇게 예민할 줄은 몰랐어요.',response:'"가족과 오래된 상처를 건드려놓고 예민하다고 부르면 대화가 더 좋아지진 않아."',delta:-3,moodChange:'ANNOYED',setFlags:'lucifer.player_offended_him'}],def.topic,'SECRET');changed=addSceneIfMissing(state,scene,meta)||changed}}
+      if (
+        legacyExact.has(key) ||
+        key.startsWith("hellaverse_dialogue") ||
+        key.startsWith("hellaverse_collection") ||
+        key.startsWith("hellaverse_gacha")
+      ) {
+        localStorage.removeItem(key);
+      }
+    }
 
-  const talks=[
-    talkScene('lucifer-s1-reconciliation-talk','다시 말할 수 있게 된 뒤',10,100,'루시퍼가 한동안 찰리가 남겨둔 메모를 바라보다가 먼저 입을 연다.',[{id:'start',speaker:'character',text:'"이상하지. 예전엔 말을 꺼내는 게 제일 어려웠는데, 한 번 제대로 말하고 나니까 침묵하는 쪽이 더 불편해졌어."',choices:[c('luc-s1-rec-a','찰리한테 더 자주 말 걸어요.','"그러려고. 조언은 적당히, 간섭은 더 적당히."',1,{nextNodeId:'after'}),c('luc-s1-rec-b','당신도 듣는 연습을 해야겠네요.','그가 피식 웃는다. "아프지만 정확한 지적이네."',1,{nextNodeId:'after'}),c('luc-s1-rec-c','가족이면 말 안 해도 알지 않아요?','"그 생각으로 너무 오래 망쳐봤어. 이제는 안 믿어."',0,{nextNodeId:'after'}),c('luc-s1-rec-d','그래도 늦지 않아서 다행이에요.','루시퍼의 표정이 조금 부드러워진다. "응. 그게 제일 중요하지."',1,{nextNodeId:'after'})]},{id:'after',speaker:'character',text:'"찰리한테는 이제 걱정된다는 말보다, 뭘 도와주면 되는지를 먼저 물어보려고 해. 같은 사랑이어도 방식은 바꿀 수 있으니까."',choices:[c('luc-s1-rec-end1','그 방식이 더 좋을 것 같아요.','"나도 그렇게 생각해. 시행착오는 있겠지만."',1,{setFlags:'lucifer.s1_reconciliation_discussed'}),c('luc-s1-rec-end2','찰리도 분명 알아줄 거예요.','"알아주길 바라서 하는 건 아니지만... 그래도 그러면 좋겠네."',1,{setFlags:'lucifer.s1_reconciliation_discussed'}),c('luc-s1-rec-end3','간섭 안 하는 건 어렵겠네요.','"엄청. 나는 왕이고 아버지고 통제 욕구도 꽤 있거든."',0,{setFlags:'lucifer.s1_reconciliation_discussed'}),c('luc-s1-rec-end4','필요하면 내가 말려줄게요.','그가 웃는다. "좋아. 외부 감사관 한 명 확보했군."',1,{setFlags:'lucifer.s1_reconciliation_discussed'})]}],['season1','charlie','family','reconciliation'],'RELATIONSHIP',24),
-    talkScene('lucifer-s1-rebuild-talk','다시 세운다는 것',0,100,'로비 어딘가의 수리 흔적을 바라보던 루시퍼가 손가락으로 금빛 장식을 톡 건드린다.',[{id:'start',speaker:'character',text:'"이 호텔은 참 이상해. 한 번 크게 망가져도, 다음 날이면 누군가 다시 망치부터 들거든."',choices:[c('luc-s1-rebuild-a','그래서 마음에 들어요?','"응. 인정하기 싫을 정도로."',1,{nextNodeId:'after'}),c('luc-s1-rebuild-b','당신도 같이 다시 세웠잖아요.','"찰리가 포기 안 했는데 구경만 할 순 없지."',1,{nextNodeId:'after'}),c('luc-s1-rebuild-c','또 무너지면요?','"또 세워야지. 가능하면 이번엔 덜 무너지게 만들고."',1,{nextNodeId:'after'}),c('luc-s1-rebuild-d','그렇게 낙관적이었어요?','그가 웃는다. "원래 그랬어. 요즘 다시 연습 중이고."',1,{nextNodeId:'after'})]},{id:'after',speaker:'character',text:'"무너졌다는 사실이 실패의 끝이라는 뜻은 아니더라. 가끔은 뭘 다시 만들지 결정하는 순간이기도 하고."',choices:[c('luc-s1-rebuild-end1','그 말 마음에 들어요.','"나도. 꽤 괜찮은 문장이네."',1,{setFlags:'lucifer.s1_rebuild_discussed'}),c('luc-s1-rebuild-end2','찰리도 그렇게 생각할 것 같아요.','"그 애는 나보다 훨씬 먼저 그렇게 생각했겠지."',1,{setFlags:'lucifer.s1_rebuild_discussed'}),c('luc-s1-rebuild-end3','가끔은 포기하는 것도 필요하죠.','"그렇지. 다만 포기와 휴식은 구분해야 해."',0,{setFlags:'lucifer.s1_rebuild_discussed'}),c('luc-s1-rebuild-end4','다음엔 내가 망치 들게요.','"좋아. 안전모부터 지급하지."',1,{setFlags:'lucifer.s1_rebuild_discussed'})]}],['season1','hotel','rebuild','optimism'],'PERSONAL',20),
-    talkScene('lucifer-s2-after-argument-talk','싸운 뒤의 연습',30,100,'루시퍼가 찰리에게 보낼 듯한 메모를 썼다가 지우는 걸 몇 번 반복한다.',[{id:'start',speaker:'character',text:'"예전 같았으면 그냥 안 보내고 말았을 텐데. 요즘은 그게 제일 나쁜 선택이라는 걸 알아서 더 성가셔."',choices:[c('luc-s2-arg-a','무슨 말을 쓰고 있어요?','"미안하다는 말 말고도 할 게 많아서 정리 중이야."',1,{nextNodeId:'after'}),c('luc-s2-arg-b','직접 말하는 게 낫지 않아요?','"맞아. 그래서 이건 메모가 아니라 예행연습이야."',1,{nextNodeId:'after'}),c('luc-s2-arg-c','또 싸울까 봐 무서워요?','루시퍼가 잠시 멈춘다. "조금. 그래도 그게 침묵할 이유는 아니지."',1,{nextNodeId:'after'}),c('luc-s2-arg-d','그냥 넘어가도 되지 않아요?','"예전에 그 방식으로 얼마나 멀어졌는지 알아서, 이번엔 싫어."',0,{nextNodeId:'after'})]},{id:'after',speaker:'character',text:'"싸우고도 다시 돌아와 말할 수 있다는 걸 이제는 관계가 망가졌다는 증거가 아니라, 아직 이어지고 있다는 증거로 보려고 해."',choices:[c('luc-s2-arg-end1','그게 더 건강한 것 같아요.','"그래. 나도 뒤늦게 배우는 중이야."',1,{setFlags:'lucifer.s2_argument_discussed'}),c('luc-s2-arg-end2','찰리도 그렇게 느낄 거예요.','"그랬으면 좋겠다."',1,{setFlags:'lucifer.s2_argument_discussed'}),c('luc-s2-arg-end3','그래도 먼저 사과하는 건 어렵죠.','"왕의 위엄보다 어려워. 진짜로."',0,{setFlags:'lucifer.s2_argument_discussed'}),c('luc-s2-arg-end4','잘 다녀와요.','그가 메모를 접는다. "그래. 이번엔 미루지 않을게."',1,{setFlags:'lucifer.s2_argument_discussed'})]}],['season2','charlie','argument','family'],'RELATIONSHIP',30)
-  ];
-  for(const s of talks)changed=addSceneIfMissing(state,s,meta)||changed;
+    localStorage.setItem(CLEAN_RESET_KEY, "1");
+  } catch (error) {
+    console.warn("Legacy Hellaverse data cleanup skipped safely.", error);
+  }
+})();
 
-  ensureEvent(state,'lucifer.s1_hotel_discussed','시즌 1 호텔 초기를 이야기함','루시퍼가 호텔에 처음 관여하던 때와 찰리의 꿈을 바라보던 마음을 이야기했다.');
-  ensureEvent(state,'lucifer.s1_reconciliation_discussed','찰리와의 화해를 이야기함','루시퍼가 찰리와 다시 가까워진 순간과 그 이후 달라진 태도를 이야기했다.');
-  ensureEvent(state,'lucifer.s1_alastor_discussed','알래스터와의 첫 충돌을 이야기함','루시퍼가 알래스터를 경계하고 불편해하는 이유를 이야기했다.');
-  ensureEvent(state,'lucifer.s1_heaven_help_discussed','찰리를 위해 천국에 손을 쓴 일을 이야기함','자신의 불편함보다 찰리에게 기회를 주는 일을 우선했던 이유를 말했다.');
-  ensureEvent(state,'lucifer.s1_rebuild_discussed','호텔 재건을 이야기함','무너진 호텔을 다시 세우며 포기하지 않기로 했던 마음을 이야기했다.');
-  ensureEvent(state,'lucifer.s2_argument_discussed','찰리와의 최근 갈등을 이야기함','화해 뒤에도 남은 감정과 다시 대화하려는 의지를 이야기했다.');
-  ensureEvent(state,'lucifer.s2_unsaid_discussed','찰리에게 아직 못 한 말을 이야기함','화해 이후에도 찰리에게 전하고 싶은 말이 남아 있음을 인정했다.');
-  ensureEvent(state,'lucifer.family_disrespected','가족을 무례하게 건드림','플레이어가 찰리나 릴리스에 대해 선을 넘는 방식으로 질문했다.','TEMPORARY');
-  ensureEvent(state,'lucifer.charlie_dream_disrespected','찰리의 꿈을 비하함','플레이어가 찰리의 꿈을 비웃거나 가치 없게 말해 루시퍼의 기분을 상하게 했다.','TEMPORARY');
-  ensureEvent(state,'lucifer.alastor_comparison_insult','알래스터와 비교해 자극함','플레이어가 알래스터를 들먹이며 루시퍼의 가족에 대한 기여를 평가해 불쾌하게 만들었다.','TEMPORARY');
-  ensureEvent(state,'lucifer.past_disrespected','과거의 상처를 무례하게 단정함','플레이어가 천국과 추락에 관한 상처를 단정적으로 재단했다.','TEMPORARY');
 
-  if(changed){write(K,state);write(PM,meta);window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'thought-archive',clearDirty:false}}))}else{write(K,state);write(PM,meta)}
+const EMOTION_STATES = [
+  ["calm", "평온"],
+  ["joy", "기쁨"],
+  ["embarrassed", "당황"],
+  ["sad", "슬픔"],
+  ["angry", "화남"],
+  ["anxious", "불안"],
+  ["curious", "호기심"],
+  ["guarded", "경계"]
+];
+
+function emotionLabel(value) {
+  return EMOTION_STATES.find(([id]) => id === value)?.[1] || "평온";
 }
 
-let queued=false,rerouting=false;
-function isMysteryLabel(node){return /^MYSTERY\s*BOX$/i.test(String(node?.textContent||'').trim())}
-function clearMysteryPageState(){const ui=read(RP,{})||{};if(ui.page==='mystery'){ui.page='';write(RP,ui);return true}return false}
-function mysteryPageIsActive(){if($$('.main-nav .active,.mode-nav .active,[data-page].active').some(isMysteryLabel))return true;const root=$('#pageRoot')||$('.page.active');if(!root)return false;if(/INDEPENDENT\s+REWARD\s+DRAW/i.test(root.textContent||''))return true;return $$('h1,h2',root).some(isMysteryLabel)}
-function rerouteFromMystery(force=false){if(rerouting||(!force&&!mysteryPageIsActive()))return;rerouting=true;clearMysteryPageState();const state=read(K,{})||{};if(state.page!=='home'){state.page='home';write(K,state)}const home=$$('[data-page]').find(n=>String(n.dataset.page||'').toLowerCase()==='home'||/^HOME$/i.test(String(n.textContent||'').trim()));if(home&&!home.classList.contains('active'))setTimeout(()=>{try{home.click()}finally{rerouting=false}},0);else setTimeout(()=>{rerouting=false},0)}
-function retireMysteryBox(){const wasActive=mysteryPageIsActive(),hadLegacyRoute=clearMysteryPageState();$$('[data-open-mystery],[data-open-box],[data-box],[data-unified-open-box],[data-box-page-open],[data-view-last-box],[data-reset-box],[data-reset-mystery-box],[data-confirm-box],[data-confirm-reset-box],[data-confirm-reset-mystery],[data-box-mode],[data-box-mode-v35],[data-mystery-mode],[data-set-mystery-mode],[data-mystery-box-settings],[data-mystery-box-mode-panel],.mystery-home,.mystery-box-settings-panel,.mb-mode-panel,#mysteryBoxModalRoot,#mysteryModeToastRoot').forEach(n=>n.remove());$$('.main-nav button,.main-nav a,.mode-nav button,.mode-nav a,[data-page]').filter(n=>isMysteryLabel(n)||/mystery|box/i.test(String(n.dataset?.page||''))).forEach(n=>n.remove());const rewardTab=$('.extras-tabs [data-ext="rewards"]');if(rewardTab){if(rewardTab.classList.contains('active'))$('.extras-tabs [data-ext="collection"]')?.click();rewardTab.remove()}$$('.modal-backdrop,.unified-modal-backdrop,.mystery-modal-backdrop').forEach(m=>{if(/MYSTERY\s*BOX/i.test(m.textContent||''))m.remove()});if(wasActive||hadLegacyRoute)rerouteFromMystery(true)}
+const createId = (prefix = "id") =>
+  prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
 
-function installStyles(){if($('#hellaverse-site-runtime-v67-style'))return;const style=document.createElement('style');style.id='hellaverse-site-runtime-v67-style';style.textContent=`
-.conversation-status{display:none!important}
-.choice-list.is-next-only{display:flex!important;justify-content:flex-end!important}
-.choice-list.is-next-only .dialogue-next{width:auto!important;min-width:110px!important}
-.dialogue-log-backdrop{z-index:1000000!important}
-.dialogue-log-modal{z-index:1000001!important}
-.memory-reset-row,.history-reset-row{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:-2px 0 10px}
-.history-reset-row{margin:4px 0 12px}
-.memory-reset-button,.history-reset-button{border:0;border-bottom:1px solid rgba(201,166,107,.28);background:transparent;color:var(--muted,#b7aaa3);padding:7px 0;font-size:.68rem;letter-spacing:.12em;cursor:pointer}
-.memory-reset-button:hover,.history-reset-button:hover{color:var(--gold,#c9a66b);border-color:var(--gold,#c9a66b)}
-.history-reset-count{font-size:.68rem;letter-spacing:.08em;color:var(--muted,#b7aaa3);opacity:.72}
-.ask-system-note{margin:12px 0 2px;padding:10px 0 12px;border-bottom:1px solid rgba(243,236,232,.08);color:var(--muted,#b7aaa3);font-size:.76rem;line-height:1.65;letter-spacing:.025em}
-.ask-system-note strong{color:var(--gold,#c9a66b);font-size:.7rem;letter-spacing:.14em;margin-right:8px}
-`;document.head.appendChild(style)}
-function nextButton(button){if(!(button instanceof HTMLElement))return;button.classList.add('dialogue-next');button.classList.remove('choice-option','dialogue-return');if(String(button.textContent||'').replace(/\s+/g,' ').trim()!=='NEXT ›')button.innerHTML='NEXT <span>›</span>';const parent=button.parentElement;if(parent?.classList.contains('choice-list')){const interactive=[...parent.children].filter(x=>x instanceof HTMLElement&&!x.hidden);parent.classList.toggle('is-next-only',interactive.length===1)}}
-function polishDialogueFlow(){installStyles();$$('.conversation-status').forEach(n=>n.remove());$$('[data-vn-next],[data-vn-finish],[data-finish]').forEach(nextButton);$$('.affection-flash').forEach(n=>{const text=String(n.textContent||'').trim(),heart=text.match(/♥\s*[+-]?\d+/);if(heart){if(text!==heart[0])n.textContent=heart[0]}else if(/RELATIONSHIP|STRANGER|DISTANT|ACQUAINTANCE|FAMILIAR|COMFORTABLE|FRIENDLY|CLOSE|TRUSTED|BONDED|DEVOTED|SPECIAL|→/i.test(text))n.remove()});$$('.toast').forEach(n=>{if(/RELATIONSHIP\s+UPDATED/i.test(String(n.textContent||'')))n.remove()})}
+const clone = value =>
+  typeof structuredClone === "function"
+    ? structuredClone(value)
+    : JSON.parse(JSON.stringify(value));
 
-function isLuciferAskBox(box){if(!box)return false;const text=String(box.textContent||'');return /WHAT\s+DO\s+YOU\s+WANT\s+TO\s+ASK\?|Nothing\s+to\s+ask/i.test(text)||box.dataset.luciferAskMenu==='1'}
-function pickAskVariant(group,heart){const eligible=group.filter(s=>heart>=Number(s.requiredAffection||0)&&heart<=Number(s.maxAffection==null?100:s.maxAffection));if(eligible.length)return eligible.sort((a,b)=>Number(b.requiredAffection||0)-Number(a.requiredAffection||0))[0];return group.slice().sort((a,b)=>{const amin=Number(a.requiredAffection||0),amax=Number(a.maxAffection==null?100:a.maxAffection),bmin=Number(b.requiredAffection||0),bmax=Number(b.maxAffection==null?100:b.maxAffection);const ad=heart<amin?amin-heart:heart>amax?heart-amax:0,bd=heart<bmin?bmin-heart:heart>bmax?heart-bmax:0;return ad-bd})[0]||null}
-function enhanceLuciferAskMenu(){const state=read(K,{})||{};if(state.active!==LUCIFER)return;const box=$('.character-room .dialogue-box');if(!isLuciferAskBox(box))return;const scenes=(state.dialogues||[]).filter(s=>s?.characterId===LUCIFER&&String(s.kind||'').toUpperCase()==='ASK'&&!LEGACY_LUCIFER_ASK_HIDE.has(String(s.id||'')));if(!scenes.length)return;const heart=Math.max(0,Math.min(100,Number(state.affection?.[LUCIFER]?.value||0))),groups=new Map();for(const scene of scenes){const title=String(scene.title||'Question').trim();if(!groups.has(title))groups.set(title,[]);groups.get(title).push(scene)}const chosen=[...groups.entries()].map(([title,rows])=>({title,scene:pickAskVariant(rows,heart)})).filter(x=>x.scene);if(!chosen.length)return;let list=$('.choice-list',box);if(!list){list=document.createElement('div');list.className='choice-list';const ret=$('[data-end]',box);ret?ret.insertAdjacentElement('beforebegin',list):box.appendChild(list)}const sig=`${heart}|${chosen.map(x=>x.scene.id).join('|')}`;if(list.dataset.luciferAskSig!==sig){list.dataset.luciferAskSig=sig;list.innerHTML=chosen.map((x,i)=>`<button class="choice-option" data-scene="${esc(x.scene.id)}"><b>${String(i+1).padStart(2,'0')}</b><span>${esc(x.title)}</span></button>`).join('')}let note=$('.ask-system-note',box);if(!note){note=document.createElement('p');note.className='ask-system-note';const speaker=$('.speaker',box);speaker?speaker.insertAdjacentElement('afterend',note):box.insertBefore(note,list)}note.innerHTML='<strong>ASK</strong>모든 질문은 열려 있습니다. 질문이 무례하거나 지나치게 개인적이면 현재 Heart에 따라 반응과 호감도 손실이 달라집니다.';box.dataset.luciferAskMenu='1'}
+function makeEntry(type) {
+  const base = {
+    id: createId("entry"),
+    condition: null,
+    effects: [],
+    affectionCondition: null,
+    affectionEffects: [],
+    emotionCondition: null,
+    emotionEffects: []
+  };
 
-function showAskConsequence(effect,heart,nextHeart){setTimeout(()=>{const root=$('#toastRoot')||document.body,min=nextHeart===0&&effect.delta<0?' · HEART MIN':'';root.innerHTML=`<div class="toast">♥ ${effect.delta}${min} · ${esc(effect.mood||'ANNOYED')}</div>`;setTimeout(()=>{$('.toast',root)?.remove()},1800)},20)}
-function applyAskOpeningEffect(sceneId){const effect=ASK_OPENING_EFFECTS[sceneId];if(!effect)return false;const state=read(K,{})||{};if(state.active!==LUCIFER)return false;const heart=Math.max(0,Math.min(100,Number(state.affection?.[LUCIFER]?.value||0))),nextHeart=Math.max(0,Math.min(100,heart+Number(effect.delta||0)));state.affection=state.affection&&typeof state.affection==='object'?state.affection:{};state.affection[LUCIFER]={...(state.affection[LUCIFER]||{}),value:nextHeart};state.moods=state.moods&&typeof state.moods==='object'?state.moods:{};state.moods[LUCIFER]=effect.mood||'ANNOYED';state.flags=state.flags&&typeof state.flags==='object'?state.flags:{};for(const flag of effect.flags||[])state.flags[flag]=true;write(K,state);window.dispatchEvent(new CustomEvent('hellaverse:state-updated',{detail:{source:'thought-archive',clearDirty:false}}));showAskConsequence(effect,heart,nextHeart);return true}
+  if (type === "narration") {
+    return { ...base, type: "narration", text: "" };
+  }
 
-function memoryModalCharacter(){const view=$('.memories-view');if(!view)return null;const name=String($('h2',view)?.textContent||'').trim(),state=read(K,{})||{};return(state.characters||[]).find(x=>String(x.name||'').trim()===name)||null}
-function enhanceMemoryReset(){const view=$('.memories-view');if(!view||$('[data-reset-character-memories]',view))return;const c=memoryModalCharacter();if(!c)return;const row=document.createElement('div');row.className='memory-reset-row';row.innerHTML=`<button type="button" class="memory-reset-button" data-reset-character-memories="${String(c.id).replace(/"/g,'&quot;')}">RESET MEMORIES</button>`;const h2=$('h2',view);h2?h2.insertAdjacentElement('afterend',row):view.prepend(row)}
-function resetCharacterMemories(cid){const state=read(K,{})||{},c=(state.characters||[]).find(x=>x.id===cid);if(!c)return;const count=(state.memories||[]).filter(m=>m.characterId===cid).length;if(!count){alert('삭제할 Memory가 없습니다.');return}if(!confirm(`${c.name}의 Memory ${count}개를 초기화할까요?\n호감도, Event, Dialogue, Conversation History는 유지됩니다.`))return;state.memories=(state.memories||[]).filter(m=>m.characterId!==cid);write(K,state);location.reload()}
-function enhanceConversationHistoryReset(){const view=$('.memories-view');if(!view)return;const c=memoryModalCharacter();if(!c||$('[data-reset-conversation-history]',view))return;const label=$$('.label',view).find(n=>/^CONVERSATION\s+HISTORY$/i.test(String(n.textContent||'').trim()));if(!label)return;const state=read(K,{})||{},count=(state.conversationHistory||[]).filter(x=>x.characterId===c.id).length,row=document.createElement('div');row.className='history-reset-row';row.innerHTML=`<span class="history-reset-count">${count} SAVED</span><button type="button" class="history-reset-button" data-reset-conversation-history="${String(c.id).replace(/"/g,'&quot;')}">RESET HISTORY</button>`;label.insertAdjacentElement('afterend',row)}
-function enhanceSettingsHistoryReset(){const button=$('[data-danger="history"]');if(!button)return;button.textContent='RESET ALL CONVERSATION HISTORY';button.dataset.resetAllConversationHistory='1'}
-function resetConversationHistory(cid=''){const state=read(K,{})||{},history=Array.isArray(state.conversationHistory)?state.conversationHistory:[],c=cid?(state.characters||[]).find(x=>x.id===cid):null,count=cid?history.filter(x=>x.characterId===cid).length:history.length;if(!count){alert('초기화할 Conversation History가 없습니다.');return}const who=c?`${c.name}의 `:'전체 ';if(!confirm(`${who}Conversation History ${count}개를 초기화할까요?\nScene Seen/Unseen 진행도, Heart, Mood, Visit, Memory는 유지됩니다.`))return;state.conversationHistory=cid?history.filter(x=>x.characterId!==cid):[];write(K,state);location.reload()}
+  if (type === "choice") {
+    return {
+      ...base,
+      type: "choice",
+      prompt: "",
+      options: [
+        makeOption("선택지 1"),
+        makeOption("선택지 2")
+      ]
+    };
+  }
 
-function enhance(){retireMysteryBox();polishDialogueFlow();enhanceLuciferAskMenu();enhanceMemoryReset();enhanceConversationHistoryReset();enhanceSettingsHistoryReset()}
-function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;enhance()})}
-function observe(){const app=$('#app');if(app&&!app.dataset.siteRuntimeV67){app.dataset.siteRuntimeV67='1';new MutationObserver(schedule).observe(app,{childList:true,subtree:true})}}
+  return {
+    ...base,
+    type: "dialogue",
+    speaker: "",
+    text: ""
+  };
+}
 
-document.addEventListener('click',e=>{const t=e.target;if(!(t instanceof Element))return;const askScene=t.closest('[data-scene]')?.dataset.scene;if(askScene)applyAskOpeningEffect(String(askScene));const historyReset=t.closest('[data-reset-conversation-history]');if(historyReset){e.preventDefault();e.stopImmediatePropagation();resetConversationHistory(String(historyReset.dataset.resetConversationHistory||''));return}if(t.closest('[data-reset-all-conversation-history]')){e.preventDefault();e.stopImmediatePropagation();resetConversationHistory('');return}const reset=t.closest('[data-reset-character-memories]');if(reset){e.preventDefault();e.stopImmediatePropagation();resetCharacterMemories(String(reset.dataset.resetCharacterMemories||''));return}if(t.closest('[data-open-mystery],[data-open-box],[data-box],[data-unified-open-box],[data-box-page-open],[data-view-last-box],[data-reset-box],[data-reset-mystery-box],[data-confirm-box],[data-confirm-reset-mystery],[data-box-mode],[data-box-mode-v35],[data-mystery-mode],[data-set-mystery-mode]')||isMysteryLabel(t.closest('button,a'))){e.preventDefault();e.stopImmediatePropagation();clearMysteryPageState();retireMysteryBox();rerouteFromMystery(true);return}if(t.closest('[data-export]')){e.preventDefault();e.stopImmediatePropagation();exportBackup()}},true);
-document.addEventListener('change',e=>{const t=e.target;if(!(t instanceof HTMLInputElement))return;if(t.id==='importFile'||t.id==='menuImport')restoreLegacy(t.files?.[0])},true);
-window.addEventListener('storage',e=>{if(!e.key||e.key===K||e.key===RP)schedule()});
-document.addEventListener('DOMContentLoaded',()=>{observe();enhance()});
-window.addEventListener('load',()=>{observe();enhance()});
-ensureLuciferExpansion();
-setTimeout(()=>{observe();enhance()},100);
-})();
+function makeOption(label = "선택지") {
+  return {
+    id: createId("option"),
+    label,
+    entries: [],
+    condition: null,
+    effects: [],
+    affectionCondition: null,
+    affectionEffects: [],
+    emotionCondition: null,
+    emotionEffects: [],
+    exitMode: "continue",
+    targetEventId: ""
+  };
+}
+
+function normalizeCondition(condition) {
+  if (!condition || typeof condition !== "object") return null;
+  return {
+    variableId: condition.variableId || "",
+    operator: condition.operator || "==",
+    value: condition.value ?? ""
+  };
+}
+
+function normalizeEffects(effects) {
+  return Array.isArray(effects)
+    ? effects.map(effect => ({
+        id: effect.id || createId("effect"),
+        variableId: effect.variableId || "",
+        operation: effect.operation || "set",
+        value: effect.value ?? ""
+      }))
+    : [];
+}
+
+function normalizeAffectionCondition(condition) {
+  if (!condition || typeof condition !== "object") return null;
+  return {
+    targetId: condition.targetId || "",
+    operator: condition.operator || ">=",
+    value: Number.isFinite(Number(condition.value)) ? Number(condition.value) : 0
+  };
+}
+
+function normalizeAffectionEffects(effects) {
+  return Array.isArray(effects)
+    ? effects.map(effect => ({
+        id: effect.id || createId("affection-effect"),
+        targetId: effect.targetId || "",
+        amount: Number.isFinite(Number(effect.amount)) ? Number(effect.amount) : 0
+      }))
+    : [];
+}
+
+function normalizeEmotionCondition(condition) {
+  if (!condition || typeof condition !== "object") return null;
+  return {
+    targetId: condition.targetId || "",
+    state: EMOTION_STATES.some(([id]) => id === condition.state) ? condition.state : "",
+    intensityOperator: ["==", "!=", ">", ">=", "<", "<="].includes(condition.intensityOperator)
+      ? condition.intensityOperator
+      : ">=",
+    intensityValue: Math.min(100, Math.max(0, Number(condition.intensityValue) || 0))
+  };
+}
+
+function normalizeEmotionEffects(effects) {
+  return Array.isArray(effects)
+    ? effects.map(effect => ({
+        id: effect.id || createId("emotion-effect"),
+        targetId: effect.targetId || "",
+        state: EMOTION_STATES.some(([id]) => id === effect.state) ? effect.state : "calm",
+        intensity: Math.min(100, Math.max(0, Number(effect.intensity) || 0))
+      }))
+    : [];
+}
+
+function normalizeEntry(entry) {
+  const item = {
+    ...entry,
+    id: entry.id || createId("entry"),
+    condition: normalizeCondition(entry.condition),
+    effects: normalizeEffects(entry.effects),
+    affectionCondition: normalizeAffectionCondition(entry.affectionCondition),
+    affectionEffects: normalizeAffectionEffects(entry.affectionEffects),
+    emotionCondition: normalizeEmotionCondition(entry.emotionCondition),
+    emotionEffects: normalizeEmotionEffects(entry.emotionEffects)
+  };
+
+  if (item.type === "choice") {
+    item.prompt = item.prompt || "";
+    item.options = Array.isArray(item.options)
+      ? item.options.map(option => {
+          const oldBranch = Array.isArray(option.entries)
+            ? option.entries
+            : (Array.isArray(option.responses) ? option.responses : []);
+
+          return {
+            id: option.id || createId("option"),
+            label: option.label || "",
+            entries: oldBranch.map(normalizeEntry),
+            condition: normalizeCondition(option.condition),
+            effects: normalizeEffects(option.effects),
+            affectionCondition: normalizeAffectionCondition(option.affectionCondition),
+            affectionEffects: normalizeAffectionEffects(option.affectionEffects),
+            emotionCondition: normalizeEmotionCondition(option.emotionCondition),
+            emotionEffects: normalizeEmotionEffects(option.emotionEffects),
+            exitMode: option.exitMode === "end" ? "end" : "continue",
+            targetEventId: option.targetEventId || ""
+          };
+        })
+      : [];
+    return item;
+  }
+
+  if (item.type === "narration") {
+    item.text = item.text || "";
+    return item;
+  }
+
+  item.type = "dialogue";
+  item.speaker = item.speaker || "";
+  item.text = item.text || "";
+  return item;
+}
+
+function normalizeEvent(event) {
+  return {
+    id: event.id || createId("event"),
+    name: event.name || "새 이벤트",
+    nextEventId: event.nextEventId || "",
+    emotionExitMode: event.emotionExitMode === "reset" ? "reset" : "keep",
+    entries: Array.isArray(event.entries) ? event.entries.map(normalizeEntry) : []
+  };
+}
+
+function normalizeVariable(variable) {
+  return {
+    id: variable.id || createId("var"),
+    name: variable.name || "새 변수",
+    type: ["number", "boolean", "string"].includes(variable.type) ? variable.type : "number",
+    defaultValue: variable.defaultValue ?? (variable.type === "boolean" ? "false" : "0")
+  };
+}
+
+function normalizeAsset(asset) {
+  return {
+    id: asset.id || createId("asset"),
+    type: ["image", "audio", "other"].includes(asset.type) ? asset.type : "image",
+    name: asset.name || "새 리소스",
+    source: asset.source || ""
+  };
+}
+
+function normalizeAffectionTarget(target) {
+  const initialValue = Math.min(100, Math.max(0, Number(target?.initialValue) || 0));
+  return {
+    id: target?.id || createId("affection"),
+    name: target?.name || "새 대상",
+    initialValue
+  };
+}
+
+function normalizeEmotionTarget(target) {
+  return {
+    id: target?.id || createId("emotion"),
+    name: target?.name || "새 대상",
+    defaultState: EMOTION_STATES.some(([id]) => id === target?.defaultState)
+      ? target.defaultState
+      : "calm",
+    defaultIntensity: Math.min(100, Math.max(0, Number(target?.defaultIntensity) || 0))
+  };
+}
+
+function normalizeState(raw) {
+  const events = Array.isArray(raw?.events) && raw.events.length
+    ? raw.events.map(normalizeEvent)
+    : [{
+        id: "event-empty",
+        name: "새 이벤트",
+        nextEventId: "",
+        emotionExitMode: "keep",
+        entries: []
+      }];
+
+  const activeEventId = events.some(event => event.id === raw?.activeEventId)
+    ? raw.activeEventId
+    : events[0].id;
+
+  return {
+    activeEventId,
+    events,
+    variables: Array.isArray(raw?.variables) ? raw.variables.map(normalizeVariable) : [],
+    assets: Array.isArray(raw?.assets) ? raw.assets.map(normalizeAsset) : [],
+    affectionTargets: Array.isArray(raw?.affectionTargets)
+      ? raw.affectionTargets.map(normalizeAffectionTarget)
+      : [],
+    emotionTargets: Array.isArray(raw?.emotionTargets)
+      ? raw.emotionTargets.map(normalizeEmotionTarget)
+      : []
+  };
+}
+
+function loadState() {
+  try {
+    return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY)));
+  } catch (error) {
+    console.warn("저장된 프로젝트 데이터를 읽지 못했습니다.", error);
+    return normalizeState(null);
+  }
+}
+
+function loadPrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREFS_KEY)) || {};
+    return {
+      textSpeed: clampNumber(saved.textSpeed, 0, 80, 24),
+      autoDelay: clampNumber(saved.autoDelay, 250, 3000, 900),
+      stageClick: saved.stageClick !== false
+    };
+  } catch (error) {
+    return {
+      textSpeed: 24,
+      autoDelay: 900,
+      stageClick: true
+    };
+  }
+}
+
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+}
+
+let state = loadState();
+let prefs = loadPrefs();
+
+let runtime = createRuntime(state.activeEventId);
+let draftState = null;
+let draftActiveEventId = null;
+let selectedEntryId = null;
+
+let typing = {
+  token: "",
+  fullText: "",
+  index: 0,
+  done: true,
+  timer: null
+};
+
+let modeTimer = null;
+let autoMode = false;
+let viewToken = "";
+
+const el = {
+  eventSelect: document.querySelector("#eventSelect"),
+  eventBadge: document.querySelector("#eventBadge"),
+  eventTitle: document.querySelector("#eventTitle"),
+  stage: document.querySelector("#stage"),
+  dialogueCard: document.querySelector("#dialogueCard"),
+  speakerName: document.querySelector("#speakerName"),
+  dialogueText: document.querySelector("#dialogueText"),
+  progressText: document.querySelector("#progressText"),
+  nextLine: document.querySelector("#nextLine"),
+  choiceCard: document.querySelector("#choiceCard"),
+  choicePrompt: document.querySelector("#choicePrompt"),
+  choiceButtons: document.querySelector("#choiceButtons"),
+  choiceDepth: document.querySelector("#choiceDepth"),
+  emptyState: document.querySelector("#emptyState"),
+  endState: document.querySelector("#endState"),
+  openSettings: document.querySelector("#openSettings"),
+  emptyOpenSettings: document.querySelector("#emptyOpenSettings"),
+
+  autoButton: document.querySelector("#autoButton"),
+  logButton: document.querySelector("#logButton"),
+  affectionButton: document.querySelector("#affectionButton"),
+  emotionButton: document.querySelector("#emotionButton"),
+  affectionToast: document.querySelector("#affectionToast"),
+  playSettingsButton: document.querySelector("#playSettingsButton"),
+
+
+  gameModal: document.querySelector("#gameModal"),
+  gameModalTitle: document.querySelector("#gameModalTitle"),
+  gameModalBody: document.querySelector("#gameModalBody"),
+  closeGameModal: document.querySelector("#closeGameModal"),
+
+  settingsOverlay: document.querySelector("#settingsOverlay"),
+  projectSettings: document.querySelector("#projectSettings"),
+  cancelSettings: document.querySelector("#cancelSettings"),
+  saveSettings: document.querySelector("#saveSettings"),
+  newEvent: document.querySelector("#newEvent"),
+  editorEventList: document.querySelector("#editorEventList"),
+  eventNameInput: document.querySelector("#eventNameInput"),
+  eventIdInput: document.querySelector("#eventIdInput"),
+  eventNextSelect: document.querySelector("#eventNextSelect"),
+  eventEmotionExitSelect: document.querySelector("#eventEmotionExitSelect"),
+  deleteEvent: document.querySelector("#deleteEvent"),
+  entryCount: document.querySelector("#entryCount"),
+  entryList: document.querySelector("#entryList"),
+  addTypeButtons: [...document.querySelectorAll("[data-add-type]")],
+
+  emptyInspector: document.querySelector("#emptyInspector"),
+  entryInspector: document.querySelector("#entryInspector"),
+  inspectorBreadcrumb: document.querySelector("#inspectorBreadcrumb"),
+  inspectorTypeBadge: document.querySelector("#inspectorTypeBadge"),
+  inspectorTitle: document.querySelector("#inspectorTitle"),
+  inspectorBody: document.querySelector("#inspectorBody"),
+  moveEntryUp: document.querySelector("#moveEntryUp"),
+  moveEntryDown: document.querySelector("#moveEntryDown"),
+  duplicateEntry: document.querySelector("#duplicateEntry"),
+  deleteEntry: document.querySelector("#deleteEntry"),
+
+  projectPanel: document.querySelector("#projectPanel"),
+  closeProjectPanel: document.querySelector("#closeProjectPanel"),
+  addAffectionTarget: document.querySelector("#addAffectionTarget"),
+  affectionTargetList: document.querySelector("#affectionTargetList"),
+  addEmotionTarget: document.querySelector("#addEmotionTarget"),
+  emotionTargetList: document.querySelector("#emotionTargetList"),
+  addVariable: document.querySelector("#addVariable"),
+  variableList: document.querySelector("#variableList"),
+  addAsset: document.querySelector("#addAsset"),
+  assetList: document.querySelector("#assetList")
+};
+
+/* ---------- STORAGE ---------- */
+
+function persistState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function persistPrefs() {
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+}
+
+/* ---------- VARIABLES / CONDITIONS ---------- */
+
+function getVariableDef(variableId, sourceState = state) {
+  return sourceState.variables.find(variable => variable.id === variableId) || null;
+}
+
+function parseVariableValue(variable, value) {
+  if (!variable) return value;
+
+  if (variable.type === "number") {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+  }
+
+  if (variable.type === "boolean") {
+    if (typeof value === "boolean") return value;
+    return String(value).toLowerCase() === "true";
+  }
+
+  return String(value ?? "");
+}
+
+function makeDefaultVariables(sourceState = state) {
+  const values = {};
+  sourceState.variables.forEach(variable => {
+    values[variable.id] = parseVariableValue(variable, variable.defaultValue);
+  });
+  return values;
+}
+
+function conditionPasses(condition) {
+  if (!condition?.variableId) return true;
+
+  const variable = getVariableDef(condition.variableId);
+  if (!variable) return true;
+
+  const current = runtime.variables[variable.id] ?? parseVariableValue(variable, variable.defaultValue);
+  const expected = parseVariableValue(variable, condition.value);
+
+  switch (condition.operator) {
+    case "!=": return current !== expected;
+    case ">": return Number(current) > Number(expected);
+    case ">=": return Number(current) >= Number(expected);
+    case "<": return Number(current) < Number(expected);
+    case "<=": return Number(current) <= Number(expected);
+    case "truthy": return Boolean(current);
+    case "falsy": return !current;
+    case "==":
+    default: return current === expected;
+  }
+}
+
+function applyEffects(effects) {
+  normalizeEffects(effects).forEach(effect => {
+    if (!effect.variableId) return;
+
+    const variable = getVariableDef(effect.variableId);
+    if (!variable) return;
+
+    const current = runtime.variables[variable.id] ?? parseVariableValue(variable, variable.defaultValue);
+    const value = parseVariableValue(variable, effect.value);
+
+    switch (effect.operation) {
+      case "add":
+        runtime.variables[variable.id] = Number(current) + Number(value);
+        break;
+      case "subtract":
+        runtime.variables[variable.id] = Number(current) - Number(value);
+        break;
+      case "toggle":
+        runtime.variables[variable.id] = !Boolean(current);
+        break;
+      case "set":
+      default:
+        runtime.variables[variable.id] = value;
+        break;
+    }
+  });
+}
+
+function getAffectionTargetDef(targetId, sourceState = state) {
+  return sourceState.affectionTargets.find(target => target.id === targetId) || null;
+}
+
+function makeDefaultAffection(sourceState = state) {
+  const values = {};
+  sourceState.affectionTargets.forEach(target => {
+    values[target.id] = Math.min(100, Math.max(0, Number(target.initialValue) || 0));
+  });
+  return values;
+}
+
+function affectionConditionPasses(condition) {
+  if (!condition?.targetId) return true;
+  const target = getAffectionTargetDef(condition.targetId);
+  if (!target) return true;
+
+  const current = Number(runtime.affection[target.id] ?? target.initialValue ?? 0);
+  const expected = Number(condition.value) || 0;
+
+  switch (condition.operator) {
+    case ">": return current > expected;
+    case "<": return current < expected;
+    case "<=": return current <= expected;
+    case "==": return current === expected;
+    case "!=": return current !== expected;
+    case ">=":
+    default: return current >= expected;
+  }
+}
+
+function ownerPasses(owner) {
+  return conditionPasses(owner?.condition)
+    && affectionConditionPasses(owner?.affectionCondition)
+    && emotionConditionPasses(owner?.emotionCondition);
+}
+
+let statusToastTimer = null;
+
+function showStatusToast(messages) {
+  if (!el.affectionToast || !messages.length) return;
+  if (statusToastTimer) clearTimeout(statusToastTimer);
+
+  el.affectionToast.textContent = messages.join(" · ");
+  el.affectionToast.hidden = false;
+
+  statusToastTimer = setTimeout(() => {
+    el.affectionToast.hidden = true;
+    statusToastTimer = null;
+  }, 1400);
+}
+
+function applyAffectionEffects(effects) {
+  const messages = [];
+
+  normalizeAffectionEffects(effects).forEach(effect => {
+    if (!effect.targetId || !effect.amount) return;
+    const target = getAffectionTargetDef(effect.targetId);
+    if (!target) return;
+
+    const current = Number(runtime.affection[target.id] ?? target.initialValue ?? 0);
+    const next = Math.min(100, Math.max(0, current + Number(effect.amount)));
+    const delta = next - current;
+    runtime.affection[target.id] = next;
+
+    if (delta !== 0) {
+      messages.push(target.name + " 호감도 " + (delta > 0 ? "+" : "") + delta);
+    }
+  });
+
+  showStatusToast(messages);
+}
+
+function getEmotionTargetDef(targetId, sourceState = state) {
+  return sourceState.emotionTargets.find(target => target.id === targetId) || null;
+}
+
+function makeDefaultEmotions(sourceState = state) {
+  const values = {};
+  sourceState.emotionTargets.forEach(target => {
+    values[target.id] = {
+      state: target.defaultState,
+      intensity: target.defaultIntensity
+    };
+  });
+  return values;
+}
+
+function emotionConditionPasses(condition) {
+  if (!condition?.targetId) return true;
+  const target = getEmotionTargetDef(condition.targetId);
+  if (!target) return true;
+
+  const current = runtime.emotions[target.id] || {
+    state: target.defaultState,
+    intensity: target.defaultIntensity
+  };
+
+  if (condition.state && current.state !== condition.state) return false;
+
+  const intensity = Number(current.intensity) || 0;
+  const expected = Number(condition.intensityValue) || 0;
+
+  switch (condition.intensityOperator) {
+    case ">": return intensity > expected;
+    case "<": return intensity < expected;
+    case "<=": return intensity <= expected;
+    case "==": return intensity === expected;
+    case "!=": return intensity !== expected;
+    case ">=":
+    default: return intensity >= expected;
+  }
+}
+
+function applyEmotionEffects(effects) {
+  const messages = [];
+
+  normalizeEmotionEffects(effects).forEach(effect => {
+    if (!effect.targetId) return;
+    const target = getEmotionTargetDef(effect.targetId);
+    if (!target) return;
+
+    runtime.emotions[target.id] = {
+      state: effect.state,
+      intensity: effect.intensity
+    };
+
+    messages.push(target.name + " 감정 → " + emotionLabel(effect.state) + " " + effect.intensity);
+  });
+
+  showStatusToast(messages);
+}
+
+function resetEmotionsToDefaults() {
+  runtime.emotions = makeDefaultEmotions();
+}
+
+function applyEventEmotionExit(event) {
+  if (event?.emotionExitMode === "reset") {
+    resetEmotionsToDefaults();
+  }
+}
+
+/* ---------- RUNTIME / SAVE ---------- */
+
+function createRuntime(eventId) {
+  const startEvent = state.events.some(event => event.id === eventId)
+    ? eventId
+    : state.events[0]?.id || "";
+
+  return {
+    eventId: startEvent,
+    frames: startEvent
+      ? [{ sourceType: "event", sourceId: startEvent, index: 0, label: "본편", exitMode: "continue", targetEventId: "" }]
+      : [],
+    variables: makeDefaultVariables(),
+    affection: makeDefaultAffection(),
+    emotions: makeDefaultEmotions(),
+    log: [],
+    choices: [],
+    seenEntries: [],
+    ended: false
+  };
+}
+
+function normalizeRuntime(raw) {
+  const base = createRuntime(raw?.eventId || state.activeEventId);
+  if (!raw || typeof raw !== "object") return base;
+
+  const eventId = state.events.some(event => event.id === raw.eventId)
+    ? raw.eventId
+    : base.eventId;
+
+  const defaults = makeDefaultVariables();
+  const variables = { ...defaults };
+
+  if (raw.variables && typeof raw.variables === "object") {
+    Object.keys(raw.variables).forEach(key => {
+      const variable = getVariableDef(key);
+      if (variable) variables[key] = parseVariableValue(variable, raw.variables[key]);
+    });
+  }
+
+  const affection = makeDefaultAffection();
+  if (raw.affection && typeof raw.affection === "object") {
+    Object.keys(raw.affection).forEach(key => {
+      if (getAffectionTargetDef(key)) {
+        affection[key] = Math.min(100, Math.max(0, Number(raw.affection[key]) || 0));
+      }
+    });
+  }
+
+  const emotions = makeDefaultEmotions();
+  if (raw.emotions && typeof raw.emotions === "object") {
+    Object.keys(raw.emotions).forEach(key => {
+      const target = getEmotionTargetDef(key);
+      const source = raw.emotions[key];
+      if (target && source && typeof source === "object") {
+        emotions[key] = {
+          state: EMOTION_STATES.some(([id]) => id === source.state) ? source.state : target.defaultState,
+          intensity: Math.min(100, Math.max(0, Number(source.intensity) || 0))
+        };
+      }
+    });
+  }
+
+  return {
+    eventId,
+    frames: Array.isArray(raw.frames) && raw.frames.length
+      ? raw.frames.map(frame => ({
+          sourceType: frame.sourceType === "option" ? "option" : "event",
+          sourceId: frame.sourceId || eventId,
+          index: Math.max(0, Number(frame.index) || 0),
+          label: frame.label || "본편",
+          exitMode: frame.exitMode === "end" ? "end" : "continue",
+          targetEventId: frame.targetEventId || ""
+        }))
+      : [{ sourceType: "event", sourceId: eventId, index: 0, label: "본편", exitMode: "continue", targetEventId: "" }],
+    variables,
+    affection,
+    emotions,
+    log: Array.isArray(raw.log) ? raw.log.slice(-200) : [],
+    choices: Array.isArray(raw.choices) ? raw.choices.slice(-200) : [],
+    seenEntries: Array.isArray(raw.seenEntries) ? [...new Set(raw.seenEntries)] : [],
+    ended: Boolean(raw.ended)
+  };
+}
+
+/* ---------- PLAYBACK LOOKUP ---------- */
+
+function getRuntimeEvent() {
+  return state.events.find(event => event.id === runtime.eventId) || state.events[0] || null;
+}
+
+function findOptionById(optionId, entries = getRuntimeEvent()?.entries || []) {
+  for (const entry of entries) {
+    if (entry.type !== "choice") continue;
+
+    for (const option of entry.options) {
+      if (option.id === optionId) return option;
+      const nested = findOptionById(optionId, option.entries);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+function resolveFrameEntries(frame) {
+  if (!frame) return [];
+
+  if (frame.sourceType === "option") {
+    return findOptionById(frame.sourceId)?.entries || [];
+  }
+
+  const event = state.events.find(item => item.id === frame.sourceId);
+  return event?.entries || [];
+}
+
+function currentFrame() {
+  return runtime.frames[runtime.frames.length - 1] || null;
+}
+
+function visibleOptions(entry) {
+  return entry.options.filter(option => ownerPasses(option));
+}
+
+function jumpToEvent(eventId) {
+  const departingEvent = getRuntimeEvent();
+  const event = state.events.find(item => item.id === eventId);
+
+  if (!event) {
+    runtime.ended = true;
+    return;
+  }
+
+  applyEventEmotionExit(departingEvent);
+
+  runtime.eventId = event.id;
+  runtime.frames = [{
+    sourceType: "event",
+    sourceId: event.id,
+    index: 0,
+    label: "본편",
+    exitMode: "continue",
+    targetEventId: ""
+  }];
+  runtime.ended = false;
+  state.activeEventId = event.id;
+  persistState();
+  viewToken = "";
+}
+
+function finishCurrentEventNow() {
+  const event = getRuntimeEvent();
+
+  if (event?.nextEventId && state.events.some(item => item.id === event.nextEventId)) {
+    jumpToEvent(event.nextEventId);
+    return true;
+  }
+
+  applyEventEmotionExit(event);
+  runtime.ended = true;
+  return false;
+}
+
+function settlePlayback() {
+  let guard = 0;
+
+  while (guard++ < 1000) {
+    if (runtime.ended) return false;
+
+    const frame = currentFrame();
+    if (!frame) {
+      runtime.ended = true;
+      return false;
+    }
+
+    const entries = resolveFrameEntries(frame);
+
+    if (frame.index >= entries.length) {
+      if (frame.sourceType === "option") {
+        const target = frame.targetEventId;
+        runtime.frames.pop();
+
+        if (target) {
+          jumpToEvent(target);
+          continue;
+        }
+
+        if (frame.exitMode === "end") {
+          finishCurrentEventNow();
+          continue;
+        }
+
+        continue;
+      }
+
+      const event = getRuntimeEvent();
+      if (event?.nextEventId && state.events.some(item => item.id === event.nextEventId)) {
+        jumpToEvent(event.nextEventId);
+        continue;
+      }
+
+      applyEventEmotionExit(event);
+      runtime.ended = true;
+      return false;
+    }
+
+    const entry = entries[frame.index];
+
+    if (!ownerPasses(entry)) {
+      frame.index += 1;
+      continue;
+    }
+
+    if (entry.type === "choice" && visibleOptions(entry).length === 0) {
+      frame.index += 1;
+      continue;
+    }
+
+    return true;
+  }
+
+  console.warn("재생 흐름 보호 제한에 도달했습니다.");
+  runtime.ended = true;
+  return false;
+}
+
+function makeViewToken(entry) {
+  const path = runtime.frames
+    .map(frame => frame.sourceType + ":" + frame.sourceId + ":" + frame.index)
+    .join("|");
+  return runtime.eventId + "|" + path + "|" + entry.id;
+}
+
+/* ---------- TYPEWRITER / MODES ---------- */
+
+function clearTypingTimer() {
+  if (typing.timer) clearInterval(typing.timer);
+  typing.timer = null;
+}
+
+function clearModeTimer() {
+  if (modeTimer) clearTimeout(modeTimer);
+  modeTimer = null;
+}
+
+function clearPlaybackTimers() {
+  clearTypingTimer();
+  clearModeTimer();
+}
+
+function startTyping(text, token) {
+  clearTypingTimer();
+  clearModeTimer();
+
+  typing = {
+    token,
+    fullText: text || "",
+    index: 0,
+    done: false,
+    timer: null
+  };
+
+  if (prefs.textSpeed === 0 || !typing.fullText) {
+    finishTyping();
+    return;
+  }
+
+  el.dialogueText.textContent = "";
+
+  typing.timer = setInterval(() => {
+    typing.index += 1;
+    el.dialogueText.textContent = typing.fullText.slice(0, typing.index);
+
+    if (typing.index >= typing.fullText.length) {
+      clearTypingTimer();
+      typing.done = true;
+      scheduleModeAdvance();
+    }
+  }, prefs.textSpeed);
+}
+
+function finishTyping() {
+  clearTypingTimer();
+  typing.index = typing.fullText.length;
+  typing.done = true;
+  el.dialogueText.textContent = typing.fullText;
+  scheduleModeAdvance();
+}
+
+function scheduleModeAdvance() {
+  clearModeTimer();
+
+  if (!typing.done || !el.choiceCard.hidden || runtime.ended) return;
+
+  if (autoMode) {
+    modeTimer = setTimeout(() => advanceDialogue(true), prefs.autoDelay);
+  }
+}
+
+function updateModeButtons() {
+  el.autoButton.classList.toggle("active", autoMode);
+}
+
+function toggleAuto() {
+  autoMode = !autoMode;
+  updateModeButtons();
+
+  if (autoMode && typing.done) scheduleModeAdvance();
+  else clearModeTimer();
+}
+
+/* ---------- LOG ---------- */
+
+function addDialogueLog(entry, token) {
+  if (viewToken === token) return;
+  viewToken = token;
+
+  runtime.log.push({
+    kind: entry.type,
+    speaker: entry.type === "narration" ? "" : (entry.speaker || ""),
+    text: entry.text || "",
+    eventName: getRuntimeEvent()?.name || "",
+    time: Date.now()
+  });
+
+  if (runtime.log.length > 200) runtime.log.splice(0, runtime.log.length - 200);
+}
+
+function addChoiceLog(entry, option) {
+  runtime.log.push({
+    kind: "choice",
+    speaker: "CHOICE",
+    text: (entry.prompt || "선택") + " → " + (option.label || "선택지"),
+    eventName: getRuntimeEvent()?.name || "",
+    time: Date.now()
+  });
+
+  runtime.choices.push({
+    entryId: entry.id,
+    optionId: option.id,
+    optionLabel: option.label || "",
+    eventId: runtime.eventId,
+    time: Date.now()
+  });
+
+  if (runtime.log.length > 200) runtime.log.splice(0, runtime.log.length - 200);
+  if (runtime.choices.length > 200) runtime.choices.splice(0, runtime.choices.length - 200);
+}
+
+/* ---------- PLAYBACK RENDER ---------- */
+
+function renderEventSelect() {
+  el.eventSelect.innerHTML = "";
+
+  state.events.forEach(event => {
+    const option = document.createElement("option");
+    option.value = event.id;
+    option.textContent = event.name;
+    option.selected = event.id === runtime.eventId;
+    el.eventSelect.append(option);
+  });
+}
+
+function hideAllStageCards() {
+  el.dialogueCard.hidden = true;
+  el.choiceCard.hidden = true;
+  el.emptyState.hidden = true;
+  el.endState.hidden = true;
+}
+
+function showDialogue(entry, frame) {
+  const narration = entry.type === "narration";
+  const token = makeViewToken(entry);
+
+  hideAllStageCards();
+  el.dialogueCard.hidden = false;
+  el.dialogueCard.classList.toggle("narration", narration);
+
+  el.eventBadge.textContent = narration
+    ? "NARRATION"
+    : (runtime.frames.length > 1 ? "BRANCH" : "DIALOGUE");
+  el.speakerName.textContent = narration ? "" : (entry.speaker.trim() || "UNKNOWN");
+  el.progressText.textContent =
+    frame.label + " · " + (frame.index + 1) + " / " + resolveFrameEntries(frame).length;
+
+  const isRootEnd =
+    runtime.frames.length === 1 &&
+    frame.index === resolveFrameEntries(frame).length - 1 &&
+    !getRuntimeEvent()?.nextEventId;
+
+  el.nextLine.textContent = isRootEnd ? "끝" : "다음";
+
+  addDialogueLog(entry, token);
+
+  if (typing.token !== token) {
+    startTyping(entry.text || "", token);
+  } else {
+    el.dialogueText.textContent = typing.done
+      ? typing.fullText
+      : typing.fullText.slice(0, typing.index);
+  }
+}
+
+function showChoice(entry) {
+  clearPlaybackTimers();
+
+  hideAllStageCards();
+  el.choiceCard.hidden = false;
+  el.eventBadge.textContent = "CHOICE";
+  el.choicePrompt.textContent = entry.prompt || "무엇을 선택할까?";
+  el.choiceDepth.textContent =
+    runtime.frames.length > 1 ? "분기 " + (runtime.frames.length - 1) + "단계" : "본편";
+  el.choiceButtons.innerHTML = "";
+
+  updateModeButtons();
+
+  visibleOptions(entry).forEach(option => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "choice-play-button";
+    button.textContent = option.label || "이름 없는 선택지";
+    button.addEventListener("click", () => chooseOption(entry, option));
+    el.choiceButtons.append(button);
+  });
+}
+
+function renderStage() {
+  const initialEvent = getRuntimeEvent();
+
+  if (!initialEvent) {
+    renderEventSelect();
+    el.eventTitle.textContent = "";
+    hideAllStageCards();
+    el.endState.hidden = false;
+    return;
+  }
+
+  const playable = settlePlayback();
+  const event = getRuntimeEvent();
+
+  renderEventSelect();
+  el.eventTitle.textContent = event?.name || "";
+
+  if (!playable) {
+    hideAllStageCards();
+    el.endState.hidden = false;
+    el.eventBadge.textContent = "END";
+    clearPlaybackTimers();
+    return;
+  }
+
+  const frame = currentFrame();
+  const entry = resolveFrameEntries(frame)[frame.index];
+
+  if (!entry) {
+    hideAllStageCards();
+    el.endState.hidden = false;
+    return;
+  }
+
+  if (entry.type === "choice") showChoice(entry);
+  else showDialogue(entry, frame);
+}
+
+function renderApp() {
+  renderStage();
+}
+
+function switchPlaybackEvent(eventId) {
+  clearPlaybackTimers();
+  runtime = createRuntime(eventId);
+  state.activeEventId = runtime.eventId;
+  persistState();
+
+  autoMode = false;
+  viewToken = "";
+  typing.token = "";
+
+  updateModeButtons();
+  renderApp();
+}
+
+function advanceDialogue(fromMode = false) {
+  const frame = currentFrame();
+  if (!frame || runtime.ended) return;
+
+  const entry = resolveFrameEntries(frame)[frame.index];
+  if (!entry || entry.type === "choice") return;
+
+  if (!typing.done && !fromMode) {
+    finishTyping();
+    return;
+  }
+
+  clearPlaybackTimers();
+  applyEffects(entry.effects);
+  applyAffectionEffects(entry.affectionEffects);
+  applyEmotionEffects(entry.emotionEffects);
+
+  if (!runtime.seenEntries.includes(entry.id)) {
+    runtime.seenEntries.push(entry.id);
+  }
+
+  frame.index += 1;
+  typing.token = "";
+  renderStage();
+}
+
+function chooseOption(entry, option) {
+  const frame = currentFrame();
+  if (!frame) return;
+
+  clearPlaybackTimers();
+  applyEffects(entry.effects);
+  applyAffectionEffects(entry.affectionEffects);
+  applyEmotionEffects(entry.emotionEffects);
+  applyEffects(option.effects);
+  applyAffectionEffects(option.affectionEffects);
+  applyEmotionEffects(option.emotionEffects);
+
+  if (!runtime.seenEntries.includes(entry.id)) {
+    runtime.seenEntries.push(entry.id);
+  }
+
+  addChoiceLog(entry, option);
+  frame.index += 1;
+
+  if (option.entries.length) {
+    runtime.frames.push({
+      sourceType: "option",
+      sourceId: option.id,
+      index: 0,
+      label: option.label || "선택 분기",
+      exitMode: option.exitMode === "end" ? "end" : "continue",
+      targetEventId: option.targetEventId || ""
+    });
+  } else if (option.targetEventId) {
+    jumpToEvent(option.targetEventId);
+  } else if (option.exitMode === "end") {
+    finishCurrentEventNow();
+  }
+
+  typing.token = "";
+  renderStage();
+}
+
+/* ---------- TITLE ---------- */
+
+/* ---------- GAME MODAL ---------- */
+
+function openGameModal(title) {
+  clearModeTimer();
+  el.gameModalTitle.textContent = title;
+  el.gameModalBody.innerHTML = "";
+  el.gameModal.hidden = false;
+}
+
+function closeGameModal() {
+  el.gameModal.hidden = true;
+  if (autoMode && typing.done) scheduleModeAdvance();
+}
+
+function openLogModal() {
+  openGameModal("대사 로그");
+
+  const list = document.createElement("div");
+  list.className = "log-list";
+
+  if (!runtime.log.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "아직 기록된 대사가 없습니다.";
+    list.append(empty);
+  } else {
+    runtime.log.slice().reverse().forEach(item => {
+      const row = document.createElement("article");
+      row.className = "log-item" + (item.kind === "choice" ? " choice-log" : "");
+
+      const label = document.createElement("small");
+      label.textContent =
+        (item.eventName ? item.eventName + " · " : "") +
+        (item.kind === "narration" ? "지문" : (item.speaker || "대사"));
+
+      const text = document.createElement("p");
+      text.textContent = item.text;
+
+      row.append(label, text);
+      list.append(row);
+    });
+  }
+
+  el.gameModalBody.append(list);
+}
+
+function openAffectionModal() {
+  openGameModal("호감도");
+
+  const list = document.createElement("div");
+  list.className = "affection-list";
+
+  if (!state.affectionTargets.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "등록된 호감도 대상이 없습니다.";
+    list.append(empty);
+  } else {
+    state.affectionTargets.forEach(target => {
+      const value = Math.min(100, Math.max(0, Number(runtime.affection[target.id] ?? target.initialValue) || 0));
+
+      const card = document.createElement("article");
+      card.className = "affection-card";
+
+      const head = document.createElement("div");
+      head.className = "affection-card-head";
+
+      const name = document.createElement("strong");
+      name.textContent = target.name;
+
+      const score = document.createElement("span");
+      score.textContent = value + " / 100";
+
+      head.append(name, score);
+
+      const track = document.createElement("div");
+      track.className = "affection-track";
+
+      const fill = document.createElement("div");
+      fill.className = "affection-fill";
+      fill.style.width = value + "%";
+      track.append(fill);
+
+      const sub = document.createElement("div");
+      sub.className = "affection-sub";
+      sub.textContent = value < 25 ? "낮음" : value < 50 ? "관심" : value < 75 ? "가까움" : "높음";
+
+      card.append(head, track, sub);
+      list.append(card);
+    });
+  }
+
+  el.gameModalBody.append(list);
+}
+
+function openEmotionModal() {
+  openGameModal("감정 상태");
+
+  const list = document.createElement("div");
+  list.className = "emotion-list";
+
+  if (!state.emotionTargets.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "등록된 감정 대상이 없습니다.";
+    list.append(empty);
+  } else {
+    state.emotionTargets.forEach(target => {
+      const current = runtime.emotions[target.id] || {
+        state: target.defaultState,
+        intensity: target.defaultIntensity
+      };
+
+      const card = document.createElement("article");
+      card.className = "emotion-card";
+
+      const head = document.createElement("div");
+      head.className = "emotion-card-head";
+
+      const name = document.createElement("strong");
+      name.textContent = target.name;
+
+      const badge = document.createElement("span");
+      badge.className = "emotion-badge";
+      badge.textContent = emotionLabel(current.state);
+
+      head.append(name, badge);
+
+      const track = document.createElement("div");
+      track.className = "emotion-track";
+
+      const fill = document.createElement("div");
+      fill.className = "emotion-fill";
+      fill.style.width = current.intensity + "%";
+      track.append(fill);
+
+      const sub = document.createElement("div");
+      sub.className = "emotion-sub";
+      sub.textContent = "강도 " + current.intensity + " / 100";
+
+      card.append(head, track, sub);
+      list.append(card);
+    });
+  }
+
+  el.gameModalBody.append(list);
+}
+
+function openPlaySettingsModal() {
+  openGameModal("플레이 설정");
+
+  const speed = makeRangeSetting(
+    "텍스트 속도",
+    prefs.textSpeed,
+    0,
+    80,
+    1,
+    value => value === 0 ? "즉시" : value + "ms",
+    value => {
+      prefs.textSpeed = Number(value);
+      persistPrefs();
+    }
+  );
+
+  const auto = makeRangeSetting(
+    "AUTO 대기",
+    prefs.autoDelay,
+    250,
+    3000,
+    50,
+    value => value + "ms",
+    value => {
+      prefs.autoDelay = Number(value);
+      persistPrefs();
+    }
+  );
+
+  const checkLabel = document.createElement("label");
+  checkLabel.className = "setting-check";
+  const check = document.createElement("input");
+  check.type = "checkbox";
+  check.checked = prefs.stageClick;
+  check.addEventListener("change", event => {
+    prefs.stageClick = event.target.checked;
+    persistPrefs();
+  });
+  const checkText = document.createElement("span");
+  checkText.textContent = "대화 화면 클릭으로 진행";
+  checkLabel.append(check, checkText);
+
+  el.gameModalBody.append(speed, auto, checkLabel);
+}
+
+function makeRangeSetting(label, value, min, max, step, format, onChange) {
+  const wrap = document.createElement("div");
+  wrap.className = "play-setting";
+
+  const head = document.createElement("div");
+  head.className = "play-setting-head";
+  const name = document.createElement("span");
+  name.textContent = label;
+  const output = document.createElement("strong");
+  output.textContent = format(value);
+  head.append(name, output);
+
+  const input = document.createElement("input");
+  input.type = "range";
+  input.min = String(min);
+  input.max = String(max);
+  input.step = String(step);
+  input.value = String(value);
+  input.addEventListener("input", event => {
+    output.textContent = format(Number(event.target.value));
+    onChange(event.target.value);
+  });
+
+  wrap.append(head, input);
+  return wrap;
+}
+
+/* ---------- EDITOR STATE ---------- */
+
+function getDraftEvent() {
+  return draftState?.events.find(event => event.id === draftActiveEventId) || null;
+}
+
+function openSettings() {
+  clearPlaybackTimers();
+  draftState = clone(state);
+  draftActiveEventId = state.activeEventId;
+  const event = getDraftEvent();
+  selectedEntryId = event?.entries[0]?.id || null;
+
+  el.projectPanel.hidden = true;
+  renderEditor();
+  el.settingsOverlay.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function cancelSettings() {
+  draftState = null;
+  draftActiveEventId = null;
+  selectedEntryId = null;
+  el.projectPanel.hidden = true;
+  el.settingsOverlay.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function sanitizeLinks(project) {
+  const eventIds = new Set(project.events.map(event => event.id));
+
+  function cleanEntries(entries) {
+    entries.forEach(entry => {
+      if (entry.type !== "choice") return;
+
+      entry.options.forEach(option => {
+        if (option.targetEventId && !eventIds.has(option.targetEventId)) {
+          option.targetEventId = "";
+        }
+        cleanEntries(option.entries);
+      });
+    });
+  }
+
+  project.events.forEach(event => {
+    if (event.nextEventId && !eventIds.has(event.nextEventId)) {
+      event.nextEventId = "";
+    }
+    cleanEntries(event.entries);
+  });
+}
+
+function saveSettings() {
+  if (!draftState) return;
+
+  draftState = normalizeState(draftState);
+  sanitizeLinks(draftState);
+
+  if (!draftState.events.some(event => event.id === draftActiveEventId)) {
+    draftActiveEventId = draftState.events[0].id;
+  }
+
+  draftState.activeEventId = draftActiveEventId;
+  state = clone(draftState);
+  persistState();
+
+  runtime = createRuntime(state.activeEventId);
+  viewToken = "";
+  typing.token = "";
+  renderApp();
+  cancelSettings();
+}
+
+function switchDraftEvent(eventId) {
+  if (!draftState?.events.some(event => event.id === eventId)) return;
+
+  draftActiveEventId = eventId;
+  const event = getDraftEvent();
+  selectedEntryId = event.entries[0]?.id || null;
+  renderEditor();
+}
+
+function createNewEvent() {
+  if (!draftState) return;
+
+  const event = {
+    id: createId("event"),
+    name: "새 이벤트",
+    nextEventId: "",
+    emotionExitMode: "keep",
+    entries: []
+  };
+
+  draftState.events.push(event);
+  draftActiveEventId = event.id;
+  selectedEntryId = null;
+  renderEditor();
+  el.eventNameInput.focus();
+  el.eventNameInput.select();
+}
+
+function deleteCurrentEvent() {
+  if (!draftState) return;
+
+  const currentIndex = draftState.events.findIndex(event => event.id === draftActiveEventId);
+  if (currentIndex < 0) return;
+
+  draftState.events.splice(currentIndex, 1);
+
+  if (!draftState.events.length) {
+    draftState.events.push({
+      id: createId("event"),
+      name: "새 이벤트",
+      nextEventId: "",
+      emotionExitMode: "keep",
+      entries: []
+    });
+  }
+
+  sanitizeLinks(draftState);
+
+  const nextIndex = Math.min(currentIndex, draftState.events.length - 1);
+  draftActiveEventId = draftState.events[nextIndex].id;
+  selectedEntryId = draftState.events[nextIndex].entries[0]?.id || null;
+  renderEditor();
+}
+
+function updateDraftEventName(value) {
+  const event = getDraftEvent();
+  if (!event) return;
+  event.name = value;
+  renderEditorEventList();
+  renderEventNextSelect();
+}
+
+/* ---------- EDITOR RENDER ---------- */
+
+function renderEditor() {
+  const event = getDraftEvent();
+
+  renderEditorEventList();
+  renderEventNextSelect();
+
+  if (!event) {
+    el.eventNameInput.value = "";
+    el.eventIdInput.value = "";
+    el.entryCount.textContent = "0개";
+    el.entryList.innerHTML = "";
+    renderInspector();
+    return;
+  }
+
+  el.eventNameInput.value = event.name;
+  el.eventIdInput.value = event.id;
+  el.eventNextSelect.value = event.nextEventId || "";
+  el.eventEmotionExitSelect.value = event.emotionExitMode || "keep";
+
+  renderFlowList();
+  renderInspector();
+  renderProjectPanel();
+}
+
+function renderEditorEventList() {
+  el.editorEventList.innerHTML = "";
+  if (!draftState) return;
+
+  draftState.events.forEach(event => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "event-item" + (event.id === draftActiveEventId ? " active" : "");
+    button.addEventListener("click", () => switchDraftEvent(event.id));
+
+    const main = document.createElement("span");
+    main.className = "event-item-main";
+
+    const name = document.createElement("strong");
+    name.textContent = event.name || "이름 없는 이벤트";
+
+    const id = document.createElement("small");
+    id.textContent = event.id;
+
+    main.append(name, id);
+
+    const count = document.createElement("span");
+    count.className = "event-count";
+    count.textContent = event.entries.length + "개";
+
+    button.append(main, count);
+    el.editorEventList.append(button);
+  });
+}
+
+function renderEventNextSelect() {
+  if (!draftState) return;
+
+  const current = getDraftEvent();
+  const selected = current?.nextEventId || "";
+
+  el.eventNextSelect.innerHTML = "";
+
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = "이벤트 종료";
+  el.eventNextSelect.append(none);
+
+  draftState.events.forEach(event => {
+    if (event.id === current?.id) return;
+
+    const option = document.createElement("option");
+    option.value = event.id;
+    option.textContent = event.name;
+    el.eventNextSelect.append(option);
+  });
+
+  el.eventNextSelect.value = selected;
+}
+
+function entryKind(entry) {
+  if (entry.type === "choice") return "CHOICE";
+  if (entry.type === "narration") return "NARRATION";
+  return "DIALOGUE";
+}
+
+function entryLabel(entry) {
+  if (entry.type === "choice") return entry.prompt || "질문을 입력하세요";
+  if (entry.type === "narration") return entry.text || "빈 지문";
+
+  const prefix = entry.speaker ? entry.speaker + ": " : "";
+  return prefix + (entry.text || "빈 대사");
+}
+
+function renderFlowList() {
+  const event = getDraftEvent();
+  el.entryList.innerHTML = "";
+
+  if (!event) {
+    el.entryCount.textContent = "0개";
+    return;
+  }
+
+  el.entryCount.textContent = event.entries.length + "개";
+
+  if (!event.entries.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "위 버튼으로 첫 항목을 추가하세요.";
+    el.entryList.append(empty);
+    return;
+  }
+
+  event.entries.forEach((entry, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className =
+      "flow-item" +
+      (entry.type === "choice" ? " choice" : "") +
+      (entry.id === selectedEntryId ? " active" : "");
+
+    button.addEventListener("click", () => {
+      selectedEntryId = entry.id;
+      renderFlowList();
+      renderInspector();
+    });
+
+    const number = document.createElement("span");
+    number.className = "flow-index";
+    number.textContent = String(index + 1).padStart(2, "0");
+
+    const main = document.createElement("span");
+    main.className = "flow-main";
+
+    const kind = document.createElement("span");
+    kind.className = "flow-kind";
+    kind.textContent = entryKind(entry);
+
+    const preview = document.createElement("span");
+    preview.className = "flow-preview";
+    preview.textContent = entryLabel(entry);
+
+    main.append(kind, preview);
+    button.append(number, main);
+    el.entryList.append(button);
+  });
+}
+
+/* ---------- ENTRY LOOKUP / EDIT ---------- */
+
+function findEntryContext(id, entries = getDraftEvent()?.entries || [], ancestors = []) {
+  for (let index = 0; index < entries.length; index++) {
+    const entry = entries[index];
+
+    if (entry.id === id) {
+      return { entry, list: entries, index, ancestors };
+    }
+
+    if (entry.type === "choice") {
+      for (const option of entry.options) {
+        const found = findEntryContext(
+          id,
+          option.entries,
+          [...ancestors, { choice: entry, option }]
+        );
+        if (found) return found;
+      }
+    }
+  }
+
+  return null;
+}
+
+function selectEntry(id) {
+  selectedEntryId = id;
+  renderFlowList();
+  renderInspector();
+}
+
+function addEntryToList(list, type) {
+  const entry = makeEntry(type);
+  list.push(entry);
+  selectedEntryId = entry.id;
+  renderFlowList();
+  renderInspector();
+}
+
+function moveSelectedEntry(direction) {
+  const context = findEntryContext(selectedEntryId);
+  if (!context) return;
+
+  const target = context.index + direction;
+  if (target < 0 || target >= context.list.length) return;
+
+  [context.list[context.index], context.list[target]] =
+    [context.list[target], context.list[context.index]];
+
+  renderFlowList();
+  renderInspector();
+}
+
+function regenerateIds(entry) {
+  entry.id = createId("entry");
+  entry.effects = normalizeEffects(entry.effects).map(effect => ({
+    ...effect,
+    id: createId("effect")
+  }));
+  entry.affectionEffects = normalizeAffectionEffects(entry.affectionEffects).map(effect => ({
+    ...effect,
+    id: createId("affection-effect")
+  }));
+  entry.emotionEffects = normalizeEmotionEffects(entry.emotionEffects).map(effect => ({
+    ...effect,
+    id: createId("emotion-effect")
+  }));
+
+  if (entry.type === "choice") {
+    entry.options.forEach(option => {
+      option.id = createId("option");
+      option.effects = normalizeEffects(option.effects).map(effect => ({
+        ...effect,
+        id: createId("effect")
+      }));
+      option.affectionEffects = normalizeAffectionEffects(option.affectionEffects).map(effect => ({
+        ...effect,
+        id: createId("affection-effect")
+      }));
+      option.emotionEffects = normalizeEmotionEffects(option.emotionEffects).map(effect => ({
+        ...effect,
+        id: createId("emotion-effect")
+      }));
+      option.entries.forEach(regenerateIds);
+    });
+  }
+}
+
+function duplicateSelectedEntry() {
+  const context = findEntryContext(selectedEntryId);
+  if (!context) return;
+
+  const copy = clone(context.entry);
+  regenerateIds(copy);
+
+  context.list.splice(context.index + 1, 0, copy);
+  selectedEntryId = copy.id;
+
+  renderFlowList();
+  renderInspector();
+}
+
+function deleteSelectedEntry() {
+  const context = findEntryContext(selectedEntryId);
+  if (!context) return;
+
+  context.list.splice(context.index, 1);
+
+  const sibling = context.list[Math.min(context.index, context.list.length - 1)];
+  const parent = context.ancestors.at(-1)?.choice;
+
+  selectedEntryId = sibling?.id || parent?.id || getDraftEvent()?.entries[0]?.id || null;
+
+  renderFlowList();
+  renderInspector();
+}
+
+/* ---------- INSPECTOR BUILDERS ---------- */
+
+function makeField(labelText, control) {
+  const label = document.createElement("label");
+  label.className = "field";
+
+  const title = document.createElement("span");
+  title.textContent = labelText;
+
+  label.append(title, control);
+  return label;
+}
+
+function makeTextInput(value, placeholder, onInput) {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = value || "";
+  input.placeholder = placeholder || "";
+  input.addEventListener("input", event => onInput(event.target.value));
+  return input;
+}
+
+function makeTextarea(value, placeholder, onInput) {
+  const textarea = document.createElement("textarea");
+  textarea.value = value || "";
+  textarea.placeholder = placeholder || "";
+  textarea.addEventListener("input", event => onInput(event.target.value));
+  return textarea;
+}
+
+function makeSelect(options, value, onChange) {
+  const select = document.createElement("select");
+
+  options.forEach(([optionValue, label]) => {
+    const option = document.createElement("option");
+    option.value = optionValue;
+    option.textContent = label;
+    select.append(option);
+  });
+
+  select.value = value || "";
+  select.addEventListener("change", event => onChange(event.target.value));
+  return select;
+}
+
+function makeSection(title, help) {
+  const section = document.createElement("section");
+  section.className = "inspector-section";
+
+  const heading = document.createElement("h4");
+  heading.textContent = title;
+  section.append(heading);
+
+  if (help) {
+    const note = document.createElement("p");
+    note.className = "section-help";
+    note.textContent = help;
+    section.append(note);
+  }
+
+  return section;
+}
+
+function variableOptions(sourceState = draftState) {
+  return [
+    ["", "선택 안 함"],
+    ...(sourceState?.variables || []).map(variable => [variable.id, variable.name])
+  ];
+}
+
+function eventOptions(sourceState = draftState) {
+  return [
+    ["", "상위 흐름 계속"],
+    ...(sourceState?.events || []).map(event => [event.id, event.name])
+  ];
+}
+
+function branchExitOptions(owner, sourceState = draftState) {
+  return [
+    ["continue", "상위 흐름 계속"],
+    ["end", "현재 이벤트 종료"],
+    ...(sourceState?.events || []).map(event => ["event:" + event.id, "이벤트 이동 · " + event.name])
+  ];
+}
+
+function getBranchExitValue(owner) {
+  if (owner.targetEventId) return "event:" + owner.targetEventId;
+  return owner.exitMode === "end" ? "end" : "continue";
+}
+
+function renderConditionEditor(owner) {
+  const wrap = document.createElement("div");
+
+  if (!owner.condition) owner.condition = null;
+  const condition = owner.condition || { variableId: "", operator: "==", value: "" };
+
+  const grid = document.createElement("div");
+  grid.className = "rule-grid";
+
+  const variable = makeSelect(variableOptions(), condition.variableId, value => {
+    if (!value) {
+      owner.condition = null;
+      renderInspector();
+      return;
+    }
+
+    owner.condition = {
+      variableId: value,
+      operator: owner.condition?.operator || "==",
+      value: owner.condition?.value ?? ""
+    };
+  });
+
+  const operator = makeSelect([
+    ["==", "="],
+    ["!=", "≠"],
+    [">", ">"],
+    [">=", "≥"],
+    ["<", "<"],
+    ["<=", "≤"],
+    ["truthy", "참"],
+    ["falsy", "거짓"]
+  ], condition.operator, value => {
+    if (!owner.condition) return;
+    owner.condition.operator = value;
+  });
+
+  const value = makeTextInput(condition.value, "비교 값", newValue => {
+    if (!owner.condition) return;
+    owner.condition.value = newValue;
+  });
+
+  grid.append(variable, operator, value);
+
+  const label = document.createElement("p");
+  label.className = "section-help";
+  label.textContent = "조건이 맞을 때만 이 항목이 표시됩니다.";
+
+  wrap.append(label, grid);
+  return wrap;
+}
+
+function renderEffectsEditor(owner) {
+  const wrap = document.createElement("div");
+  const help = document.createElement("p");
+  help.className = "section-help";
+  help.textContent = "이 항목이 끝나거나 선택됐을 때 변수 값을 변경합니다.";
+  wrap.append(help);
+
+  const list = document.createElement("div");
+  list.className = "effect-list";
+
+  owner.effects = normalizeEffects(owner.effects);
+
+  owner.effects.forEach((effect, index) => {
+    const row = document.createElement("div");
+    row.className = "effect-row";
+
+    const variable = makeSelect(variableOptions(), effect.variableId, value => {
+      effect.variableId = value;
+    });
+
+    const operation = makeSelect([
+      ["set", "대입"],
+      ["add", "더하기"],
+      ["subtract", "빼기"],
+      ["toggle", "토글"]
+    ], effect.operation, value => {
+      effect.operation = value;
+    });
+
+    const value = makeTextInput(effect.value, "값", newValue => {
+      effect.value = newValue;
+    });
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", "효과 삭제");
+    remove.addEventListener("click", () => {
+      owner.effects.splice(index, 1);
+      renderInspector();
+    });
+
+    row.append(variable, operation, value, remove);
+    list.append(row);
+  });
+
+  if (!owner.effects.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "변수 효과 없음";
+    list.append(empty);
+  }
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "inline-add";
+  add.textContent = "+ 변수 효과 추가";
+  add.addEventListener("click", () => {
+    owner.effects.push({
+      id: createId("effect"),
+      variableId: draftState?.variables[0]?.id || "",
+      operation: "set",
+      value: "0"
+    });
+    renderInspector();
+  });
+
+  wrap.append(list, add);
+  return wrap;
+}
+
+function affectionTargetOptions(sourceState = draftState) {
+  return [
+    ["", "대상 선택"],
+    ...(sourceState?.affectionTargets || []).map(target => [target.id, target.name])
+  ];
+}
+
+function renderAffectionConditionEditor(owner) {
+  const wrap = document.createElement("div");
+
+  const label = document.createElement("p");
+  label.className = "affection-section-label";
+  label.textContent = "호감도 조건";
+
+  const condition = owner.affectionCondition || { targetId: "", operator: ">=", value: 0 };
+  const grid = document.createElement("div");
+  grid.className = "affection-condition-grid";
+
+  const target = makeSelect(affectionTargetOptions(), condition.targetId, value => {
+    if (!value) {
+      owner.affectionCondition = null;
+      renderInspector();
+      return;
+    }
+    owner.affectionCondition = {
+      targetId: value,
+      operator: owner.affectionCondition?.operator || ">=",
+      value: owner.affectionCondition?.value ?? 0
+    };
+  });
+
+  const operator = makeSelect([
+    [">=", "≥"],
+    [">", ">"],
+    ["==", "="],
+    ["!=", "≠"],
+    ["<=", "≤"],
+    ["<", "<"]
+  ], condition.operator, value => {
+    if (!owner.affectionCondition) return;
+    owner.affectionCondition.operator = value;
+  });
+
+  const amount = makeTextInput(String(condition.value ?? 0), "값", value => {
+    if (!owner.affectionCondition) return;
+    owner.affectionCondition.value = Number(value) || 0;
+  });
+  amount.type = "number";
+  amount.min = "0";
+  amount.max = "100";
+
+  grid.append(target, operator, amount);
+  wrap.append(label, grid);
+  return wrap;
+}
+
+function renderAffectionEffectsEditor(owner) {
+  const wrap = document.createElement("div");
+
+  const label = document.createElement("p");
+  label.className = "affection-section-label";
+  label.textContent = "호감도 변화";
+
+  const list = document.createElement("div");
+  list.className = "option-affection-list";
+
+  owner.affectionEffects = normalizeAffectionEffects(owner.affectionEffects);
+
+  owner.affectionEffects.forEach((effect, index) => {
+    const row = document.createElement("div");
+    row.className = "option-affection-row";
+
+    const target = makeSelect(affectionTargetOptions(), effect.targetId, value => {
+      effect.targetId = value;
+    });
+
+    const amount = makeTextInput(String(effect.amount), "+ / -", value => {
+      effect.amount = Number(value) || 0;
+    });
+    amount.type = "number";
+    amount.className = "affection-amount";
+    amount.min = "-100";
+    amount.max = "100";
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "inline-remove";
+    remove.textContent = "×";
+    remove.addEventListener("click", () => {
+      owner.affectionEffects.splice(index, 1);
+      renderInspector();
+    });
+
+    row.append(target, amount, remove);
+    list.append(row);
+  });
+
+  if (!owner.affectionEffects.length) {
+    const empty = document.createElement("div");
+    empty.className = "affection-empty";
+    empty.textContent = draftState?.affectionTargets?.length
+      ? "변화 없음"
+      : "프로젝트 설정에서 호감도 대상을 먼저 추가하세요.";
+    list.append(empty);
+  }
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "inline-add";
+  add.textContent = "+ 호감도 변화";
+  add.disabled = !draftState?.affectionTargets?.length;
+  add.addEventListener("click", () => {
+    owner.affectionEffects.push({
+      id: createId("affection-effect"),
+      targetId: draftState.affectionTargets[0]?.id || "",
+      amount: 1
+    });
+    renderInspector();
+  });
+
+  wrap.append(label, list, add);
+  return wrap;
+}
+
+function emotionTargetOptions(sourceState = draftState) {
+  return [
+    ["", "대상 선택"],
+    ...(sourceState?.emotionTargets || []).map(target => [target.id, target.name])
+  ];
+}
+
+function emotionStateOptions(includeAny = false) {
+  return [
+    ...(includeAny ? [["", "감정 무관"]] : []),
+    ...EMOTION_STATES
+  ];
+}
+
+function renderEmotionConditionEditor(owner) {
+  const wrap = document.createElement("div");
+
+  const label = document.createElement("p");
+  label.className = "emotion-section-label";
+  label.textContent = "감정 조건";
+
+  const condition = owner.emotionCondition || {
+    targetId: "",
+    state: "",
+    intensityOperator: ">=",
+    intensityValue: 0
+  };
+
+  const grid = document.createElement("div");
+  grid.className = "emotion-condition-grid";
+
+  const target = makeSelect(emotionTargetOptions(), condition.targetId, value => {
+    if (!value) {
+      owner.emotionCondition = null;
+      renderInspector();
+      return;
+    }
+    owner.emotionCondition = {
+      targetId: value,
+      state: owner.emotionCondition?.state || "",
+      intensityOperator: owner.emotionCondition?.intensityOperator || ">=",
+      intensityValue: owner.emotionCondition?.intensityValue ?? 0
+    };
+  });
+
+  const stateSelect = makeSelect(emotionStateOptions(true), condition.state, value => {
+    if (!owner.emotionCondition) return;
+    owner.emotionCondition.state = value;
+  });
+
+  const operator = makeSelect([
+    [">=", "강도 ≥"],
+    [">", "강도 >"],
+    ["==", "강도 ="],
+    ["!=", "강도 ≠"],
+    ["<=", "강도 ≤"],
+    ["<", "강도 <"]
+  ], condition.intensityOperator, value => {
+    if (!owner.emotionCondition) return;
+    owner.emotionCondition.intensityOperator = value;
+  });
+
+  const intensity = makeTextInput(String(condition.intensityValue ?? 0), "강도", value => {
+    if (!owner.emotionCondition) return;
+    owner.emotionCondition.intensityValue = Math.min(100, Math.max(0, Number(value) || 0));
+  });
+  intensity.type = "number";
+  intensity.min = "0";
+  intensity.max = "100";
+  intensity.className = "emotion-intensity";
+
+  grid.append(target, stateSelect, operator, intensity);
+  wrap.append(label, grid);
+  return wrap;
+}
+
+function renderEmotionEffectsEditor(owner) {
+  const wrap = document.createElement("div");
+
+  const label = document.createElement("p");
+  label.className = "emotion-section-label";
+  label.textContent = "감정 변화";
+
+  const list = document.createElement("div");
+  list.className = "option-emotion-list";
+
+  owner.emotionEffects = normalizeEmotionEffects(owner.emotionEffects);
+
+  owner.emotionEffects.forEach((effect, index) => {
+    const row = document.createElement("div");
+    row.className = "option-emotion-row";
+
+    const target = makeSelect(emotionTargetOptions(), effect.targetId, value => {
+      effect.targetId = value;
+    });
+
+    const stateSelect = makeSelect(emotionStateOptions(), effect.state, value => {
+      effect.state = value;
+    });
+
+    const intensity = makeTextInput(String(effect.intensity), "강도", value => {
+      effect.intensity = Math.min(100, Math.max(0, Number(value) || 0));
+    });
+    intensity.type = "number";
+    intensity.min = "0";
+    intensity.max = "100";
+    intensity.className = "emotion-intensity";
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "inline-remove";
+    remove.textContent = "×";
+    remove.addEventListener("click", () => {
+      owner.emotionEffects.splice(index, 1);
+      renderInspector();
+    });
+
+    row.append(target, stateSelect, intensity, remove);
+    list.append(row);
+  });
+
+  if (!owner.emotionEffects.length) {
+    const empty = document.createElement("div");
+    empty.className = "emotion-empty";
+    empty.textContent = draftState?.emotionTargets?.length
+      ? "감정 변화 없음"
+      : "프로젝트 설정에서 감정 대상을 먼저 추가하세요.";
+    list.append(empty);
+  }
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "inline-add";
+  add.textContent = "+ 감정 변화";
+  add.disabled = !draftState?.emotionTargets?.length;
+  add.addEventListener("click", () => {
+    const target = draftState.emotionTargets[0];
+    owner.emotionEffects.push({
+      id: createId("emotion-effect"),
+      targetId: target?.id || "",
+      state: target?.defaultState || "calm",
+      intensity: target?.defaultIntensity || 0
+    });
+    renderInspector();
+  });
+
+  wrap.append(label, list, add);
+  return wrap;
+}
+
+function renderAdvancedDetails(owner, includeTarget = false, skipAffectionEffects = false, skipEmotionEffects = false) {
+  const details = document.createElement("details");
+  details.className = "advanced-details";
+
+  const summary = document.createElement("summary");
+  summary.textContent = includeTarget
+    ? "고급 · 조건 / 호감도 / 감정 / 변수 / 이벤트 이동"
+    : "고급 · 조건 / 호감도 / 감정 / 변수";
+
+  const body = document.createElement("div");
+  body.className = "advanced-body";
+
+  const condition = document.createElement("div");
+  condition.append(renderConditionEditor(owner));
+
+  const affection = document.createElement("div");
+  affection.append(renderAffectionConditionEditor(owner));
+  if (!skipAffectionEffects) {
+    affection.append(renderAffectionEffectsEditor(owner));
+  }
+
+  const emotion = document.createElement("div");
+  emotion.append(renderEmotionConditionEditor(owner));
+  if (!skipEmotionEffects) {
+    emotion.append(renderEmotionEffectsEditor(owner));
+  }
+
+  const effects = document.createElement("div");
+  effects.append(renderEffectsEditor(owner));
+
+  body.append(condition, affection, emotion, effects);
+
+  if (includeTarget) {
+    const exit = makeSelect(branchExitOptions(owner), getBranchExitValue(owner), value => {
+      if (value.startsWith("event:")) {
+        owner.targetEventId = value.slice(6);
+        owner.exitMode = "continue";
+      } else {
+        owner.targetEventId = "";
+        owner.exitMode = value === "end" ? "end" : "continue";
+      }
+    });
+    body.append(makeField("분기 종료 후", exit));
+  }
+
+  details.append(summary, body);
+  return details;
+}
+
+/* ---------- INSPECTOR RENDER ---------- */
+
+function renderInspector() {
+  const context = findEntryContext(selectedEntryId);
+  const hasEntry = Boolean(context);
+
+  el.emptyInspector.hidden = hasEntry;
+  el.entryInspector.hidden = !hasEntry;
+
+  if (!context) return;
+
+  const entry = context.entry;
+  el.inspectorTypeBadge.textContent = entryKind(entry);
+  el.inspectorTitle.textContent =
+    entry.type === "choice" ? "선택지 편집" :
+    entry.type === "narration" ? "지문 편집" : "대사 편집";
+
+  el.moveEntryUp.disabled = context.index === 0;
+  el.moveEntryDown.disabled = context.index === context.list.length - 1;
+
+  renderBreadcrumb(context);
+  el.inspectorBody.innerHTML = "";
+
+  if (entry.type === "choice") {
+    renderChoiceInspector(entry);
+  } else if (entry.type === "narration") {
+    renderNarrationInspector(entry);
+  } else {
+    renderDialogueInspector(entry);
+  }
+}
+
+function renderBreadcrumb(context) {
+  el.inspectorBreadcrumb.innerHTML = "";
+
+  const root = document.createElement("span");
+  root.textContent = "본편";
+  el.inspectorBreadcrumb.append(root);
+
+  context.ancestors.forEach(({ choice, option }) => {
+    const slash = document.createElement("span");
+    slash.textContent = " / ";
+    el.inspectorBreadcrumb.append(slash);
+
+    const choiceButton = document.createElement("button");
+    choiceButton.type = "button";
+    choiceButton.textContent = choice.prompt || "선택지";
+    choiceButton.addEventListener("click", () => selectEntry(choice.id));
+    el.inspectorBreadcrumb.append(choiceButton);
+
+    const optionText = document.createElement("span");
+    optionText.textContent = " → " + (option.label || "분기");
+    el.inspectorBreadcrumb.append(optionText);
+  });
+}
+
+function renderDialogueInspector(entry) {
+  const section = makeSection("대사 내용", "화자와 화면에 표시될 문장을 입력합니다.");
+
+  const speaker = makeTextInput(entry.speaker, "화자 이름", value => {
+    entry.speaker = value;
+    renderFlowList();
+  });
+
+  const text = makeTextarea(entry.text, "대사를 입력하세요.", value => {
+    entry.text = value;
+    renderFlowList();
+  });
+
+  section.append(
+    makeField("화자", speaker),
+    makeField("대사", text),
+    renderAdvancedDetails(entry)
+  );
+
+  el.inspectorBody.append(section);
+}
+
+function renderNarrationInspector(entry) {
+  const section = makeSection("지문 내용", "화자 없이 표시되는 설명 문장입니다.");
+
+  const text = makeTextarea(entry.text, "지문을 입력하세요.", value => {
+    entry.text = value;
+    renderFlowList();
+  });
+
+  section.append(
+    makeField("글", text),
+    renderAdvancedDetails(entry)
+  );
+
+  el.inspectorBody.append(section);
+}
+
+function renderChoiceInspector(choice) {
+  const questionSection = makeSection(
+    "질문 / 상황",
+    "플레이 화면에서 선택지 버튼 위에 표시됩니다."
+  );
+
+  const prompt = makeTextarea(choice.prompt, "무엇을 선택할까?", value => {
+    choice.prompt = value;
+    renderFlowList();
+  });
+
+  questionSection.append(
+    makeField("표시 문구", prompt),
+    renderAdvancedDetails(choice)
+  );
+  el.inspectorBody.append(questionSection);
+
+  const optionsSection = makeSection(
+    "선택지",
+    "각 선택지마다 별도의 분기 흐름, 조건, 변수 효과, 이벤트 이동을 설정할 수 있습니다."
+  );
+
+  const list = document.createElement("div");
+  list.className = "option-list";
+
+  choice.options.forEach((option, index) => {
+    list.append(renderOptionCard(choice, option, index));
+  });
+
+  if (!choice.options.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "선택지가 없습니다.";
+    list.append(empty);
+  }
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "add-option";
+  add.textContent = "+ 선택지 추가";
+  add.addEventListener("click", () => {
+    choice.options.push(makeOption("선택지 " + (choice.options.length + 1)));
+    renderInspector();
+  });
+
+  optionsSection.append(list, add);
+  el.inspectorBody.append(optionsSection);
+
+  const note = document.createElement("div");
+  note.className = "info-note";
+  note.textContent =
+    "분기 내용이 끝나면 상위 흐름으로 복귀합니다. 선택지에 이벤트 이동을 지정하면 분기 종료 후 해당 이벤트로 넘어갑니다.";
+  el.inspectorBody.append(note);
+}
+
+function renderOptionCard(choice, option, optionIndex) {
+  const card = document.createElement("article");
+  card.className = "option-card";
+
+  const header = document.createElement("div");
+  header.className = "option-header";
+
+  const labelInput = makeTextInput(option.label, "선택지 문구", value => {
+    option.label = value;
+  });
+  header.append(makeField("선택지 " + (optionIndex + 1), labelInput));
+
+  const actions = document.createElement("div");
+  actions.className = "option-actions";
+
+  const up = document.createElement("button");
+  up.type = "button";
+  up.textContent = "↑";
+  up.title = "위로 이동";
+  up.disabled = optionIndex === 0;
+  up.addEventListener("click", () => {
+    [choice.options[optionIndex - 1], choice.options[optionIndex]] =
+      [choice.options[optionIndex], choice.options[optionIndex - 1]];
+    renderInspector();
+  });
+
+  const down = document.createElement("button");
+  down.type = "button";
+  down.textContent = "↓";
+  down.title = "아래로 이동";
+  down.disabled = optionIndex === choice.options.length - 1;
+  down.addEventListener("click", () => {
+    [choice.options[optionIndex + 1], choice.options[optionIndex]] =
+      [choice.options[optionIndex], choice.options[optionIndex + 1]];
+    renderInspector();
+  });
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = "×";
+  remove.title = "선택지 삭제";
+  remove.className = "remove-option";
+  remove.addEventListener("click", () => {
+    choice.options.splice(optionIndex, 1);
+    renderInspector();
+  });
+
+  actions.append(up, down, remove);
+  header.append(actions);
+
+  const branchArea = document.createElement("div");
+  branchArea.className = "branch-area";
+
+  const branchTop = document.createElement("div");
+  branchTop.className = "branch-top";
+
+  const branchLabel = document.createElement("span");
+  branchLabel.textContent = "선택 후 재생 · " + option.entries.length + "개";
+
+  const branchAdds = document.createElement("div");
+  branchAdds.className = "branch-adds";
+
+  [
+    ["dialogue", "+ 대사"],
+    ["narration", "+ 지문"],
+    ["choice", "+ 선택지"]
+  ].forEach(([type, label]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    if (type === "choice") button.className = "nested-choice";
+    button.addEventListener("click", () => addEntryToList(option.entries, type));
+    branchAdds.append(button);
+  });
+
+  branchTop.append(branchLabel, branchAdds);
+
+  const branchList = document.createElement("div");
+  branchList.className = "branch-list";
+
+  if (!option.entries.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "선택 후 바로 상위 흐름으로 이어집니다.";
+    branchList.append(empty);
+  } else {
+    option.entries.forEach((entry, index) => {
+      branchList.append(renderBranchRow(option, entry, index));
+    });
+  }
+
+  const affectionEditor = document.createElement("div");
+  affectionEditor.className = "option-affection";
+  affectionEditor.append(renderAffectionEffectsEditor(option));
+
+  const emotionEditor = document.createElement("div");
+  emotionEditor.className = "option-emotion";
+  emotionEditor.append(renderEmotionEffectsEditor(option));
+
+  branchArea.append(branchTop, branchList, renderAdvancedDetails(option, true, true, true));
+  card.append(header, affectionEditor, emotionEditor, branchArea);
+  return card;
+}
+
+function renderBranchRow(option, entry, index) {
+  const row = document.createElement("div");
+  row.className = "branch-row";
+
+  const main = document.createElement("button");
+  main.type = "button";
+  main.className = "branch-row-main";
+  main.addEventListener("click", () => selectEntry(entry.id));
+
+  const kind = document.createElement("small");
+  kind.textContent = entryKind(entry);
+
+  const preview = document.createElement("span");
+  preview.textContent = entryLabel(entry);
+
+  main.append(kind, preview);
+
+  const actions = document.createElement("div");
+  actions.className = "branch-row-actions";
+
+  const up = document.createElement("button");
+  up.type = "button";
+  up.textContent = "↑";
+  up.title = "위로 이동";
+  up.disabled = index === 0;
+  up.addEventListener("click", () => {
+    [option.entries[index - 1], option.entries[index]] =
+      [option.entries[index], option.entries[index - 1]];
+    renderInspector();
+  });
+
+  const down = document.createElement("button");
+  down.type = "button";
+  down.textContent = "↓";
+  down.title = "아래로 이동";
+  down.disabled = index === option.entries.length - 1;
+  down.addEventListener("click", () => {
+    [option.entries[index + 1], option.entries[index]] =
+      [option.entries[index], option.entries[index + 1]];
+    renderInspector();
+  });
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = "×";
+  remove.title = "삭제";
+  remove.addEventListener("click", () => {
+    option.entries.splice(index, 1);
+    if (selectedEntryId === entry.id) selectedEntryId = null;
+    renderFlowList();
+    renderInspector();
+  });
+
+  actions.append(up, down, remove);
+  row.append(main, actions);
+  return row;
+}
+
+/* ---------- PROJECT PANEL ---------- */
+
+function renderProjectPanel() {
+  if (!draftState) return;
+  renderAffectionTargetList();
+  renderEmotionTargetList();
+  renderVariableList();
+  renderAssetList();
+}
+
+function renderAffectionTargetList() {
+  el.affectionTargetList.innerHTML = "";
+
+  draftState.affectionTargets.forEach((target, index) => {
+    const row = document.createElement("div");
+    row.className = "affection-target-row";
+
+    const name = makeTextInput(target.name, "대상 이름", value => {
+      target.name = value;
+    });
+
+    const initial = makeTextInput(String(target.initialValue), "시작값", value => {
+      target.initialValue = Math.min(100, Math.max(0, Number(value) || 0));
+    });
+    initial.type = "number";
+    initial.min = "0";
+    initial.max = "100";
+    initial.className = "affection-initial";
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "inline-remove";
+    remove.textContent = "×";
+    remove.addEventListener("click", () => {
+      const targetId = target.id;
+      draftState.affectionTargets.splice(index, 1);
+      removeAffectionReferences(targetId);
+      renderProjectPanel();
+      renderInspector();
+    });
+
+    row.append(name, initial, remove);
+    el.affectionTargetList.append(row);
+  });
+
+  if (!draftState.affectionTargets.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "등록된 호감도 대상이 없습니다.";
+    el.affectionTargetList.append(empty);
+  }
+}
+
+function removeAffectionReferences(targetId) {
+  function cleanOwner(owner) {
+    if (owner.affectionCondition?.targetId === targetId) owner.affectionCondition = null;
+    owner.affectionEffects = normalizeAffectionEffects(owner.affectionEffects)
+      .filter(effect => effect.targetId !== targetId);
+  }
+
+  function cleanEntries(entries) {
+    entries.forEach(entry => {
+      cleanOwner(entry);
+      if (entry.type === "choice") {
+        entry.options.forEach(option => {
+          cleanOwner(option);
+          cleanEntries(option.entries);
+        });
+      }
+    });
+  }
+
+  draftState.events.forEach(event => cleanEntries(event.entries));
+}
+
+function renderEmotionTargetList() {
+  el.emotionTargetList.innerHTML = "";
+
+  draftState.emotionTargets.forEach((target, index) => {
+    const row = document.createElement("div");
+    row.className = "emotion-target-row";
+
+    const name = makeTextInput(target.name, "대상 이름", value => {
+      target.name = value;
+    });
+
+    const stateSelect = makeSelect(emotionStateOptions(), target.defaultState, value => {
+      target.defaultState = value;
+    });
+
+    const intensity = makeTextInput(String(target.defaultIntensity), "강도", value => {
+      target.defaultIntensity = Math.min(100, Math.max(0, Number(value) || 0));
+    });
+    intensity.type = "number";
+    intensity.min = "0";
+    intensity.max = "100";
+    intensity.className = "emotion-intensity";
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "inline-remove";
+    remove.textContent = "×";
+    remove.addEventListener("click", () => {
+      const targetId = target.id;
+      draftState.emotionTargets.splice(index, 1);
+      removeEmotionReferences(targetId);
+      renderProjectPanel();
+      renderInspector();
+    });
+
+    row.append(name, stateSelect, intensity, remove);
+    el.emotionTargetList.append(row);
+  });
+
+  if (!draftState.emotionTargets.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "등록된 감정 대상이 없습니다.";
+    el.emotionTargetList.append(empty);
+  }
+}
+
+function removeEmotionReferences(targetId) {
+  function cleanOwner(owner) {
+    if (owner.emotionCondition?.targetId === targetId) owner.emotionCondition = null;
+    owner.emotionEffects = normalizeEmotionEffects(owner.emotionEffects)
+      .filter(effect => effect.targetId !== targetId);
+  }
+
+  function cleanEntries(entries) {
+    entries.forEach(entry => {
+      cleanOwner(entry);
+      if (entry.type === "choice") {
+        entry.options.forEach(option => {
+          cleanOwner(option);
+          cleanEntries(option.entries);
+        });
+      }
+    });
+  }
+
+  draftState.events.forEach(event => cleanEntries(event.entries));
+}
+
+function renderVariableList() {
+  el.variableList.innerHTML = "";
+
+  draftState.variables.forEach((variable, index) => {
+    const row = document.createElement("div");
+    row.className = "project-row";
+
+    const name = makeTextInput(variable.name, "변수 이름", value => {
+      variable.name = value;
+    });
+
+    const type = makeSelect([
+      ["number", "숫자"],
+      ["boolean", "참/거짓"],
+      ["string", "문자"]
+    ], variable.type, value => {
+      variable.type = value;
+    });
+
+    const initial = makeTextInput(variable.defaultValue, "초기값", value => {
+      variable.defaultValue = value;
+    });
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "inline-remove";
+    remove.textContent = "×";
+    remove.addEventListener("click", () => {
+      const removedId = variable.id;
+      draftState.variables.splice(index, 1);
+      removeVariableReferences(removedId);
+      renderProjectPanel();
+      renderInspector();
+    });
+
+    row.append(name, type, initial, remove);
+    el.variableList.append(row);
+  });
+
+  if (!draftState.variables.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "등록된 변수가 없습니다.";
+    el.variableList.append(empty);
+  }
+}
+
+function removeVariableReferences(variableId) {
+  function cleanOwner(owner) {
+    if (owner.condition?.variableId === variableId) owner.condition = null;
+    owner.effects = normalizeEffects(owner.effects).filter(effect => effect.variableId !== variableId);
+  }
+
+  function cleanEntries(entries) {
+    entries.forEach(entry => {
+      cleanOwner(entry);
+      if (entry.type === "choice") {
+        entry.options.forEach(option => {
+          cleanOwner(option);
+          cleanEntries(option.entries);
+        });
+      }
+    });
+  }
+
+  draftState.events.forEach(event => cleanEntries(event.entries));
+}
+
+function renderAssetList() {
+  el.assetList.innerHTML = "";
+
+  draftState.assets.forEach((asset, index) => {
+    const row = document.createElement("div");
+    row.className = "project-row asset-row";
+
+    const type = makeSelect([
+      ["image", "이미지"],
+      ["audio", "오디오"],
+      ["other", "기타"]
+    ], asset.type, value => {
+      asset.type = value;
+    });
+
+    const name = makeTextInput(asset.name, "리소스 이름", value => {
+      asset.name = value;
+    });
+
+    const source = makeTextInput(asset.source, "파일 또는 URL", value => {
+      asset.source = value;
+    });
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "inline-remove";
+    remove.textContent = "×";
+    remove.addEventListener("click", () => {
+      draftState.assets.splice(index, 1);
+      renderAssetList();
+    });
+
+    row.append(type, name, source, remove);
+    el.assetList.append(row);
+  });
+
+  if (!draftState.assets.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-note";
+    empty.textContent = "등록된 리소스가 없습니다.";
+    el.assetList.append(empty);
+  }
+}
+
+/* ---------- UI EVENTS ---------- */
+
+el.eventSelect.addEventListener("change", event => {
+  switchPlaybackEvent(event.target.value);
+});
+
+el.nextLine.addEventListener("click", () => advanceDialogue(false));
+el.openSettings.addEventListener("click", openSettings);
+el.emptyOpenSettings.addEventListener("click", openSettings);
+
+el.autoButton.addEventListener("click", toggleAuto);
+el.logButton.addEventListener("click", openLogModal);
+el.affectionButton.addEventListener("click", openAffectionModal);
+el.emotionButton.addEventListener("click", openEmotionModal);
+el.playSettingsButton.addEventListener("click", openPlaySettingsModal);
+
+
+el.closeGameModal.addEventListener("click", closeGameModal);
+el.gameModal.addEventListener("click", event => {
+  if (event.target === el.gameModal) closeGameModal();
+});
+
+el.projectSettings.addEventListener("click", () => {
+  el.projectPanel.hidden = false;
+  renderProjectPanel();
+});
+el.closeProjectPanel.addEventListener("click", () => {
+  el.projectPanel.hidden = true;
+});
+el.cancelSettings.addEventListener("click", cancelSettings);
+el.saveSettings.addEventListener("click", saveSettings);
+el.newEvent.addEventListener("click", createNewEvent);
+el.deleteEvent.addEventListener("click", deleteCurrentEvent);
+
+el.eventNameInput.addEventListener("input", event => {
+  updateDraftEventName(event.target.value);
+});
+
+el.eventNextSelect.addEventListener("change", event => {
+  const current = getDraftEvent();
+  if (current) current.nextEventId = event.target.value;
+});
+
+el.eventEmotionExitSelect.addEventListener("change", event => {
+  const current = getDraftEvent();
+  if (current) current.emotionExitMode = event.target.value === "reset" ? "reset" : "keep";
+});
+
+el.addTypeButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    const event = getDraftEvent();
+    if (!event) return;
+    addEntryToList(event.entries, button.dataset.addType);
+  });
+});
+
+el.moveEntryUp.addEventListener("click", () => moveSelectedEntry(-1));
+el.moveEntryDown.addEventListener("click", () => moveSelectedEntry(1));
+el.duplicateEntry.addEventListener("click", duplicateSelectedEntry);
+el.deleteEntry.addEventListener("click", deleteSelectedEntry);
+
+el.addAffectionTarget.addEventListener("click", () => {
+  if (!draftState) return;
+
+  draftState.affectionTargets.push({
+    id: createId("affection"),
+    name: "새 대상",
+    initialValue: 0
+  });
+
+  renderProjectPanel();
+  renderInspector();
+});
+
+el.addEmotionTarget.addEventListener("click", () => {
+  if (!draftState) return;
+
+  draftState.emotionTargets.push({
+    id: createId("emotion"),
+    name: "새 대상",
+    defaultState: "calm",
+    defaultIntensity: 0
+  });
+
+  renderProjectPanel();
+  renderInspector();
+});
+
+el.addVariable.addEventListener("click", () => {
+  if (!draftState) return;
+
+  draftState.variables.push({
+    id: createId("var"),
+    name: "새 변수",
+    type: "number",
+    defaultValue: "0"
+  });
+
+  renderProjectPanel();
+  renderInspector();
+});
+
+el.addAsset.addEventListener("click", () => {
+  if (!draftState) return;
+
+  draftState.assets.push({
+    id: createId("asset"),
+    type: "image",
+    name: "새 리소스",
+    source: ""
+  });
+
+  renderAssetList();
+});
+
+el.stage.addEventListener("click", event => {
+  if (!prefs.stageClick || !el.gameModal.hidden || !el.settingsOverlay.hidden) return;
+
+  const tag = event.target?.tagName;
+  if (["BUTTON", "INPUT", "SELECT", "TEXTAREA"].includes(tag)) return;
+
+  if (!el.choiceCard.hidden) return;
+  advanceDialogue(false);
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    if (!el.gameModal.hidden) {
+      closeGameModal();
+      return;
+    }
+
+    if (!el.settingsOverlay.hidden) {
+      cancelSettings();
+      return;
+    }
+  }
+
+  if (!el.settingsOverlay.hidden || !el.gameModal.hidden) return;
+
+  if (event.key === " " || event.key === "Enter") {
+    if (document.activeElement === el.eventSelect || !el.choiceCard.hidden) return;
+    event.preventDefault();
+    advanceDialogue(false);
+  }
+});
+
+/* ---------- BOOT ---------- */
+
+state = normalizeState(state);
+persistState();
+persistPrefs();
+renderApp();
+updateModeButtons();

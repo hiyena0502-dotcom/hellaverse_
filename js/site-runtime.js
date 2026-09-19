@@ -329,6 +329,7 @@ let typing={token:"",full:"",index:0,done:true,timer:null};
 let autoMode=false;
 let autoTimer=null;
 let toastTimer=null;
+let gachaAnimating=false;
 
 const startScreen=$("#startScreen");
 const gameShell=$("#gameShell");
@@ -672,16 +673,17 @@ function renderGacha(){
   const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled);
   const total=RARITIES.reduce((s,r)=>s+Number(state.gacha.rarityWeights[r]||0),0)||1;
   const history=state.gacha.history.slice(-8).reverse();
+  const drawDisabled=gachaAnimating||!state.gacha.enabled||!pool.length;
 
   pageRoot.innerHTML=
     '<section><div class="page-head"><div><p class="page-kicker">GACHA</p><h1>ARCHIVE DRAW</h1></div><p>아이템 설정에서 가챠 포함으로 지정한 아이템을 추첨합니다. 획득한 아이템은 컬렉션과 인벤토리에 기록됩니다.</p></div>'+
     '<div class="gacha-layout">'+
-      '<div class="gacha-stage"><div><p class="gacha-balance">'+esc(state.gacha.currencyName)+' · '+state.gacha.balance+'</p><h2>DRAW THE ARCHIVE</h2>'+
+      '<div class="gacha-stage '+(gachaAnimating?'is-drawing':'')+'"><div class="gacha-core"><p class="gacha-balance">'+esc(state.gacha.currencyName)+' · '+state.gacha.balance+'</p><h2>DRAW THE ARCHIVE</h2>'+
       '<p>'+pool.length+'개의 아이템이 현재 가챠 풀에 등록되어 있습니다.</p><div id="gachaResult" class="gacha-result-grid"></div>'+
-      '<div class="draw-actions"><button class="gold-button" type="button" data-action="draw-gacha" data-count="1" '+(!state.gacha.enabled||!pool.length?"disabled":"")+'>1 DRAW · '+state.gacha.singleCost+'</button>'+
-      '<button class="gold-button" type="button" data-action="draw-gacha" data-count="10" '+(!state.gacha.enabled||!pool.length?"disabled":"")+'>10 DRAW · '+state.gacha.tenCost+'</button></div></div></div>'+
+      '<div class="draw-actions"><button class="gold-button" type="button" data-action="draw-gacha" data-count="1" '+(drawDisabled?"disabled":"")+'>1 DRAW · '+state.gacha.singleCost+'</button>'+
+      '<button class="gold-button" type="button" data-action="draw-gacha" data-count="10" '+(drawDisabled?"disabled":"")+'>10 DRAW · '+state.gacha.tenCost+'</button></div></div><div class="gacha-aura" aria-hidden="true"></div></div>'+
       '<aside class="gacha-side"><div class="info-card"><h3>RATES</h3>'+RARITIES.map(r=>'<div class="rate-row"><span>'+r+'</span><b>'+((state.gacha.rarityWeights[r]/total)*100).toFixed(1)+'%</b></div>').join("")+'</div>'+
-      '<div class="info-card"><div class="info-card-head"><h3>RECENT</h3><button class="small-button history-clear" type="button" data-action="clear-gacha-history" '+(!history.length?"disabled":"")+'>CLEAR</button></div>'+
+      '<div class="info-card"><div class="info-card-head"><h3>RECENT</h3><button class="small-button history-clear" type="button" data-action="clear-gacha-history" '+(!history.length||gachaAnimating?"disabled":"")+'>CLEAR</button></div>'+
       (history.length?history.map(h=>'<div class="history-row"><span>'+esc(h.rarity)+'</span><b>'+esc(h.name)+'</b></div>').join(""):'<p class="muted">아직 기록이 없습니다.</p>')+'</div></aside>'+
     '</div></section>';
 }
@@ -1014,6 +1016,22 @@ function chooseWeighted(items,getWeight){
   for(const item of items){roll-=Math.max(0,Number(getWeight(item))||0);if(roll<=0)return item}
   return items.at(-1);
 }
+function playGachaAnimation(results){
+  const stage=$(".gacha-stage",pageRoot);
+  const box=$("#gachaResult");
+  if(!stage||!box){gachaAnimating=false;return}
+  stage.classList.add("is-drawing");
+  box.innerHTML='<div class="gacha-summon"><span class="gacha-sigil">✦</span><b>SUMMONING</b><small>ARCHIVE LINK</small></div>';
+  setTimeout(()=>{
+    stage.classList.add("is-reveal");
+    box.innerHTML=results.map((i,index)=>'<div class="gacha-result-card gacha-reveal-card rarity-'+esc(i.rarity)+'" style="animation-delay:'+(index*80)+'ms"><span>'+esc(i.rarity)+'</span><strong>'+esc(i.name)+'</strong><small>'+esc(getCharacter(i.collectionCharacterId)?.name||"UNASSIGNED")+'</small></div>').join("");
+    setTimeout(()=>{
+      gachaAnimating=false;
+      stage.classList.remove("is-drawing","is-reveal");
+      $$(".draw-actions button",pageRoot).forEach(button=>button.disabled=false);
+    },Math.max(900,results.length*80+600));
+  },650);
+}
 function clearGachaHistory(){
   state.gacha.history=[];
   saveState();
@@ -1021,6 +1039,7 @@ function clearGachaHistory(){
   showToast("가챠 RECENT 기록을 비웠습니다.");
 }
 function drawGacha(count){
+  if(gachaAnimating)return;
   const pool=state.items.filter(i=>i.enabled&&i.gachaEnabled);
   if(!pool.length){showToast("가챠 풀이 비어 있습니다.");return}
   const cost=count===10?state.gacha.tenCost:state.gacha.singleCost;
@@ -1036,10 +1055,11 @@ function drawGacha(count){
     results.push(item);
     state.gacha.history.push({name:item.name,rarity:item.rarity,itemId:item.id,at:Date.now()});
   }
-  state.gacha.history=state.gacha.history.slice(-50);saveState();
+  state.gacha.history=state.gacha.history.slice(-50);
+  saveState();
+  gachaAnimating=true;
   renderGacha();
-  const box=$("#gachaResult");
-  if(box)box.innerHTML=results.map(i=>'<div class="gacha-result-card rarity-'+esc(i.rarity)+'"><span>'+esc(i.rarity)+'</span><strong>'+esc(i.name)+'</strong><small>'+esc(getCharacter(i.collectionCharacterId)?.name||"UNKNOWN")+'</small></div>').join("");
+  playGachaAnimation(results);
 }
 function collectionDetail(id){
   const i=itemById(id);if(!i)return;
